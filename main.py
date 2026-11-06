@@ -1,6 +1,7 @@
 import pygame
 import config
 
+
 def main():
 
     pygame.init()
@@ -22,6 +23,7 @@ def main():
         clock.tick(config.FPS)
 
     pygame.quit()
+
 
 if __name__ == "__main__":
     main()    
