@@ -1,6 +1,9 @@
+import math
+
 import config
 from core.food import Food
 from core.physics import torus_delta
+from core.creature import Creature
 
 class World:
     def __init__(self, rng):
@@ -25,4 +28,14 @@ class World:
                     creature.eat_food(food.energy)
                     food.x = self.rng.uniform(0, self.width)
                     food.y = self.rng.uniform(0, self.height)
+
+    def add_population(self,count):
+        for _ in range(count):
+            x = self.rng.uniform(0, self.width)
+            y = self.rng.uniform(0, self.height)
+            angle = self.rng.uniform(-math.pi, math.pi)
+            creature = Creature(x, y, angle, config.CREATURE_SPEED,
+                                config.INITIAL_ENERGY,
+                                config.ENERGY_COST_PER_TICK)
+            self.creatures.append(creature)
 

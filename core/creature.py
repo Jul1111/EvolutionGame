@@ -10,6 +10,7 @@ class Creature:
         self.energy_cost_per_tick = energy_cost_per_tick
         self.alive = True
         self.food_eaten = 0 
+        self.age = 0
 
     def update(self, world_width, world_height):
         if not self.alive:
@@ -25,6 +26,8 @@ class Creature:
         self.x  %= world_width
         self.y  %= world_height
         self.energy = self.energy - self.energy_cost_per_tick
+
+        self.age += 1 #Added age increment to track how long the creature has been alive
 
     def eat_food(self,amount):
         if not self.alive:
