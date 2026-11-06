@@ -1,0 +1,44 @@
+evolution_sim/
+├── main.py                  # Point d'entrée : boucle pygame
+├── config.py                # Constantes (taille monde, taux de mutation, etc.)
+├── requirements.txt         # pygame, numpy
+├── README.md
+│
+├── core/
+│   ├── __init__.py
+│   ├── world.py             # Monde : dimensions, entités, nourriture, tick
+│   ├── creature.py          # Être vivant : position, énergie, âge, capteurs
+│   ├── food.py              # Ressources
+│   └── physics.py           # Déplacement, collisions, distances
+│
+├── brain/
+│   ├── __init__.py
+│   ├── network.py           # Réseau de neurones (numpy, feed-forward)
+│   ├── genome.py            # Génome = poids + traits (vitesse, vision...)
+│   └── activations.py       # tanh, relu, sigmoid
+│
+├── evolution/
+│   ├── __init__.py
+│   ├── population.py        # Gestion de la population, générations
+│   ├── selection.py         # Sélection (tournoi, élitisme)
+│   ├── crossover.py         # Croisement de génomes
+│   └── mutation.py          # Mutation des poids et traits
+│
+├── rendering/
+│   ├── __init__.py
+│   ├── renderer.py          # Dessin du monde et des créatures
+│   ├── hud.py               # Stats : génération, fitness, population
+│   ├── plots.py             # Courbes fitness (surface pygame)
+│   └── camera.py            # Zoom / déplacement (optionnel)
+│
+├── utils/
+│   ├── __init__.py
+│   ├── save_load.py         # Sauvegarde du meilleur génome (JSON/npz)
+│   ├── logger.py            # Log CSV des stats par génération
+│   └── rng.py               # Seed centralisée (reproductibilité)
+│
+├── saves/                   # Génomes sauvegardés
+├── logs/                    # CSV de stats
+└── tests/
+    ├── test_network.py
+    └── test_evolution.py
