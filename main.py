@@ -1,17 +1,30 @@
 import pygame
 import config
-import core.creature as creature
+import random
+
+from core.creature import Creature
+from core.world import World
 
 
 def main():
 
     pygame.init()
-    
+
+    rng = random.Random(config.SEED)
+
     screen = pygame.display.set_mode((config.SCREEN_WIDTH, config.SCREEN_HEIGHT))
     pygame.display.set_caption("Evolution Simulator")
     clock = pygame.time.Clock()
 
-    creature_instance = creature.Creature(config.SCREEN_WIDTH / 2, config.SCREEN_HEIGHT / 2, 0.5, 2)
+    creature = Creature(config.SCREEN_WIDTH / 2, 
+                       config.SCREEN_HEIGHT / 2, 
+                       config.CREATURE_ANGLE, 
+                       config.CREATURE_SPEED, 
+                       config.INITIAL_ENERGY,
+                       config.ENERGY_COST_PER_TICK)
+
+    world = World(rng)
+    world.creatures.append(creature)
 
     running = True
     while running:
@@ -21,9 +34,15 @@ def main():
 
         screen.fill(config.BACKGROUND_COLOR)
 
-        creature_instance.update()
-        pygame.draw.circle(screen, config.CREATURE_COLOR, (int(creature_instance.x), int(creature_instance.y)), config.CREATURE_RADIUS)
+        world.update()
+        for food in world.foods:
+            pygame.draw.circle(screen, config.FOOD_COLOR, (int(food.x), int(food.y)), config.FOOD_RADIUS)
 
+        for c in world.creatures:
+            color = config.CREATURE_COLOR if c.alive else config.DEAD_COLOR
+            pygame.draw.circle(screen, color, (int(c.x), int(c.y)), config.CREATURE_RADIUS)
+
+        print (f"Creature Energy: {creature.energy:.2f}, Food Eaten: {creature.food_eaten}, Alive: {creature.alive}")
         pygame.display.flip()
         clock.tick(config.FPS)
 
