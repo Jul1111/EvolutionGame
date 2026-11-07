@@ -78,4 +78,5 @@ HUD_VALUE_COLOR = (235, 240, 240)
 
 # Configuration for food respawn
 FOOD_RESPAWN_DELAY = 60     # Ticks before an eaten food is available again (starting value, to tune)
-FOOD_FIXED_POSITIONS = False # True: food comes back at the same place; False: at a new random place
+FOOD_FIXED_POSITIONS = True  # True: food comes back at the same place; False: at a new random place
+FOOD_MAX_EATS = 3           # Times a source can be eaten before it moves elsewhere (starting value, to tune)

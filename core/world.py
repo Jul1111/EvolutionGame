@@ -51,11 +51,14 @@ class World:
 
             if best is not None:
                 best.eat_food(food.energy)
-                # The food comes back after a delay, at the same place or at a new random one
+                # The food comes back after a delay. A source that has been eaten FOOD_MAX_EATS
+                # times is exhausted: it comes back at a new random place instead
                 food.cooldown = config.FOOD_RESPAWN_DELAY
-                if not config.FOOD_FIXED_POSITIONS:
+                food.eats += 1
+                if not config.FOOD_FIXED_POSITIONS or food.eats >= config.FOOD_MAX_EATS:
                     food.x = self.rng.uniform(0, self.width)
                     food.y = self.rng.uniform(0, self.height)
+                    food.eats = 0
 
         self.tick += 1
 
@@ -78,12 +81,15 @@ class World:
         best_distance2 = config.VISION_RANGE ** 2
         best_dx = None
         best_dy = None
+        creature.food_nearby = False  # Any food in range, even one that is not available yet (metric only)
         for food in self.foods:
-            if food.cooldown > 0:
-                continue  # Not available yet: the creature cannot see it
             dx = torus_delta(creature.x, food.x, self.width)
             dy = torus_delta(creature.y, food.y, self.height)
             distance2 = dx * dx + dy * dy
+            if distance2 <= config.VISION_RANGE ** 2:
+                creature.food_nearby = True
+            if food.cooldown > 0:
+                continue  # Not available yet: the network cannot see it
             if distance2 <= best_distance2:
                 best_distance2 = distance2
                 best_dx = dx

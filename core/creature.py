@@ -15,6 +15,7 @@ class Creature:
         self.food_eaten = 0 
         self.age = 0
         # Exploration metrics: what the creature does when it sees no food
+        self.food_nearby = True  # Set by World.sense each tick
         self.blind_ticks = 0
         self.blind_speed_sum = 0.0
         self.blind_turn_sum = 0.0
@@ -34,8 +35,8 @@ class Creature:
         self.angle = normalize_angle(self.angle + turn * config.CREATURE_MAX_TURN)
         self.speed = (speed_command + 1.0) / 2.0 * config.CREATURE_MAX_SPEED
 
-        # inputs[0] is the normalised distance to food: 1.0 means nothing in sight (see World.sense)
-        if inputs[0] >= 1.0:
+        # Blind = no food at all within range, available or not (waiting next to a source is not exploring)
+        if not self.food_nearby:
             self.blind_ticks += 1
             self.blind_speed_sum += self.speed
             self.blind_turn_sum += abs(turn)
