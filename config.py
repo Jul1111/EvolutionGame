@@ -63,3 +63,15 @@ SAVE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "saves")
 GENOMES_FILE = os.path.join(SAVE_DIR, "latest.npz")
 STATS_FILE = os.path.join(SAVE_DIR, "stats.csv")
 LOAD_ON_START = True        # Resume from saves/latest.npz if it exists
+
+# Configuration for rendering (organic style)
+BG_CENTER_COLOR = (30, 40, 46)       # Centre of the "petri dish" background
+BG_EDGE_COLOR = (9, 11, 15)          # Darker vignette on the edges
+ENERGY_LOW_COLOR = (222, 96, 78)     # Creature colour when energy is near 0
+ENERGY_MID_COLOR = (240, 196, 92)
+ENERGY_HIGH_COLOR = (120, 224, 176)  # Creature colour when energy is at ENERGY_INPUT_MAX
+DEBUG_VISION_COLOR = (70, 120, 130)
+DEBUG_LINK_COLOR = (150, 235, 200)
+HUD_PANEL_COLOR = (12, 16, 20, 190)
+HUD_LABEL_COLOR = (150, 165, 170)
+HUD_VALUE_COLOR = (235, 240, 240)

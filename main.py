@@ -5,7 +5,8 @@ import time
 
 from core.world import World
 from evolution.population import brains_from_genomes, select_parents
-from rendering.hud import create_font, draw_hud, format_time
+from rendering.hud import Hud, format_time
+from rendering.scene import Scene
 from utils.persistence import save_genomes, load_genomes
 from utils.logger import log_generation
 
@@ -20,8 +21,10 @@ def main():
     pygame.display.set_caption("Evolution Simulator")
     clock = pygame.time.Clock()
 
-    # Create a font for rendering text
-    font = create_font()
+    # Rendering: world scene (background, food, creatures) and HUD (panel, curves)
+    scene = Scene()
+    hud = Hud()
+    debug_mode = 0  # 0 = off, 1 = oldest living creature, 2 = all living creatures
 
     world = World(rng)
     loaded = load_genomes() if config.LOAD_ON_START else None
@@ -61,6 +64,10 @@ def main():
                     # Decrease simulation speed
                     if speed_index > 0:
                         speed_index -= 1
+                elif event.key == pygame.K_d:
+                    debug_mode = (debug_mode + 1) % 3
+                elif event.key == pygame.K_g:
+                    hud.show_chart = not hud.show_chart
 
         speed = config.SPEED_STEPS[speed_index]
         
@@ -70,8 +77,6 @@ def main():
             frames = 0
             window_start = time.perf_counter()
             last_speed = speed
-
-        screen.fill(config.BACKGROUND_COLOR)
 
         # Run several simulation ticks per frame, according to the chosen speed
         t0 = time.perf_counter()
@@ -91,6 +96,7 @@ def main():
                       f"vitesse moy parents {mean_speed:.2f}")
                 log_generation(generation, world.tick, alive_count, parents[0].age,
                                mean_food, max_food, mean_speed)
+                hud.reload_stats()
                 genomes = [p.brain.get_genome() for p in parents]
                 save_genomes(genomes, generation)
                 brains = brains_from_genomes(genomes, rng)
@@ -101,16 +107,9 @@ def main():
                 break
         t1 = time.perf_counter()
 
-        # Draw all food items and creatures on the screen
-        for food in world.foods:
-            pygame.draw.circle(screen, config.FOOD_COLOR, (int(food.x), int(food.y)), config.FOOD_RADIUS)
-
-        for c in world.creatures:
-            color = config.CREATURE_COLOR if c.alive else config.DEAD_COLOR
-            pygame.draw.circle(screen, color, (int(c.x), int(c.y)), config.CREATURE_RADIUS)
-
-        # Draw the heads-up display (HUD) with the current game statistics
-        draw_hud(screen, font, world, clock.get_fps(), speed)
+        # Draw the world, then the heads-up display (HUD)
+        scene.draw(screen, world, debug_mode)
+        hud.draw(screen, world, clock.get_fps(), speed, generation, debug_mode)
         t2 = time.perf_counter()
 
         pygame.display.flip()
