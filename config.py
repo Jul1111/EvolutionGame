@@ -27,3 +27,13 @@ ENERGY_COST_PER_TICK = 0.1
 
 # Configuration for population
 POPULATION_SIZE = 100
+
+# Configuration for evolution
+GEN_MAX_TICKS = 36000  # Safety cap: 10 simulated minutes (600 s x TICKS_PER_SECOND)
+PARENTS_COUNT = 20
+
+# Configuration for time display
+TICKS_PER_SECOND = 60
+
+# Configuration for simulation speed
+SPEED_STEPS = [1, 2, 5, 10, 20, 50, 100]

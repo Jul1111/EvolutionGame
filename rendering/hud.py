@@ -1,10 +1,17 @@
 import pygame
+import config
 
 def create_font():
     """Create a font object for rendering text."""
     return pygame.font.SysFont("arial", 18)
 
-def draw_hud(screen, font, world, fps):
+def format_time(ticks):
+    """Convert a number of ticks to a mm:ss string (simulated time)."""
+    seconds = ticks / config.TICKS_PER_SECOND
+    minutes, seconds = divmod(int(seconds), 60)
+    return f"{minutes:02d}:{seconds:02d}"
+
+def draw_hud(screen, font, world, fps, speed):
     """Draw the heads-up display (HUD) on the screen."""
     creatures = world.creatures
 
@@ -14,9 +21,12 @@ def draw_hud(screen, font, world, fps):
 
     lines = [
         f"Vivantes: {alive_count}/{len(creatures)}",
-        f"Meilleur âge: {best_age}",
+        f"Meilleur âge: {format_time(best_age)}",
         f"Sans nourriture: {zero_food}",
-        f"FPS: {fps:.0f}"
+        f"Vitesse: x{speed}",
+        f"FPS: {fps:.0f}",
+        f"Temps: {format_time(world.tick)} / {format_time(config.GEN_MAX_TICKS)}",
+        f"Statut : {'Terminé' if world.is_over() else 'En cours'}"
     ]
 
     for i, line in enumerate(lines):
