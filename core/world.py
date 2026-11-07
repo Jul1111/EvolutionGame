@@ -40,8 +40,8 @@ class World:
             best_distance2 = (config.CREATURE_RADIUS + config.FOOD_RADIUS) ** 2
             
             for creature in self.creatures:
-                if not creature.alive:
-                    continue
+                if not creature.alive or creature.energy + food.energy > config.ENERGY_MAX:
+                    continue  # Dead, or the meal would not fit: leaves the food to the others
                 dx = torus_delta(creature.x, food.x, self.width)
                 dy = torus_delta(creature.y, food.y, self.height)
                 distance2 = dx * dx + dy * dy
@@ -76,7 +76,7 @@ class World:
             self.add_creature(brain)
 
     def sense(self, creature):
-        """Retourne les entrées du réseau : [distance, angle relatif, énergie], toutes normalisées."""
+        """Retourne les entrées du réseau : [distance, angle relatif, énergie, vitesse, peut manger], normalisées."""
         # Find the closest food within the vision range
         best_distance2 = config.VISION_RANGE ** 2
         best_dx = None
@@ -96,14 +96,17 @@ class World:
                 best_dy = dy
 
         energy = max(0.0, min(creature.energy / config.ENERGY_INPUT_MAX, 1.0))
+        speed = creature.speed / config.CREATURE_MAX_SPEED
+        # 1.0 if a meal would fit (same rule as the food phase), else 0.0
+        can_eat = 1.0 if creature.energy + config.FOOD_ENERGY <= config.ENERGY_MAX else 0.0
 
         # Nothing in sight: maximum distance, straight ahead
         if best_dx is None:
-            return [1.0, 0.0, energy]
+            return [1.0, 0.0, energy, speed, can_eat]
 
         distance = math.sqrt(best_distance2) / config.VISION_RANGE
         angle = normalize_angle(math.atan2(best_dy, best_dx) - creature.angle) / math.pi
-        return [distance, angle, energy]
+        return [distance, angle, energy, speed, can_eat]
 
     def is_over(self):
         alive = sum(1 for c in self.creatures if c.alive)

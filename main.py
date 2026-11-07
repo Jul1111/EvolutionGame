@@ -11,7 +11,7 @@ from rendering.scene import Scene, pick_creature
 from rendering.display import Display
 from rendering.layout import compute_layout
 from utils.persistence import save_genomes, load_genomes
-from utils.logger import log_generation
+from utils.logger import log_generation, archive_stats
 
 
 def main():
@@ -46,6 +46,7 @@ def main():
         generation = saved_generation + 1
         print(f"Reprise depuis la sauvegarde : génération {generation}")
     else:
+        archive_stats()
         world.add_population(config.POPULATION_SIZE)
         generation = 1
 
@@ -135,6 +136,7 @@ def main():
                 alive_count = sum(1 for c in world.creatures if c.alive)
                 max_food = max(c.food_eaten for c in parents)
                 mean_speed = sum(c.speed for c in parents) / len(parents)
+                mean_energy = sum(c.energy for c in parents) / len(parents)
                 # Exploration metrics, computed on the parents
                 blind_ticks = sum(c.blind_ticks for c in parents)
                 total_age = sum(c.age for c in parents)
@@ -147,13 +149,15 @@ def main():
                       f"meilleur âge {format_time(parents[0].age)} | "
                       f"nourriture parents moy {mean_food:.1f} max {max_food} | "
                       f"vitesse moy parents {mean_speed:.2f} | "
-                      f"mangé total {total_food} | aveugles {blind_frac:.0%}")
+                      f"mangé total {total_food} | aveugles {blind_frac:.0%} | "
+                      f"énergie moy parents {mean_energy:.0f}")
                 log_generation({
                     "generation": generation, "ticks": world.tick, "alive": alive_count,
                     "best_age": parents[0].age, "mean_food": mean_food, "max_food": max_food,
                     "mean_speed": mean_speed, "food_count": config.FOOD_COUNT,
                     "total_food": total_food, "blind_frac": blind_frac,
                     "blind_speed": blind_speed, "blind_turn": blind_turn,
+                    "mean_energy": mean_energy,
                 })
                 hud.reload_stats()
                 genomes = [p.brain.get_genome() for p in parents]

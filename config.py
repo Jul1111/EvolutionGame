@@ -24,6 +24,7 @@ FOOD_COLOR = (90, 200, 110)
 # Configuration for energy
 FOOD_ENERGY = 30.0
 INITIAL_ENERGY = 100.0
+ENERGY_MAX = 200.0          # Satiety: a creature only eats if the whole meal fits (energy + food <= max). Starting value, to tune
 
 # Configuration for population
 POPULATION_SIZE = 100
@@ -40,7 +41,7 @@ SPEED_STEPS = [1, 2, 5, 10, 20, 50, 100]
 
 # Configuration for senses
 VISION_RANGE = 200          # Maximum distance at which a creature sees food
-ENERGY_INPUT_MAX = 200.0    # Energy at which the network input saturates at 1.0
+ENERGY_INPUT_MAX = ENERGY_MAX  # Energy at which the network input saturates at 1.0 (= satiety, so the input covers the full range)
 
 # Configuration for variable speed
 CREATURE_MAX_SPEED = 4.0
@@ -49,11 +50,18 @@ ENERGY_MOVE_COST = 0.03     # Extra energy lost per tick, per unit of speed
                             # (at speed 2: 0.04 + 0.03 x 2 = 0.10)
 
 # Configuration for the neural network
-NN_INPUTS = 3               # distance, relative angle, energy
+NN_INPUTS = 5               # distance, relative angle, energy, current speed, can eat
 NN_HIDDEN = 6
 NN_OUTPUTS = 2              # turn, speed
+# Labels shown in the interface, in the SAME ORDER as the vectors built by World.sense (inputs) and Creature.update (outputs)
+INPUT_LABELS = ["Distance", "Angle", "Énergie", "Vitesse", "Peut manger"]
+OUTPUT_LABELS = ["Virage", "Vit. cible"]
+assert len(INPUT_LABELS) == NN_INPUTS, "INPUT_LABELS needs exactly one label per network input (NN_INPUTS)"
+assert len(OUTPUT_LABELS) == NN_OUTPUTS, "OUTPUT_LABELS needs exactly one label per network output (NN_OUTPUTS)"
 NN_INIT_STD = 0.5           # Std of the initial random weights
-CREATURE_MAX_TURN = 0.15    # Max rotation per tick (radians) when the turn output is +/-1
+CREATURE_MAX_TURN = 0.25    # Max rotation per tick (radians) at rest, when the turn output is +/-1 (starting value, to tune)
+TURN_SPEED_PENALTY = 0.5    # The faster the creature, the wider its turns: max turn x (1 - penalty x speed / max speed). Starting value, to tune
+CREATURE_ACCELERATION = 0.25  # Max change of speed per tick, accelerating or braking (starting value, to tune)
 
 # Configuration for mutation
 MUTATION_STD = 0.1          # Std of the gaussian noise added to each weight of a child

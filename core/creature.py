@@ -32,8 +32,14 @@ class Creature:
         turn = float(outputs[0])
         speed_command = float(outputs[1])
 
-        self.angle = normalize_angle(self.angle + turn * config.CREATURE_MAX_TURN)
-        self.speed = (speed_command + 1.0) / 2.0 * config.CREATURE_MAX_SPEED
+        # Inertia: the network asks for a target speed, the speed moves toward it with limited acceleration
+        target_speed = (speed_command + 1.0) / 2.0 * config.CREATURE_MAX_SPEED
+        change = max(-config.CREATURE_ACCELERATION, min(config.CREATURE_ACCELERATION, target_speed - self.speed))
+        self.speed += change
+
+        # The faster the creature goes, the less it can turn
+        max_turn = config.CREATURE_MAX_TURN * (1.0 - config.TURN_SPEED_PENALTY * self.speed / config.CREATURE_MAX_SPEED)
+        self.angle = normalize_angle(self.angle + turn * max_turn)
 
         # Blind = no food at all within range, available or not (waiting next to a source is not exploring)
         if not self.food_nearby:
@@ -57,6 +63,6 @@ class Creature:
     def eat_food(self,amount):
         if not self.alive:
             return
-        self.energy += amount
+        self.energy = min(self.energy + amount, config.ENERGY_MAX)  # The excess is lost
         self.food_eaten += 1
         

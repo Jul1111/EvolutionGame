@@ -13,7 +13,31 @@ BLUE = (110, 180, 235)
 
 # Natural heights of the panels at scale 1 (logical pixels). Real heights are these times the scale, stretched
 # vertically to use the room available in the side bar.
-H_GEN, H_CREATURE, H_NET, H_CHART = 176, 176, 118, 150
+# The network panel grows with the number of rows: header 26 + 15 per row + gap 4 + margin 7
+H_NET = 26 + 15 * (config.NN_INPUTS + config.NN_OUTPUTS) + 4 + 7
+H_GEN, H_CREATURE, H_CHART = 176, 176, 150
+
+
+# How each network input is displayed, by label: value → (text, signed bar?).
+# A label that is not listed here is shown as a plain number with a plain bar.
+INPUT_FORMAT = {
+    "Distance": lambda v: ("rien en vue" if v >= 1.0 else f"{v:.2f}", False),
+    "Angle": lambda v: (f"{v:+.2f}", True),
+    "Peut manger": lambda v: ("oui" if v >= 0.5 else "non", False),
+}
+
+
+def network_rows(inputs, outputs):
+    """Rows of the network panel: (label, text, value, signed bar?, colour). Driven by config.INPUT_LABELS and OUTPUT_LABELS."""
+    rows = []
+    for label, value in zip(config.INPUT_LABELS, inputs):
+        value = float(value)
+        text, signed = INPUT_FORMAT.get(label, lambda v: (f"{v:.2f}", False))(value)
+        rows.append((label, text, value, signed, MINT))
+    for label, value in zip(config.OUTPUT_LABELS, outputs):
+        value = float(value)
+        rows.append((label, f"{value:+.2f}", value, True, AMBER))
+    return rows
 MAX_PANEL_W = 560    # Logical width cap, for very wide windows
 
 
@@ -315,20 +339,14 @@ class Hud:
         inputs = world.sense(selected)
         selected.food_nearby = flag
         outputs = selected.brain.forward(inputs)
-        dist, angle, energy = inputs
 
         x0 = c.x(96)
         bw = W - x0 - c.x(70)
         bar_h = max(3, c.x(5))
-        rows = [
-            ("Distance", "rien en vue" if dist >= 1.0 and angle == 0.0 else f"{dist:.2f}", dist, False, MINT),
-            ("Angle", f"{angle:+.2f}", angle, True, MINT),
-            ("Énergie", f"{energy:.2f}", energy, False, MINT),
-            ("Virage", f"{float(outputs[0]):+.2f}", float(outputs[0]), True, AMBER),
-            ("Vitesse", f"{float(outputs[1]):+.2f}", float(outputs[1]), True, AMBER),
-        ]
+        rows = network_rows(inputs, outputs)
+        n_in = len(config.INPUT_LABELS)
         for i, (label, txt, value, signed, color) in enumerate(rows):
-            y = c.y(28 + i * 17 + (4 if i >= 3 else 0))
+            y = c.y(26 + i * 15 + (4 if i >= n_in else 0))
             _text(p, f["small"], label, pad, y, LABEL)
             by = y + (f["small"].get_height() - bar_h) // 2
             if signed:
@@ -336,7 +354,7 @@ class Hud:
             else:
                 _bar(p, x0, by, bw, bar_h, value, color)
             _text(p, f["small"], txt, W - pad, y, VALUE, right=True)
-        ly = c.y(28 + 3 * 17) + c.x(1)
+        ly = c.y(26 + n_in * 15) + c.x(1)
         pygame.draw.line(p, (255, 255, 255, 30), (pad, ly), (W - pad, ly))
         return p
 

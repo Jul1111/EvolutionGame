@@ -1,8 +1,10 @@
 import os
+import time
 
 import numpy as np
 
 import config
+from brain.network import NeuralNetwork
 
 
 def save_genomes(genomes, generation):
@@ -20,4 +22,14 @@ def load_genomes():
     if not os.path.exists(config.GENOMES_FILE):
         return None
     data = np.load(config.GENOMES_FILE)
-    return data["genomes"], int(data["generation"])
+    genomes, generation = data["genomes"], int(data["generation"])
+    expected = NeuralNetwork(config.NN_INPUTS, config.NN_HIDDEN, config.NN_OUTPUTS).n_weights()
+    if genomes.shape[1] != expected:
+        # The network changed since the save: set it aside instead of crashing or overwriting it
+        stamp = time.strftime("%Y%m%d_%H%M%S")
+        moved = config.GENOMES_FILE.replace(".npz", f"_incompatible_{stamp}.npz")
+        data.close()
+        os.replace(config.GENOMES_FILE, moved)
+        print(f"Sauvegarde incompatible ({genomes.shape[1]} poids au lieu de {expected}) : mise de côté, départ de zéro")
+        return None
+    return genomes, generation
