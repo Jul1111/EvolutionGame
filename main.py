@@ -78,7 +78,7 @@ def main():
         log_generation({
             "generation": generation, "ticks": world.tick, "alive": alive_count,
             "best_age": parents[0].age, "mean_food": mean_food, "max_food": max_food,
-            "mean_speed": mean_speed, "food_count": config.FOOD_COUNT,
+            "mean_speed": mean_speed, "food_count": len(world.foods),
             "total_food": total_food, "blind_frac": blind_frac,
             "blind_speed": blind_speed, "blind_turn": blind_turn,
             "mean_energy": mean_energy,
@@ -86,6 +86,7 @@ def main():
         hud.reload_stats()
         genomes = [p.brain.get_genome() for p in parents]
         save_genomes(genomes, generation)
+        apply_pending()
         brains = brains_from_genomes(genomes, rng)
         world = World(rng)
         for brain in brains:
@@ -99,6 +100,7 @@ def main():
         nonlocal world, generation, selected
         archive_stats()
         archive_genomes()
+        apply_pending()
         world = World(rng)
         world.add_population(config.POPULATION_SIZE)
         generation = 1
@@ -106,6 +108,30 @@ def main():
         trail.clear()
         hud.reload_stats()
         print("Départ de zéro : sauvegarde et CSV mis de côté")
+
+    # Settings editable from the menu: action → (config name, values it cycles through, text shown).
+    # All of them are applied at the start of the next generation, so one generation never mixes two settings.
+    PARAMS = {
+        "mutation": ("MUTATION_STD", [0.02, 0.05, 0.1, 0.2, 0.3], lambda v: f"{v:g}"),
+        "parents": ("PARENTS_COUNT", [10, 20, 30, 50], str),
+        "food": ("FOOD_COUNT", [5, 10, 15, 20, 30], str),
+        "food_energy": ("FOOD_ENERGY", [15.0, 30.0, 45.0, 60.0], lambda v: f"{v:g}"),
+        "respawn": ("FOOD_RESPAWN_DELAY", [0, 30, 60, 120, 300], lambda v: f"{v} ticks"),
+        "max_eats": ("FOOD_MAX_EATS", [1, 2, 3, 5, 10], str),
+        "fixed": ("FOOD_FIXED_POSITIONS", [False, True], lambda v: "fixes" if v else "aléatoires"),
+    }
+    pending = {}   # action → value waiting for the next generation
+
+    def apply_pending():
+        for action, value in pending.items():
+            setattr(config, PARAMS[action][0], value)
+        pending.clear()
+
+    def next_step(steps, current):
+        """Next value of the list after `current` (the first greater one if it is not in the list), wrapping around."""
+        if isinstance(current, bool):
+            return not current
+        return next((v for v in steps if v > current + 1e-9), steps[0])
 
     # Every command, from the keyboard or from the menu, goes through do(). Returns True to keep the menu open.
     def do(action):
@@ -130,6 +156,12 @@ def main():
             display.toggle_fullscreen()
         elif action == "end_gen":
             end_generation()
+        elif action in PARAMS:
+            # The value is only noted here (pending) and written to config when the next generation is built.
+            # The menu stays open to click again.
+            name, steps, _ = PARAMS[action]
+            pending[action] = next_step(steps, pending.get(action, getattr(config, name)))
+            return True
         elif action == "reset":
             if not reset_pending:
                 reset_pending = True   # First click asks for confirmation, the menu stays open
@@ -227,6 +259,8 @@ def main():
             "speed": speed, "paused": paused, "debug": ("off", "sélection", "toutes")[debug_mode],
             "color": scene.color_label(), "chart": hud.show_chart, "graph": hud.show_graph,
             "fullscreen": display.fullscreen,
+            **{a: fmt(pending.get(a, getattr(config, name))) + ("  *" if a in pending else "")
+               for a, (name, _, fmt) in PARAMS.items()},
             "reset": "Confirmer : tout effacer ?" if reset_pending else "Repartir de zéro",
         })
         t2 = time.perf_counter()

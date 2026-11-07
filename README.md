@@ -40,6 +40,7 @@ La simulation reprend automatiquement la dernière sauvegarde si elle existe (vo
 |---|---|
 | Simulation | Pause, avancer d'un tick, accélérer, ralentir |
 | Affichage | Debug, couleur, courbes, graphe du réseau, plein écran |
+| Paramètres | Mutation, parents conservés, nombre de nourritures, énergie d'une nourriture, délai de réapparition, repas avant épuisement, positions de la nourriture (fixes ou aléatoires). Un clic passe à la valeur suivante parmi des valeurs prédéfinies. La valeur est appliquée au début de la génération suivante (marquée d'un `*` en attendant), et n'est pas conservée au redémarrage : `config.py` reste la référence |
 | Sauvegarde | Terminer la génération maintenant, repartir de zéro (confirmation demandée) |
 
 La sauvegarde des génomes et le CSV s'écrivent automatiquement à chaque fin de génération. «Terminer la génération maintenant» force cette fin (sélection, CSV, sauvegarde) : le classement se fait alors sur une génération inachevée. «Repartir de zéro» met de côté `latest.npz` et `stats.csv` (renommés avec la date), rien n'est supprimé.

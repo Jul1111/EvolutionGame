@@ -28,6 +28,17 @@ MENUS = [
         ("graph", "Graphe du réseau", "toggle", "graph", "N"),
         ("fullscreen", "Plein écran", "toggle", "fullscreen", "F"),
     ]),
+    # Settings cycle through preset values at each click. A "*" marks a value waiting for the next generation.
+    ("Paramètres", [
+        ("mutation", "Mutation : {mutation}", "action", None, ""),
+        ("parents", "Parents conservés : {parents}", "action", None, ""),
+        None,
+        ("food", "Nombre de nourritures : {food}", "action", None, ""),
+        ("food_energy", "Énergie d'une nourriture : {food_energy}", "action", None, ""),
+        ("respawn", "Délai de réapparition : {respawn}", "action", None, ""),
+        ("max_eats", "Repas avant épuisement : {max_eats}", "action", None, ""),
+        ("fixed", "Positions de la nourriture : {fixed}", "action", None, ""),
+    ]),
     ("Sauvegarde", [
         ("end_gen", "Terminer la génération maintenant", "action", None, ""),
         None,
