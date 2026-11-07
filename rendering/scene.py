@@ -281,38 +281,26 @@ class Scene:
             targets = [selected]
         else:
             targets = [max(alive, key=lambda c: (c.age, c.energy))]
-        vision2 = config.VISION_RANGE ** 2
         vision_color = config.DEBUG_VISION_COLOR if mode == 1 else _lerp(config.DEBUG_VISION_COLOR, (0, 0, 0), 0.6)
+        radius = round(config.VISION_RANGE * k)
+        half_fov = math.radians(config.VISION_FOV_DEGREES) / 2.0
         for c in targets:
             center = (round(c.x * k), round(c.y * k))
-            pygame.draw.circle(screen, vision_color, center, round(config.VISION_RANGE * k), 1)
-            # Same rule as World.sense: nearest food within the vision range, if it is available
-            best = None
-            best_d2 = vision2
-            for food in world.foods:
-                if food.cooldown > 0:
-                    continue
-                dx = torus_delta(c.x, food.x, world.width)
-                dy = torus_delta(c.y, food.y, world.height)
-                d2 = dx * dx + dy * dy
-                if d2 <= best_d2:
-                    best_d2 = d2
-                    best = (dx, dy)
-            if best is not None:
-                pygame.draw.aaline(screen, config.DEBUG_LINK_COLOR, (c.x * k, c.y * k),
-                                   ((c.x + best[0]) * k, (c.y + best[1]) * k))
-            # Same for the nearest poison, in the poison colour
-            best, best_d2 = None, vision2
-            for poison in world.poisons:
-                if poison.cooldown > 0:
-                    continue
-                dx = torus_delta(c.x, poison.x, world.width)
-                dy = torus_delta(c.y, poison.y, world.height)
-                d2 = dx * dx + dy * dy
-                if d2 <= best_d2:
-                    best_d2, best = d2, (dx, dy)
-            if best is not None:
-                pygame.draw.aaline(screen, config.POISON_COLOR, (c.x * k, c.y * k),
-                                   ((c.x + best[0]) * k, (c.y + best[1]) * k))
+            if config.VISION_FOV_DEGREES >= 360:
+                pygame.draw.circle(screen, vision_color, center, radius, 1)
+            else:
+                # Field of view: the two edges and the arc between them, centred on the heading
+                n = max(8, round(config.VISION_FOV_DEGREES / 5))
+                arc = [(center[0] + math.cos(c.angle - half_fov + 2 * half_fov * i / n) * radius,
+                        center[1] + math.sin(c.angle - half_fov + 2 * half_fov * i / n) * radius)
+                       for i in range(n + 1)]
+                pygame.draw.lines(screen, vision_color, False, [arc[0], center, arc[-1]], 1)
+                pygame.draw.lines(screen, vision_color, False, arc, 1)
+            # Same rule as World.sense (the world's own method): nearest available item in view
+            for items, color in ((world.foods, config.DEBUG_LINK_COLOR), (world.poisons, config.POISON_COLOR)):
+                best, _ = world.nearest(c, items)
+                if best is not None:
+                    _, dx, dy = best
+                    pygame.draw.aaline(screen, color, (c.x * k, c.y * k), ((c.x + dx) * k, (c.y + dy) * k))
             if mode == 1:
                 pygame.draw.circle(screen, (255, 255, 255), center, round((config.CREATURE_RADIUS + 5) * k), 1)

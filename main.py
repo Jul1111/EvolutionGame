@@ -1,7 +1,6 @@
 import pygame
 import config
 import random
-import time
 from collections import deque
 
 from core.world import World
@@ -46,7 +45,6 @@ def main():
         for brain in brains_from_genomes(genomes, rng):
             world.add_creature(brain)
         generation = saved_generation + 1
-        print(f"Reprise depuis la sauvegarde : génération {generation}")
     else:
         archive_stats()
         world.add_population(config.POPULATION_SIZE)
@@ -111,13 +109,13 @@ def main():
         selected = None
         trail.clear()
         hud.reload_stats()
-        print("Départ de zéro : sauvegarde et CSV mis de côté")
 
     # Settings editable from the menu: action → (config name, values it cycles through, text shown).
     # All of them are applied at the start of the next generation, so one generation never mixes two settings.
     PARAMS = {
         "mutation": ("MUTATION_STD", [0.02, 0.05, 0.1, 0.2, 0.3], lambda v: f"{v:g}"),
         "parents": ("PARENTS_COUNT", [10, 20, 30, 50], str),
+        "fov": ("VISION_FOV_DEGREES", [60, 90, 120, 180, 270, 360], lambda v: "tout autour" if v >= 360 else f"{v}°"),
         "food": ("FOOD_COUNT", [5, 10, 15, 20, 30], str),
         "food_energy": ("FOOD_ENERGY", [15.0, 30.0, 45.0, 60.0], lambda v: f"{v:g}"),
         "respawn": ("FOOD_RESPAWN_DELAY", [0, 30, 60, 120, 300], lambda v: f"{v} ticks"),
@@ -188,14 +186,6 @@ def main():
     reset_pending = False
 
     speed_index = 0
-    last_speed = config.SPEED_STEPS[speed_index]
-
-    # Performance measurement, averaged over one second of real time
-    update_time = 0.0
-    draw_time = 0.0
-    flip_time = 0.0
-    frames = 0
-    window_start = time.perf_counter()
 
     running = True
     while running:
@@ -241,16 +231,8 @@ def main():
             continue  # The window changed during the events (fullscreen): relayout before drawing
 
         speed = config.SPEED_STEPS[speed_index]
-        
-        if speed != last_speed:
-            # An average over two different speeds would be meaningless
-            update_time = draw_time = flip_time = 0.0
-            frames = 0
-            window_start = time.perf_counter()
-            last_speed = speed
 
         # Run several simulation ticks per frame, according to the chosen speed
-        t0 = time.perf_counter()
         ticks_to_run = 1 if step_request else (0 if paused else speed)
         for _ in range(ticks_to_run):
             world.update()
@@ -259,7 +241,6 @@ def main():
             if world.is_over():
                 end_generation()
                 break
-        t1 = time.perf_counter()
 
         # Draw the world, then the heads-up display (HUD)
         scene.draw(world_view, world, debug_mode, selected, trail)
@@ -276,24 +257,8 @@ def main():
                for a, (name, _, fmt) in PARAMS.items()},
             "reset": "Confirmer : tout effacer ?" if reset_pending else "Repartir de zéro",
         })
-        t2 = time.perf_counter()
 
         display.flip()
-        t3 = time.perf_counter()
-
-        update_time += t1 - t0
-        draw_time += t2 - t1
-        flip_time += t3 - t2
-        frames += 1
-        if t3 - window_start >= 1.0:
-            ms = 1000.0 / frames
-            #print(f"x{speed} | update {update_time * ms:.2f} ms/image "
-                  #f"({update_time * ms / speed:.3f} ms/tick) | "
-                  #f"dessin {draw_time * ms:.2f} ms | flip {flip_time * ms:.2f} ms | "
-                  #f"{frames} images")
-            update_time = draw_time = flip_time = 0.0
-            frames = 0
-            window_start = t3
         clock.tick(config.FPS)
 
     pygame.quit()

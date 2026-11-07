@@ -39,7 +39,7 @@ La simulation reprend automatiquement la dernière sauvegarde si elle existe (vo
 | Menu | Contenu |
 |---|---|
 | Simulation | Pause, avancer d'un tick, accélérer, ralentir |
-| Affichage | Debug (cercle de vision, trait vers la nourriture la plus proche et, en violet, vers le poison le plus proche), couleur, courbes, graphe du réseau, plein écran |
+| Affichage | Debug (cône de vision, trait vers la nourriture la plus proche et, en violet, vers le poison le plus proche), couleur, courbes, graphe du réseau, plein écran |
 | Courbes | Une case par courbe à afficher, dans la couleur de la courbe : meilleur âge, nourriture (moyenne, max, totale, par minute), vitesse (moyenne, sans nourriture en vue, rapport des deux), part aveugle, virage aveugle, énergie, vivantes, poison (parents, total, rapport poison / nourriture). Défaut : meilleur âge, nourriture moy., vitesse moy., poison touché (parents). Chaque courbe a sa propre échelle. La sélection n'est pas conservée au redémarrage |
 | Paramètres | Mutation, parents conservés, nombre de nourritures, énergie d'une nourriture, délai de réapparition, repas avant épuisement, positions de la nourriture (fixes ou aléatoires), nombre de poisons, dégâts d'un poison. Un clic passe à la valeur suivante parmi des valeurs prédéfinies. La valeur est appliquée au début de la génération suivante (marquée d'un `*` en attendant), et n'est pas conservée au redémarrage : `config.py` reste la référence |
 | Sauvegarde | Terminer la génération maintenant, repartir de zéro (confirmation demandée) |
@@ -64,7 +64,7 @@ La sauvegarde des génomes et le CSV s'écrivent automatiquement à chaque fin d
 **Le poison.**
 - Losange violet dans le monde. La créature la plus proche qui le touche perd 40 d'énergie (elle meurt si elle tombe à 0), puis le poison disparaît 60 ticks et revient à un endroit au hasard.
 - Il n'est pas limité par la satiété : une créature rassasiée est aussi touchée.
-- Le réseau voit le poison le plus proche dans la portée de vision, par deux entrées dédiées. Un poison en attente de retour est invisible.
+- Le réseau voit le poison le plus proche dans son champ de vision, par deux entrées dédiées. Un poison en attente de retour est invisible.
 - Réglable depuis le menu Paramètres (nombre, dégâts). 0 poison = monde d'avant, avec deux entrées constantes.
 
 **L'énergie.**
@@ -88,7 +88,7 @@ La sauvegarde des génomes et le CSV s'écrivent automatiquement à chaque fin d
 | Distance au poison le plus proche (1 = rien en vue) | |
 | Angle relatif à ce poison | |
 
-La portée de vision est de 200. Le réseau n'a pas de mémoire.
+La vision est un cône : portée de 200 (`VISION_RANGE`), ouverture de 120° centrée sur le cap (`VISION_FOV_DEGREES`, réglable dans Paramètres, 360 = tout autour). Ce qui est hors du cône est invisible, nourriture comme poison. Une créature ne voit donc pas ce qui est derrière elle : la part de créatures « aveugles » monte (environ 63 % à 10 nourritures contre 24 % en vision circulaire), pense à ajuster `FOOD_COUNT`. Le réseau n'a pas de mémoire.
 
 **L'évolution.**
 1. Une génération compte 100 créatures.

@@ -41,6 +41,7 @@ SPEED_STEPS = [1, 2, 5, 10, 20, 50, 100]
 
 # Configuration for senses
 VISION_RANGE = 200          # Maximum distance at which a creature sees food
+VISION_FOV_DEGREES = 120    # Field of view, centred on the heading. 360 = sees all around (the former behaviour). Starting value, to tune
 ENERGY_INPUT_MAX = ENERGY_MAX  # Energy at which the network input saturates at 1.0 (= satiety, so the input covers the full range)
 
 # Configuration for variable speed

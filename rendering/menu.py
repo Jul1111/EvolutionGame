@@ -36,6 +36,8 @@ MENUS = [
         ("mutation", "Mutation : {mutation}", "action", None, ""),
         ("parents", "Parents conservés : {parents}", "action", None, ""),
         None,
+        ("fov", "Champ de vision : {fov}", "action", None, ""),
+        None,
         ("food", "Nombre de nourritures : {food}", "action", None, ""),
         ("food_energy", "Énergie d'une nourriture : {food_energy}", "action", None, ""),
         ("respawn", "Délai de réapparition : {respawn}", "action", None, ""),

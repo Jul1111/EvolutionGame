@@ -102,27 +102,35 @@ class World:
             brain.randomize(self.rng, config.NN_INIT_STD)
             self.add_creature(brain)
 
-    def _nearest(self, creature, items):
-        """Nearest available item within the vision range: (distance², dx, dy), or None.
-        Also returns whether any item is in range, available or not."""
+    def nearest(self, creature, items):
+        """Nearest available item in the creature's field of view: ((distance², dx, dy) or None, in_view).
+        In view = within the vision range AND within VISION_FOV_DEGREES centred on the heading.
+        in_view says whether any item is in view, available or not. Also used by the debug overlay."""
         best = None
-        best_distance2 = config.VISION_RANGE ** 2
-        in_range = False
+        range2 = config.VISION_RANGE ** 2
+        best_distance2 = range2
+        in_view = False
+        all_around = config.VISION_FOV_DEGREES >= 360
+        half_fov = math.radians(config.VISION_FOV_DEGREES) / 2.0
         for item in items:
             dx = torus_delta(creature.x, item.x, self.width)
             dy = torus_delta(creature.y, item.y, self.height)
             distance2 = dx * dx + dy * dy
-            if distance2 <= config.VISION_RANGE ** 2:
-                in_range = True
+            if distance2 > range2:
+                continue
+            # Range is tested first: the angle (atan2) is only computed for the few items that are close enough
+            if not all_around and abs(normalize_angle(math.atan2(dy, dx) - creature.angle)) > half_fov:
+                continue  # Outside the field of view
+            in_view = True
             if item.cooldown > 0:
                 continue  # Not available yet: the network cannot see it
             if distance2 <= best_distance2:
                 best_distance2 = distance2
                 best = (distance2, dx, dy)
-        return best, in_range
+        return best, in_view
 
     def _direction(self, creature, found):
-        """Network inputs for one kind of target: [distance, relative angle]. Nothing in sight: maximum distance, ahead."""
+        """Network inputs for one kind of target: [distance, relative angle]. Nothing in view: maximum distance, ahead."""
         if found is None:
             return [1.0, 0.0]
         distance2, dx, dy = found
@@ -133,9 +141,9 @@ class World:
     def sense(self, creature):
         """Retourne les entrées du réseau, normalisées :
         [distance, angle relatif, énergie, vitesse, peut manger, distance poison, angle poison]."""
-        food, in_range = self._nearest(creature, self.foods)
-        creature.food_nearby = in_range  # Any food in range, even one that is not available yet (metric only)
-        poison, _ = self._nearest(creature, self.poisons)
+        food, in_view = self.nearest(creature, self.foods)
+        creature.food_nearby = in_view  # Any food in view, even one that is not available yet (metric only)
+        poison, _ = self.nearest(creature, self.poisons)
 
         energy = max(0.0, min(creature.energy / config.ENERGY_INPUT_MAX, 1.0))
         speed = creature.speed / config.CREATURE_MAX_SPEED
