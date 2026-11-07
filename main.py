@@ -22,11 +22,10 @@ def main():
 
     # The window fits the desktop and can be resized or put in fullscreen (key F). The layout (world, side bar,
     # curves strip) is recomputed for the window size and drawn at its real resolution: no bars, no blur.
-    display = Display()
+    display = Display("Evolution Simulator")
     layout = None
-    last_window = None
+    last_generation = None
     last_size = None
-    pygame.display.set_caption("Evolution Simulator")
     clock = pygame.time.Clock()
 
     # Rendering: world scene (background, food, creatures) and HUD (panel, curves)
@@ -62,15 +61,15 @@ def main():
 
     running = True
     while running:
-        window = pygame.display.get_surface()
-        if window is not last_window or window.get_size() != last_size:
+        window = display.surface()
+        if display.generation != last_generation or window.get_size() != last_size:
             layout = compute_layout(*window.get_size())
             scene.resize(layout.scale, layout.world.size)
             hud.relayout(layout)
             world_view = window.subsurface(layout.world)
             sidebar = window.subsurface(layout.sidebar)
             strip_view = window.subsurface(layout.strip) if layout.strip is not None else None
-            last_window, last_size = window, window.get_size()
+            last_generation, last_size = display.generation, window.get_size()
         step_request = False
         for event in pygame.event.get():
             # Handle quitting the game
@@ -103,14 +102,14 @@ def main():
                 elif event.key == pygame.K_RIGHT and paused:
                     step_request = True
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                if layout.world.collidepoint(event.pos):  # Click in the world (not in the panels)
-                    wx = (event.pos[0] - layout.world.x) / layout.scale  # Pixels → world units
-                    wy = (event.pos[1] - layout.world.y) / layout.scale
+                mx, my = display.to_pixels(event.pos)  # Window points → surface pixels (2x on Retina)
+                if layout.world.collidepoint(mx, my):  # Click in the world (not in the panels)
+                    wx = (mx - layout.world.x) / layout.scale  # Pixels → world units
+                    wy = (my - layout.world.y) / layout.scale
                     selected = pick_creature(world, wx, wy)
                     trail.clear()
 
-        current = pygame.display.get_surface()
-        if current is not last_window or current.get_size() != last_size:
+        if display.generation != last_generation or display.surface().get_size() != last_size:
             continue  # The window changed during the events (fullscreen): relayout before drawing
 
         speed = config.SPEED_STEPS[speed_index]
@@ -175,7 +174,7 @@ def main():
                  scene.color_label())
         t2 = time.perf_counter()
 
-        pygame.display.flip()
+        display.flip()
         t3 = time.perf_counter()
 
         update_time += t1 - t0
