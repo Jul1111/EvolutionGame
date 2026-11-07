@@ -2,11 +2,14 @@ import pygame
 import config
 import random
 import time
+from collections import deque
 
 from core.world import World
 from evolution.population import brains_from_genomes, select_parents
 from rendering.hud import Hud, format_time
-from rendering.scene import Scene
+from rendering.scene import Scene, pick_creature
+from rendering.display import Display
+from rendering.layout import compute_layout
 from utils.persistence import save_genomes, load_genomes
 from utils.logger import log_generation
 
@@ -17,14 +20,22 @@ def main():
 
     rng = random.Random(config.SEED)
 
-    screen = pygame.display.set_mode((config.SCREEN_WIDTH, config.SCREEN_HEIGHT))
+    # The window fits the desktop and can be resized or put in fullscreen (key F). The layout (world, side bar,
+    # curves strip) is recomputed for the window size and drawn at its real resolution: no bars, no blur.
+    display = Display()
+    layout = None
+    last_window = None
+    last_size = None
     pygame.display.set_caption("Evolution Simulator")
     clock = pygame.time.Clock()
 
     # Rendering: world scene (background, food, creatures) and HUD (panel, curves)
     scene = Scene()
     hud = Hud()
-    debug_mode = 0  # 0 = off, 1 = oldest living creature, 2 = all living creatures
+    debug_mode = 0  # 0 = off, 1 = selected (else oldest living) creature, 2 = all living creatures
+    paused = False
+    selected = None                            # Creature picked with a click (cleared at each new generation)
+    trail = deque(maxlen=config.TRAIL_LENGTH)  # Recent positions of the selected creature, one per tick
 
     world = World(rng)
     loaded = load_genomes() if config.LOAD_ON_START else None
@@ -51,10 +62,25 @@ def main():
 
     running = True
     while running:
+        window = pygame.display.get_surface()
+        if window is not last_window or window.get_size() != last_size:
+            layout = compute_layout(*window.get_size())
+            scene.resize(layout.scale, layout.world.size)
+            hud.relayout(layout)
+            world_view = window.subsurface(layout.world)
+            sidebar = window.subsurface(layout.sidebar)
+            strip_view = window.subsurface(layout.strip) if layout.strip is not None else None
+            last_window, last_size = window, window.get_size()
+        step_request = False
         for event in pygame.event.get():
             # Handle quitting the game
-            if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
+            if event.type == pygame.QUIT:
                 running = False
+            elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                if display.fullscreen:
+                    display.toggle_fullscreen()  # First Escape leaves fullscreen
+                else:
+                    running = False
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_UP:
                     # Increase simulation speed
@@ -68,6 +94,24 @@ def main():
                     debug_mode = (debug_mode + 1) % 3
                 elif event.key == pygame.K_g:
                     hud.show_chart = not hud.show_chart
+                elif event.key in (pygame.K_f, pygame.K_F11):
+                    display.toggle_fullscreen()
+                elif event.key == pygame.K_c:
+                    scene.cycle_color_mode()
+                elif event.key == pygame.K_SPACE:
+                    paused = not paused
+                elif event.key == pygame.K_RIGHT and paused:
+                    step_request = True
+            elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                if layout.world.collidepoint(event.pos):  # Click in the world (not in the panels)
+                    wx = (event.pos[0] - layout.world.x) / layout.scale  # Pixels → world units
+                    wy = (event.pos[1] - layout.world.y) / layout.scale
+                    selected = pick_creature(world, wx, wy)
+                    trail.clear()
+
+        current = pygame.display.get_surface()
+        if current is not last_window or current.get_size() != last_size:
+            continue  # The window changed during the events (fullscreen): relayout before drawing
 
         speed = config.SPEED_STEPS[speed_index]
         
@@ -80,8 +124,11 @@ def main():
 
         # Run several simulation ticks per frame, according to the chosen speed
         t0 = time.perf_counter()
-        for _ in range(speed):
+        ticks_to_run = 1 if step_request else (0 if paused else speed)
+        for _ in range(ticks_to_run):
             world.update()
+            if selected is not None and selected.alive:
+                trail.append((selected.x, selected.y))
             if world.is_over():
                 # End of the generation: parents + mutated children form the next one
                 parents = select_parents(world.creatures, config.PARENTS_COUNT)
@@ -117,12 +164,15 @@ def main():
                 for brain in brains:
                     world.add_creature(brain)
                 generation += 1
+                selected = None  # The creatures of the old world no longer exist
+                trail.clear()
                 break
         t1 = time.perf_counter()
 
         # Draw the world, then the heads-up display (HUD)
-        scene.draw(screen, world, debug_mode)
-        hud.draw(screen, world, clock.get_fps(), speed, generation, debug_mode)
+        scene.draw(world_view, world, debug_mode, selected, trail)
+        hud.draw(sidebar, strip_view, world, clock.get_fps(), speed, generation, debug_mode, paused, selected,
+                 scene.color_label())
         t2 = time.perf_counter()
 
         pygame.display.flip()

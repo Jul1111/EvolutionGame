@@ -72,7 +72,11 @@ ENERGY_MID_COLOR = (240, 196, 92)
 ENERGY_HIGH_COLOR = (120, 224, 176)  # Creature colour when energy is at ENERGY_INPUT_MAX
 DEBUG_VISION_COLOR = (70, 120, 130)
 DEBUG_LINK_COLOR = (150, 235, 200)
-HUD_PANEL_COLOR = (12, 16, 20, 190)
+HUD_PANEL_COLOR = (25, 31, 37, 255)
+SIDEBAR_BG_COLOR = (15, 18, 22)
+PANEL_WIDTH = 320                    # Side bar on the right of the world view
+WINDOW_WIDTH = SCREEN_WIDTH + PANEL_WIDTH
+TRAIL_LENGTH = 600                   # Ticks of trajectory kept for the selected creature
 HUD_LABEL_COLOR = (150, 165, 170)
 HUD_VALUE_COLOR = (235, 240, 240)
 

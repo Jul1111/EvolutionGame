@@ -8,9 +8,12 @@ from core.physics import torus_delta
 
 ENERGY_BUCKETS = 16   # Number of pre-rendered creature sprites (one per energy level)
 FOOD_FRAMES = 12      # Number of pre-rendered food pulsation frames
+COLOR_MODES = ("énergie", "vitesse", "nourriture")  # What the creature colour encodes (key C)
+TRAIL_COLOR = (255, 226, 140)
+TRAIL_FADE = (24, 30, 34)
 SUPERSAMPLE = 4       # Sprites are drawn 4x bigger then shrunk, for smooth edges
 
-# Soft light patches on the background: (x, y, radius in px, RGB boost). Fixed on purpose:
+# Soft light patches on the background: (x, y, radius, RGB boost), in world units. Fixed on purpose:
 # no random number is drawn here, so the simulation's single seeded generator is untouched.
 BLOBS = [
     (260, 170, 220, (10, 18, 14)),
@@ -36,24 +39,61 @@ def _shrink(big, size):
     return pygame.transform.smoothscale(big, (size, size)).convert_alpha()
 
 
+def pick_creature(world, x, y, radius=14.0):
+    """Creature under the point (x, y) in world units, torus-aware. Living ones win over dead ones."""
+    best = None
+    best_key = None
+    for c in world.creatures:
+        dx = torus_delta(x, c.x, world.width)
+        dy = torus_delta(y, c.y, world.height)
+        d2 = dx * dx + dy * dy
+        if d2 <= radius * radius:
+            key = (0 if c.alive else 1, d2)
+            if best_key is None or key < best_key:
+                best, best_key = c, key
+    return best
+
+
 class Scene:
-    """Draws the world (background, food, creatures, debug overlay). Read-only on the simulation."""
+    """Draws the world (background, food, creatures, debug overlay) at the window's real resolution.
+    Read-only on the simulation. Call resize() whenever the layout changes."""
 
     def __init__(self):
-        self.background = self._build_background()
+        self.scale = None          # Pixels per world unit used for positions (exact)
+        self.sprite_scale = None   # Scale the sprites were built for (rebuilt only on a >1% change)
+        self.size = None
+        self.color_mode = 0
         self.bucket_colors = [energy_color(i / (ENERGY_BUCKETS - 1)) for i in range(ENERGY_BUCKETS)]
-        self.body_sprites = [self._build_body(c) for c in self.bucket_colors]
-        self.dead_sprite = self._build_dead()
-        self.food_sprites = [self._build_food(f) for f in range(FOOD_FRAMES)]
 
-    # ---------- sprite construction (done once) ----------
+    def cycle_color_mode(self):
+        self.color_mode = (self.color_mode + 1) % len(COLOR_MODES)
 
-    def _build_background(self):
-        w, h = config.SCREEN_WIDTH, config.SCREEN_HEIGHT
-        xs = np.arange(w, dtype=np.float32)[:, None]
-        ys = np.arange(h, dtype=np.float32)[None, :]
-        # Radial vignette: bright centre, dark edges
-        r = np.sqrt(((xs - w / 2) / (w / 2)) ** 2 * 0.8 + ((ys - h / 2) / (h / 2)) ** 2)
+    def color_label(self):
+        return COLOR_MODES[self.color_mode]
+
+    def resize(self, scale, size):
+        """Rebuild what depends on the size: background always (cheap), sprites if the scale changed enough."""
+        self.scale = scale
+        if size != self.size:
+            self.size = size
+            self.background = self._build_background(size)
+        if self.sprite_scale is None or abs(scale / self.sprite_scale - 1.0) > 0.01:
+            self.sprite_scale = scale
+            self.body_sprites = [self._build_body(c) for c in self.bucket_colors]
+            self.dead_sprite = self._build_dead()
+            self.food_sprites = [self._build_food(f) for f in range(FOOD_FRAMES)]
+
+    # ---------- construction (on resize) ----------
+
+    @staticmethod
+    def _build_background(size):
+        w, h = size
+        # Computed on a small grid then enlarged: the background is smooth, so nothing is lost
+        gw, gh = max(16, min(w, 640)), max(9, min(h, 360))
+        xs = (np.arange(gw, dtype=np.float32) * (config.SCREEN_WIDTH / gw))[:, None]
+        ys = (np.arange(gh, dtype=np.float32) * (config.SCREEN_HEIGHT / gh))[None, :]
+        cx, cy = config.SCREEN_WIDTH / 2, config.SCREEN_HEIGHT / 2
+        r = np.sqrt(((xs - cx) / cx) ** 2 * 0.8 + ((ys - cy) / cy) ** 2)   # Vignette: bright centre, dark edges
         t = np.clip(r / 1.15, 0.0, 1.0) ** 1.7
         center = np.array(config.BG_CENTER_COLOR, dtype=np.float32)
         edge = np.array(config.BG_EDGE_COLOR, dtype=np.float32)
@@ -61,45 +101,47 @@ class Scene:
         for bx, by, br, boost in BLOBS:
             g = np.exp(-(((xs - bx) ** 2 + (ys - by) ** 2) / (2.0 * (br / 2.0) ** 2)))
             img += g[..., None] * np.array(boost, dtype=np.float32)
-        img = np.clip(img, 0, 255).astype(np.uint8)
-        return pygame.surfarray.make_surface(img).convert()
+        small = pygame.surfarray.make_surface(np.clip(img, 0, 255).astype(np.uint8))
+        return pygame.transform.smoothscale(small, (w, h)).convert()
+
+    def _sprite_canvas(self, half):
+        size = int(math.ceil(half)) * 2
+        s = SUPERSAMPLE
+        return size, s, pygame.Surface((size * s, size * s), pygame.SRCALPHA)
 
     def _build_body(self, color):
-        r = config.CREATURE_RADIUS
-        size = 2 * (r + 3)
-        s = SUPERSAMPLE
-        big = pygame.Surface((size * s, size * s), pygame.SRCALPHA)
-        c = size * s // 2
+        k = self.sprite_scale
+        r = config.CREATURE_RADIUS * k
+        size, s, big = self._sprite_canvas(r + 3 * k)
+        c = size * s / 2
         dark = _lerp(color, (10, 12, 16), 0.55)
         light = _lerp(color, (255, 255, 255), 0.45)
-        pygame.draw.circle(big, (*color, 55), (c, c), (r + 2.5) * s)          # soft halo
-        pygame.draw.circle(big, (*color, 225), (c, c), r * s)                 # body
-        pygame.draw.circle(big, (*light, 255), (c, c), r * s, int(1.3 * s))   # membrane
-        pygame.draw.circle(big, (*dark, 255), (c, c), r * 0.42 * s)           # nucleus
+        pygame.draw.circle(big, (*color, 55), (c, c), (r + 2.5 * k) * s)             # soft halo
+        pygame.draw.circle(big, (*color, 225), (c, c), r * s)                        # body
+        pygame.draw.circle(big, (*light, 255), (c, c), r * s, max(1, int(1.3 * k * s)))  # membrane
+        pygame.draw.circle(big, (*dark, 255), (c, c), r * 0.42 * s)                  # nucleus
         return _shrink(big, size)
 
     def _build_dead(self):
-        r = config.CREATURE_RADIUS
-        size = 2 * (r + 3)
-        s = SUPERSAMPLE
-        big = pygame.Surface((size * s, size * s), pygame.SRCALPHA)
-        c = size * s // 2
+        k = self.sprite_scale
+        r = config.CREATURE_RADIUS * k
+        size, s, big = self._sprite_canvas(r + 3 * k)
+        c = size * s / 2
         pygame.draw.circle(big, (*config.DEAD_COLOR, 70), (c, c), r * s)
-        pygame.draw.circle(big, (*config.DEAD_COLOR, 110), (c, c), r * s, int(1.0 * s))
+        pygame.draw.circle(big, (*config.DEAD_COLOR, 110), (c, c), r * s, max(1, int(k * s)))
         return _shrink(big, size)
 
     def _build_food(self, frame):
-        r = config.FOOD_RADIUS
+        k = self.sprite_scale
+        r = config.FOOD_RADIUS * k
         halo = r * 4
-        size = 2 * halo + 2
-        s = SUPERSAMPLE
-        big = pygame.Surface((size * s, size * s), pygame.SRCALPHA)
-        c = size * s // 2
+        size, s, big = self._sprite_canvas(halo + k)
+        c = size * s / 2
         pulse = 0.55 + 0.45 * (0.5 + 0.5 * math.cos(2 * math.pi * frame / FOOD_FRAMES))
         steps = 10
-        for k in range(steps):  # concentric discs, alpha growing towards the centre
-            radius = halo * s * (1.0 - k / steps)
-            alpha = int(70 * pulse * ((k + 1) / steps) ** 1.5)
+        for i in range(steps):  # concentric discs, alpha growing towards the centre
+            radius = halo * s * (1.0 - i / steps)
+            alpha = int(70 * pulse * ((i + 1) / steps) ** 1.5)
             pygame.draw.circle(big, (*config.FOOD_COLOR, alpha), (c, c), radius)
         core = _lerp(config.FOOD_COLOR, (255, 255, 255), 0.35)
         pygame.draw.circle(big, (*config.FOOD_COLOR, 255), (c, c), r * s)
@@ -109,79 +151,121 @@ class Scene:
     # ---------- drawing (every frame) ----------
 
     @staticmethod
-    def _blit_wrapped(screen, sprite, x, y, world_w, world_h):
-        """Blit a sprite centred on (x, y), and its ghost on the other side if it crosses a torus edge."""
+    def _blit_wrapped(screen, sprite, x, y, area_w, area_h):
+        """Blit a sprite centred on (x, y) (pixels), and its ghost on the other side if it crosses a torus edge."""
         sw, sh = sprite.get_size()
         hw, hh = sw / 2, sh / 2
         xs = [x]
         if x < hw:
-            xs.append(x + world_w)
-        elif x > world_w - hw:
-            xs.append(x - world_w)
+            xs.append(x + area_w)
+        elif x > area_w - hw:
+            xs.append(x - area_w)
         ys = [y]
         if y < hh:
-            ys.append(y + world_h)
-        elif y > world_h - hh:
-            ys.append(y - world_h)
+            ys.append(y + area_h)
+        elif y > area_h - hh:
+            ys.append(y - area_h)
         for px in xs:
             for py in ys:
-                screen.blit(sprite, (px - hw, py - hh))
+                screen.blit(sprite, (round(px - hw), round(py - hh)))
 
-    def draw(self, screen, world, debug_mode):
-        """debug_mode: 0 = off, 1 = oldest living creature only, 2 = all living creatures."""
+    def draw(self, screen, world, debug_mode, selected=None, trail=None):
+        """screen: the world area. debug_mode: 0 = off, 1 = selected (else oldest living) creature, 2 = all living."""
+        k = self.scale
         screen.blit(self.background, (0, 0))
-        ww, wh = world.width, world.height
+        ww, wh = world.width * k, world.height * k   # The world, in pixels
 
         now = pygame.time.get_ticks()  # real time: pulsation does not accelerate with the sim speed
         for i, food in enumerate(world.foods):
             if food.cooldown > 0:
                 continue  # Eaten, not back yet
             frame = int(now / 90 + i * 3) % FOOD_FRAMES
-            self._blit_wrapped(screen, self.food_sprites[frame], food.x, food.y, ww, wh)
+            self._blit_wrapped(screen, self.food_sprites[frame], food.x * k, food.y * k, ww, wh)
 
         for c in world.creatures:
             if not c.alive:
-                self._blit_wrapped(screen, self.dead_sprite, c.x, c.y, ww, wh)
+                self._blit_wrapped(screen, self.dead_sprite, c.x * k, c.y * k, ww, wh)
 
-        r = config.CREATURE_RADIUS
+        if trail is not None:
+            self._draw_trail(screen, trail, world)
+
+        r = config.CREATURE_RADIUS * k
+        nub_radius = max(1, round(2 * k))
+        max_food = max([c.food_eaten for c in world.creatures if c.alive] + [1])
         for c in world.creatures:
             if not c.alive:
                 continue
-            ratio = max(0.0, min(c.energy / config.ENERGY_INPUT_MAX, 1.0))
+            if self.color_mode == 0:
+                ratio = c.energy / config.ENERGY_INPUT_MAX
+            elif self.color_mode == 1:
+                ratio = c.speed / config.CREATURE_MAX_SPEED
+            else:
+                ratio = c.food_eaten / max_food
+            ratio = max(0.0, min(ratio, 1.0))
             bucket = int(ratio * (ENERGY_BUCKETS - 1) + 0.5)
             color = self.bucket_colors[bucket]
+            px, py = c.x * k, c.y * k
             cos_a, sin_a = math.cos(c.angle), math.sin(c.angle)
 
             # Tail behind the creature: longer when it moves faster
             if c.speed > 0.3:
-                length = c.speed * 3.0
-                p0 = (c.x - cos_a * r, c.y - sin_a * r)
-                p1 = (c.x - cos_a * (r + length), c.y - sin_a * (r + length))
+                length = c.speed * 3.0 * k
+                p0 = (px - cos_a * r, py - sin_a * r)
+                p1 = (px - cos_a * (r + length), py - sin_a * (r + length))
                 pygame.draw.aaline(screen, _lerp(color, (10, 12, 16), 0.35), p0, p1)
 
-            self._blit_wrapped(screen, self.body_sprites[bucket], c.x, c.y, ww, wh)
+            self._blit_wrapped(screen, self.body_sprites[bucket], px, py, ww, wh)
 
             # Heading marker: small light dot towards the front
-            nub = (int(c.x + cos_a * r * 0.62), int(c.y + sin_a * r * 0.62))
-            pygame.draw.circle(screen, _lerp(color, (255, 255, 255), 0.75), nub, 2)
+            nub = (round(px + cos_a * r * 0.62), round(py + sin_a * r * 0.62))
+            pygame.draw.circle(screen, _lerp(color, (255, 255, 255), 0.75), nub, nub_radius)
+
+        if selected is not None:
+            center = (round(selected.x * k), round(selected.y * k))
+            width = max(1, round(k))
+            pygame.draw.circle(screen, (255, 255, 255), center, round(r + 6 * k), width)
+            pygame.draw.circle(screen, (120, 125, 130), center, round(r + 9 * k), width)
 
         if debug_mode:
-            self._draw_debug(screen, world, debug_mode)
+            self._draw_debug(screen, world, debug_mode, selected)
 
-    def _draw_debug(self, screen, world, mode):
+    def _draw_trail(self, screen, trail, world):
+        """Trajectory of the selected creature, fading with age. Segments that wrap the torus are skipped."""
+        n = len(trail)
+        if n < 2:
+            return
+        k = self.scale
+        half_w, half_h = world.width / 2, world.height / 2
+        prev = trail[0]
+        for i in range(1, n):
+            cur = trail[i]
+            if abs(cur[0] - prev[0]) < half_w and abs(cur[1] - prev[1]) < half_h:
+                pygame.draw.aaline(screen, _lerp(TRAIL_FADE, TRAIL_COLOR, i / n),
+                                   (prev[0] * k, prev[1] * k), (cur[0] * k, cur[1] * k))
+            prev = cur
+
+    def _draw_debug(self, screen, world, mode, selected=None):
+        k = self.scale
         alive = [c for c in world.creatures if c.alive]
         if not alive:
             return
-        targets = alive if mode == 2 else [max(alive, key=lambda c: (c.age, c.energy))]
+        if mode == 2:
+            targets = alive
+        elif selected is not None and selected.alive:
+            targets = [selected]
+        else:
+            targets = [max(alive, key=lambda c: (c.age, c.energy))]
         vision2 = config.VISION_RANGE ** 2
+        vision_color = config.DEBUG_VISION_COLOR if mode == 1 else _lerp(config.DEBUG_VISION_COLOR, (0, 0, 0), 0.6)
         for c in targets:
-            center = (int(c.x), int(c.y))
-            vision_color = config.DEBUG_VISION_COLOR if mode == 1 else _lerp(config.DEBUG_VISION_COLOR, (0, 0, 0), 0.6)
-            pygame.draw.circle(screen, vision_color, center, config.VISION_RANGE, 1)
-            # Same rule as World.sense: nearest food within the vision range
+            center = (round(c.x * k), round(c.y * k))
+            pygame.draw.circle(screen, vision_color, center, round(config.VISION_RANGE * k), 1)
+            # Same rule as World.sense: nearest food within the vision range, if it is available
             best = None
             best_d2 = vision2
             for food in world.foods:
+                if food.cooldown > 0:
+                    continue
                 dx = torus_delta(c.x, food.x, world.width)
                 dy = torus_delta(c.y, food.y, world.height)
                 d2 = dx * dx + dy * dy
@@ -189,6 +273,7 @@ class Scene:
                     best_d2 = d2
                     best = (dx, dy)
             if best is not None:
-                pygame.draw.aaline(screen, config.DEBUG_LINK_COLOR, (c.x, c.y), (c.x + best[0], c.y + best[1]))
+                pygame.draw.aaline(screen, config.DEBUG_LINK_COLOR, (c.x * k, c.y * k),
+                                   ((c.x + best[0]) * k, (c.y + best[1]) * k))
             if mode == 1:
-                pygame.draw.circle(screen, (255, 255, 255), center, config.CREATURE_RADIUS + 5, 1)
+                pygame.draw.circle(screen, (255, 255, 255), center, round((config.CREATURE_RADIUS + 5) * k), 1)
