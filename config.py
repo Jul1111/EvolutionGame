@@ -1,4 +1,6 @@
 #Configuration file for the game
+import os
+
 SCREEN_WIDTH = 1280
 SCREEN_HEIGHT = 720
 FPS = 60
@@ -15,7 +17,7 @@ WORLD_HEIGHT = SCREEN_HEIGHT
 
 # Configuration for food
 SEED = 42
-FOOD_COUNT = 50
+FOOD_COUNT = 15
 FOOD_RADIUS = 4
 FOOD_COLOR = (90, 200, 110)
 
@@ -55,3 +57,9 @@ CREATURE_MAX_TURN = 0.15    # Max rotation per tick (radians) when the turn outp
 
 # Configuration for mutation
 MUTATION_STD = 0.1          # Std of the gaussian noise added to each weight of a child
+
+# Configuration for saving and logging
+SAVE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "saves")
+GENOMES_FILE = os.path.join(SAVE_DIR, "latest.npz")
+STATS_FILE = os.path.join(SAVE_DIR, "stats.csv")
+LOAD_ON_START = True        # Resume from saves/latest.npz if it exists

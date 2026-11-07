@@ -14,11 +14,8 @@ def _brain_from_genome(genome):
     return brain
 
 
-def next_generation_brains(creatures, rng):
+def brains_from_genomes(genomes, rng):
     """Retourne POPULATION_SIZE cerveaux : les parents (élitisme) puis des enfants mutés."""
-    parents = select_parents(creatures, config.PARENTS_COUNT)
-    genomes = [p.brain.get_genome() for p in parents]
-
     # Élitisme : copies des parents, créatures neuves (âge, énergie, position remis à zéro)
     brains = [_brain_from_genome(g) for g in genomes]
 

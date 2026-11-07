@@ -4,8 +4,10 @@ import random
 import time
 
 from core.world import World
-from evolution.population import next_generation_brains, select_parents
+from evolution.population import brains_from_genomes, select_parents
 from rendering.hud import create_font, draw_hud, format_time
+from utils.persistence import save_genomes, load_genomes
+from utils.logger import log_generation
 
 
 def main():
@@ -22,9 +24,17 @@ def main():
     font = create_font()
 
     world = World(rng)
-    world.add_population(config.POPULATION_SIZE)
-
-    generation = 1
+    loaded = load_genomes() if config.LOAD_ON_START else None
+    if loaded is not None:
+        # Resume: saved parents + mutated children
+        genomes, saved_generation = loaded
+        for brain in brains_from_genomes(genomes, rng):
+            world.add_creature(brain)
+        generation = saved_generation + 1
+        print(f"Reprise depuis la sauvegarde : génération {generation}")
+    else:
+        world.add_population(config.POPULATION_SIZE)
+        generation = 1
 
     speed_index = 0
     last_speed = config.SPEED_STEPS[speed_index]
@@ -71,11 +81,19 @@ def main():
                 # End of the generation: parents + mutated children form the next one
                 parents = select_parents(world.creatures, config.PARENTS_COUNT)
                 mean_food = sum(c.food_eaten for c in parents) / len(parents)
+                alive_count = sum(1 for c in world.creatures if c.alive)
+                max_food = max(c.food_eaten for c in parents)
+                mean_speed = sum(c.speed for c in parents) / len(parents)
                 print(f"Gen {generation:>4} | fin {format_time(world.tick)} | "
+                      f"vivantes {alive_count}/{len(world.creatures)} | "
                       f"meilleur âge {format_time(parents[0].age)} | "
-                      f"nourriture parents moy {mean_food:.1f} max {max(c.food_eaten for c in parents)} | "
-                      f"vitesse moy parents {sum(c.speed for c in parents) / len(parents):.2f}")
-                brains = next_generation_brains(world.creatures, rng)
+                      f"nourriture parents moy {mean_food:.1f} max {max_food} | "
+                      f"vitesse moy parents {mean_speed:.2f}")
+                log_generation(generation, world.tick, alive_count, parents[0].age,
+                               mean_food, max_food, mean_speed)
+                genomes = [p.brain.get_genome() for p in parents]
+                save_genomes(genomes, generation)
+                brains = brains_from_genomes(genomes, rng)
                 world = World(rng)
                 for brain in brains:
                     world.add_creature(brain)
