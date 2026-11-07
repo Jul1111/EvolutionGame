@@ -82,6 +82,10 @@ def main():
             "total_food": total_food, "blind_frac": blind_frac,
             "blind_speed": blind_speed, "blind_turn": blind_turn,
             "mean_energy": mean_energy,
+            # Logged before apply_pending(): these are the values the finished generation ran with
+            "mutation_std": config.MUTATION_STD, "parents": config.PARENTS_COUNT,
+            "food_energy": config.FOOD_ENERGY, "respawn_delay": config.FOOD_RESPAWN_DELAY,
+            "max_eats": config.FOOD_MAX_EATS, "fixed_positions": int(config.FOOD_FIXED_POSITIONS),
         })
         hud.reload_stats()
         genomes = [p.brain.get_genome() for p in parents]

@@ -5,7 +5,9 @@ import time
 import config
 
 HEADER = ["generation", "ticks", "alive", "best_age", "mean_food", "max_food", "mean_speed",
-          "food_count", "total_food", "blind_frac", "blind_speed", "blind_turn", "mean_energy"]
+          "food_count", "total_food", "blind_frac", "blind_speed", "blind_turn", "mean_energy",
+          # Settings in effect during the generation (they can change from the menu between two generations)
+          "mutation_std", "parents", "food_energy", "respawn_delay", "max_eats", "fixed_positions"]
 
 
 def log_generation(stats):

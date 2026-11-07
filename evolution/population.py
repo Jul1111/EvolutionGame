@@ -3,9 +3,16 @@ from brain.network import NeuralNetwork
 from evolution.mutation import mutate
 
 
+def rank_key(creature):
+    """Ranking: age, then food eaten, then energy left (only to break exact ties).
+    Food eaten comes before energy: once many creatures reach the time cap, ranking by energy rewards the ones
+    that barely move (they spend less), and evolution drifts toward immobility."""
+    return (creature.age, creature.food_eaten, creature.energy)
+
+
 def select_parents(creatures, count):
-    """Retourne les `count` meilleures créatures, classées par (âge, énergie restante)."""
-    return sorted(creatures, key=lambda c: (c.age, c.energy), reverse=True)[:count]
+    """Retourne les `count` meilleures créatures, classées par rank_key (âge, nourriture mangée, énergie)."""
+    return sorted(creatures, key=rank_key, reverse=True)[:count]
 
 
 def _brain_from_genome(genome):

@@ -3,6 +3,7 @@ import csv
 import pygame
 import config
 from rendering.scene import energy_color
+from evolution.population import rank_key
 
 VALUE = config.HUD_VALUE_COLOR
 LABEL = config.HUD_LABEL_COLOR
@@ -365,8 +366,8 @@ class Hud:
         _row(p, f, c, 114, "Nourriture mangée", str(cr.food_eaten))
         blind_share = cr.blind_ticks / cr.age if cr.age else 0.0
         _row(p, f, c, 132, "Temps aveugle", f"{blind_share:.0%}")
-        better = sum(1 for o in world.creatures if (o.age, o.energy) > (cr.age, cr.energy))
-        _row(p, f, c, 150, "Rang (âge, énergie)", f"{better + 1}/{len(world.creatures)}")
+        better = sum(1 for o in world.creatures if rank_key(o) > rank_key(cr))
+        _row(p, f, c, 150, "Rang (âge, nourriture)", f"{better + 1}/{len(world.creatures)}")
         return p
 
     def _draw_network(self, world, selected):

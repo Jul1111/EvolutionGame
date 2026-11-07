@@ -82,7 +82,7 @@ La portée de vision est de 200. Le réseau n'a pas de mémoire.
 **L'évolution.**
 1. Une génération compte 100 créatures.
 2. Elle s'arrête quand il reste 20 vivantes, ou au plafond de 36 000 ticks (10 minutes simulées).
-3. Les 20 meilleures sont classées par (âge, énergie restante).
+3. Les 20 meilleures sont classées par (âge, nourriture mangée), l'énergie restante ne départageant que les égalités exactes.
 4. Elles passent telles quelles dans la génération suivante (élitisme), avec 80 enfants : copie d'un parent plus un bruit gaussien (écart-type 0,1) sur chaque poids. Pas de croisement.
 5. Chaque génération repart dans un monde neuf, avec des créatures neuves.
 
@@ -104,6 +104,7 @@ Colonnes de `stats.csv` (âges en ticks, 60 ticks = 1 seconde simulée) :
 | `generation`, `ticks`, `alive`, `best_age` | Numéro, durée, vivantes à la fin, âge du meilleur |
 | `mean_food`, `max_food` | Nourriture mangée par les parents |
 | `mean_speed`, `mean_energy` | Vitesse et énergie des parents au dernier tick |
+| `mutation_std`, `parents`, `food_energy`, `respawn_delay`, `max_eats`, `fixed_positions` | Réglages en vigueur pendant la génération (`fixed_positions` : 1 = fixes, 0 = aléatoires). Permettent de comparer des runs quand on change les réglages depuis le menu |
 | `food_count` | Nombre de nourritures du monde pour cette génération |
 | `total_food` | Nourriture mangée par toute la population |
 | `blind_frac`, `blind_speed`, `blind_turn` | Part du temps sans aucune nourriture à portée, vitesse et virage dans ces moments (parents) |
