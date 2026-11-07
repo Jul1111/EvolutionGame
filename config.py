@@ -8,7 +8,6 @@ BACKGROUND_COLOR = (18, 20, 26)
 CREATURE_RADIUS = 8
 CREATURE_COLOR = (240, 200, 80)
 DEAD_COLOR = (90, 90, 90)
-CREATURE_SPEED = 2
 
 # Configuration for world
 WORLD_WIDTH = SCREEN_WIDTH
@@ -23,7 +22,6 @@ FOOD_COLOR = (90, 200, 110)
 # Configuration for energy
 FOOD_ENERGY = 30.0
 INITIAL_ENERGY = 100.0
-ENERGY_COST_PER_TICK = 0.1
 
 # Configuration for population
 POPULATION_SIZE = 100
@@ -37,3 +35,20 @@ TICKS_PER_SECOND = 60
 
 # Configuration for simulation speed
 SPEED_STEPS = [1, 2, 5, 10, 20, 50, 100]
+
+# Configuration for senses
+VISION_RANGE = 200          # Maximum distance at which a creature sees food
+ENERGY_INPUT_MAX = 200.0    # Energy at which the network input saturates at 1.0
+
+# Configuration for variable speed
+CREATURE_MAX_SPEED = 4.0
+ENERGY_BASE_COST = 0.04     # Energy lost per tick, even when standing still
+ENERGY_MOVE_COST = 0.03     # Extra energy lost per tick, per unit of speed
+                            # (at speed 2: 0.04 + 0.03 x 2 = 0.10)
+
+# Configuration for the neural network
+NN_INPUTS = 3               # distance, relative angle, energy
+NN_HIDDEN = 6
+NN_OUTPUTS = 2              # turn, speed
+NN_INIT_STD = 0.5           # Std of the initial random weights
+CREATURE_MAX_TURN = 0.15    # Max rotation per tick (radians) when the turn output is +/-1
