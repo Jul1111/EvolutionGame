@@ -7,10 +7,11 @@ from collections import deque
 from core.world import World
 from evolution.population import brains_from_genomes, select_parents
 from rendering.hud import Hud, format_time
+from rendering.menu import MenuBar
 from rendering.scene import Scene, pick_creature
 from rendering.display import Display
 from rendering.layout import compute_layout
-from utils.persistence import save_genomes, load_genomes
+from utils.persistence import save_genomes, load_genomes, archive_genomes
 from utils.logger import log_generation, archive_stats
 
 
@@ -31,6 +32,7 @@ def main():
     # Rendering: world scene (background, food, creatures) and HUD (panel, curves)
     scene = Scene()
     hud = Hud()
+    menu = MenuBar()
     debug_mode = 0  # 0 = off, 1 = selected (else oldest living) creature, 2 = all living creatures
     paused = False
     selected = None                            # Creature picked with a click (cleared at each new generation)
@@ -50,6 +52,97 @@ def main():
         world.add_population(config.POPULATION_SIZE)
         generation = 1
 
+    def end_generation():
+        """End of the generation: parents + mutated children form the next one."""
+        nonlocal world, generation, selected
+        parents = select_parents(world.creatures, config.PARENTS_COUNT)
+        mean_food = sum(c.food_eaten for c in parents) / len(parents)
+        alive_count = sum(1 for c in world.creatures if c.alive)
+        max_food = max(c.food_eaten for c in parents)
+        mean_speed = sum(c.speed for c in parents) / len(parents)
+        mean_energy = sum(c.energy for c in parents) / len(parents)
+        # Exploration metrics, computed on the parents
+        blind_ticks = sum(c.blind_ticks for c in parents)
+        total_age = sum(c.age for c in parents)
+        blind_frac = blind_ticks / total_age if total_age else 0.0
+        blind_speed = sum(c.blind_speed_sum for c in parents) / blind_ticks if blind_ticks else None
+        blind_turn = sum(c.blind_turn_sum for c in parents) / blind_ticks if blind_ticks else None
+        total_food = sum(c.food_eaten for c in world.creatures)
+        print(f"Gen {generation:>4} | fin {format_time(world.tick)} | "
+              f"vivantes {alive_count}/{len(world.creatures)} | "
+              f"meilleur âge {format_time(parents[0].age)} | "
+              f"nourriture parents moy {mean_food:.1f} max {max_food} | "
+              f"vitesse moy parents {mean_speed:.2f} | "
+              f"mangé total {total_food} | aveugles {blind_frac:.0%} | "
+              f"énergie moy parents {mean_energy:.0f}")
+        log_generation({
+            "generation": generation, "ticks": world.tick, "alive": alive_count,
+            "best_age": parents[0].age, "mean_food": mean_food, "max_food": max_food,
+            "mean_speed": mean_speed, "food_count": config.FOOD_COUNT,
+            "total_food": total_food, "blind_frac": blind_frac,
+            "blind_speed": blind_speed, "blind_turn": blind_turn,
+            "mean_energy": mean_energy,
+        })
+        hud.reload_stats()
+        genomes = [p.brain.get_genome() for p in parents]
+        save_genomes(genomes, generation)
+        brains = brains_from_genomes(genomes, rng)
+        world = World(rng)
+        for brain in brains:
+            world.add_creature(brain)
+        generation += 1
+        selected = None  # The creatures of the old world no longer exist
+        trail.clear()
+
+    def reset_all():
+        """Start again from zero: the save and the CSV are set aside (timestamped), not deleted."""
+        nonlocal world, generation, selected
+        archive_stats()
+        archive_genomes()
+        world = World(rng)
+        world.add_population(config.POPULATION_SIZE)
+        generation = 1
+        selected = None
+        trail.clear()
+        hud.reload_stats()
+        print("Départ de zéro : sauvegarde et CSV mis de côté")
+
+    # Every command, from the keyboard or from the menu, goes through do(). Returns True to keep the menu open.
+    def do(action):
+        nonlocal speed_index, debug_mode, paused, step_request, reset_pending
+        if action == "speed_up":
+            speed_index = min(speed_index + 1, len(config.SPEED_STEPS) - 1)
+        elif action == "speed_down":
+            speed_index = max(speed_index - 1, 0)
+        elif action == "debug":
+            debug_mode = (debug_mode + 1) % 3
+        elif action == "color":
+            scene.cycle_color_mode()
+        elif action == "pause":
+            paused = not paused
+        elif action == "step":
+            step_request = paused
+        elif action == "chart":
+            hud.toggle_chart()
+        elif action == "graph":
+            hud.toggle_graph()
+        elif action == "fullscreen":
+            display.toggle_fullscreen()
+        elif action == "end_gen":
+            end_generation()
+        elif action == "reset":
+            if not reset_pending:
+                reset_pending = True   # First click asks for confirmation, the menu stays open
+                return True
+            reset_pending = False
+            reset_all()
+        return False
+
+    KEYS = {pygame.K_UP: "speed_up", pygame.K_DOWN: "speed_down", pygame.K_d: "debug", pygame.K_c: "color",
+            pygame.K_SPACE: "pause", pygame.K_RIGHT: "step", pygame.K_g: "chart", pygame.K_n: "graph",
+            pygame.K_f: "fullscreen", pygame.K_F11: "fullscreen"}
+    reset_pending = False
+
     speed_index = 0
     last_speed = config.SPEED_STEPS[speed_index]
 
@@ -67,6 +160,7 @@ def main():
             layout = compute_layout(*window.get_size())
             scene.resize(layout.scale, layout.world.size)
             hud.relayout(layout)
+            menu.relayout(layout)
             world_view = window.subsurface(layout.world)
             sidebar = window.subsurface(layout.sidebar)
             strip_view = window.subsurface(layout.strip) if layout.strip is not None else None
@@ -77,34 +171,23 @@ def main():
             if event.type == pygame.QUIT:
                 running = False
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
-                if display.fullscreen:
-                    display.toggle_fullscreen()  # First Escape leaves fullscreen
+                if menu.open_index is not None:
+                    menu.close()               # First Escape closes the open menu
+                elif display.fullscreen:
+                    display.toggle_fullscreen()  # Then leaves fullscreen
                 else:
                     running = False
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_UP:
-                    # Increase simulation speed
-                    if speed_index < len(config.SPEED_STEPS) - 1:
-                        speed_index += 1
-                elif event.key == pygame.K_DOWN:
-                    # Decrease simulation speed
-                    if speed_index > 0:
-                        speed_index -= 1
-                elif event.key == pygame.K_d:
-                    debug_mode = (debug_mode + 1) % 3
-                elif event.key == pygame.K_g:
-                    hud.show_chart = not hud.show_chart
-                elif event.key in (pygame.K_f, pygame.K_F11):
-                    display.toggle_fullscreen()
-                elif event.key == pygame.K_c:
-                    scene.cycle_color_mode()
-                elif event.key == pygame.K_SPACE:
-                    paused = not paused
-                elif event.key == pygame.K_RIGHT and paused:
-                    step_request = True
+            elif event.type == pygame.KEYDOWN:
+                if event.key in KEYS:
+                    do(KEYS[event.key])
+            elif event.type == pygame.MOUSEMOTION:
+                menu.hover(*display.to_pixels(event.pos))
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 mx, my = display.to_pixels(event.pos)  # Window points → surface pixels (2x on Retina)
-                if layout.world.collidepoint(mx, my):  # Click in the world (not in the panels)
+                consumed, action = menu.click(mx, my)
+                if action is not None and not do(action):
+                    menu.close()
+                if not consumed and layout.world.collidepoint(mx, my):  # Click in the world (not in the panels)
                     wx = (mx - layout.world.x) / layout.scale  # Pixels → world units
                     wy = (my - layout.world.y) / layout.scale
                     selected = pick_creature(world, wx, wy)
@@ -130,45 +213,7 @@ def main():
             if selected is not None and selected.alive:
                 trail.append((selected.x, selected.y))
             if world.is_over():
-                # End of the generation: parents + mutated children form the next one
-                parents = select_parents(world.creatures, config.PARENTS_COUNT)
-                mean_food = sum(c.food_eaten for c in parents) / len(parents)
-                alive_count = sum(1 for c in world.creatures if c.alive)
-                max_food = max(c.food_eaten for c in parents)
-                mean_speed = sum(c.speed for c in parents) / len(parents)
-                mean_energy = sum(c.energy for c in parents) / len(parents)
-                # Exploration metrics, computed on the parents
-                blind_ticks = sum(c.blind_ticks for c in parents)
-                total_age = sum(c.age for c in parents)
-                blind_frac = blind_ticks / total_age if total_age else 0.0
-                blind_speed = sum(c.blind_speed_sum for c in parents) / blind_ticks if blind_ticks else None
-                blind_turn = sum(c.blind_turn_sum for c in parents) / blind_ticks if blind_ticks else None
-                total_food = sum(c.food_eaten for c in world.creatures)
-                print(f"Gen {generation:>4} | fin {format_time(world.tick)} | "
-                      f"vivantes {alive_count}/{len(world.creatures)} | "
-                      f"meilleur âge {format_time(parents[0].age)} | "
-                      f"nourriture parents moy {mean_food:.1f} max {max_food} | "
-                      f"vitesse moy parents {mean_speed:.2f} | "
-                      f"mangé total {total_food} | aveugles {blind_frac:.0%} | "
-                      f"énergie moy parents {mean_energy:.0f}")
-                log_generation({
-                    "generation": generation, "ticks": world.tick, "alive": alive_count,
-                    "best_age": parents[0].age, "mean_food": mean_food, "max_food": max_food,
-                    "mean_speed": mean_speed, "food_count": config.FOOD_COUNT,
-                    "total_food": total_food, "blind_frac": blind_frac,
-                    "blind_speed": blind_speed, "blind_turn": blind_turn,
-                    "mean_energy": mean_energy,
-                })
-                hud.reload_stats()
-                genomes = [p.brain.get_genome() for p in parents]
-                save_genomes(genomes, generation)
-                brains = brains_from_genomes(genomes, rng)
-                world = World(rng)
-                for brain in brains:
-                    world.add_creature(brain)
-                generation += 1
-                selected = None  # The creatures of the old world no longer exist
-                trail.clear()
+                end_generation()
                 break
         t1 = time.perf_counter()
 
@@ -176,6 +221,14 @@ def main():
         scene.draw(world_view, world, debug_mode, selected, trail)
         hud.draw(sidebar, strip_view, world, clock.get_fps(), speed, generation, debug_mode, paused, selected,
                  scene.color_label())
+        if menu.open_index is None:
+            reset_pending = False
+        menu.draw(window, {
+            "speed": speed, "paused": paused, "debug": ("off", "sélection", "toutes")[debug_mode],
+            "color": scene.color_label(), "chart": hud.show_chart, "graph": hud.show_graph,
+            "fullscreen": display.fullscreen,
+            "reset": "Confirmer : tout effacer ?" if reset_pending else "Repartir de zéro",
+        })
         t2 = time.perf_counter()
 
         display.flip()

@@ -1,8 +1,9 @@
 import pygame
 
 import config
+from rendering.layout import BASE_W, BASE_H
 
-LOGICAL = (config.WINDOW_WIDTH, config.SCREEN_HEIGHT)   # Size at scale 1, used only to pick the first window size
+LOGICAL = (BASE_W, BASE_H)   # Size at scale 1 (menu bar included), used only to pick the first window size
 
 
 def fit_window_size(width_ratio=0.95, height_ratio=0.85):

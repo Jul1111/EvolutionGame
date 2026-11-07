@@ -33,3 +33,10 @@ def load_genomes():
         print(f"Sauvegarde incompatible ({genomes.shape[1]} poids au lieu de {expected}) : mise de côté, départ de zéro")
         return None
     return genomes, generation
+
+
+def archive_genomes():
+    """Fresh start: set aside the existing save (timestamped) instead of deleting it."""
+    if os.path.exists(config.GENOMES_FILE):
+        stamp = time.strftime("%Y%m%d_%H%M%S")
+        os.replace(config.GENOMES_FILE, config.GENOMES_FILE.replace(".npz", f"_ancien_{stamp}.npz"))

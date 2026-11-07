@@ -11,11 +11,11 @@ AMBER = (240, 196, 92)
 CORAL = (222, 96, 78)
 BLUE = (110, 180, 235)
 
-# Natural heights of the panels at scale 1 (logical pixels). Real heights are these times the scale, stretched
-# vertically to use the room available in the side bar.
-# The network panel grows with the number of rows: header 26 + 15 per row + gap 4 + margin 7
-H_NET = 26 + 15 * (config.NN_INPUTS + config.NN_OUTPUTS) + 4 + 7
-H_GEN, H_CREATURE, H_CHART = 176, 176, 150
+# Natural height (logical pixels at scale 1) of the Génération and Créature panels. They are stretched vertically
+# (0.85x to 1.9x) to use the room left by the network panel and the curves.
+H_CONTENT = 176
+H_CHART = 130     # Curves panel in the side bar
+GRAPH_H = 120     # Network graph, when shown
 
 
 # How each network input is displayed, by label: value → (text, signed bar?).
@@ -72,6 +72,29 @@ def create_fonts(u):
     def make(size, bold=False):
         return pygame.font.SysFont("arial", max(9, round(size * u)), bold=bold)
     return {"title": make(20, True), "base": make(15), "small": make(13)}
+
+
+def _lerp(a, b, t):
+    return tuple(int(a[i] + (b[i] - a[i]) * t) for i in range(3))
+
+
+def _node(surf, x, y, r, value):
+    """Neuron: fill brightness = |activation|, mint if positive, coral if negative."""
+    t = max(0.0, min(1.0, abs(value)))
+    base = MINT if value >= 0 else CORAL
+    pygame.draw.circle(surf, _lerp((38, 46, 54), base, t), (x, y), r)
+    pygame.draw.circle(surf, (255, 255, 255, 80), (x, y), r, 1)
+
+
+def _edge(surf, a, b, weight, source, wmax):
+    """Link: colour = sign of the signal (weight x source activation), strength = size of that signal.
+    A link carrying no signal stays faintly visible, according to the size of its weight."""
+    signal = weight * source
+    sign = signal if abs(signal) > 1e-3 else weight
+    t = min(1.0, abs(signal))
+    alpha = int(min(255, 22 + 190 * t + 40 * abs(weight) / wmax))
+    color = (*(MINT if sign >= 0 else CORAL), alpha)
+    pygame.draw.line(surf, color, a, b, 1 if t < 0.4 else 2)
 
 
 class Ctx:
@@ -196,7 +219,8 @@ class Hud:
     a strip under the world with the curves. Everything is drawn at the real resolution (see relayout)."""
 
     def __init__(self):
-        self.show_chart = True
+        self.show_chart = True    # Curves (in the strip when there is one, else in the side bar)
+        self.show_graph = False   # Network drawn as a graph above the bars
         self.layout = None
         self.stats = load_stats()
 
@@ -205,33 +229,45 @@ class Hud:
     def relayout(self, layout):
         """Call whenever the window size changes."""
         self.layout = layout
-        u = layout.scale
-        self.u = u
-        self.fonts = create_fonts(u)
+        self.u = layout.scale
+        self.fonts = create_fonts(self.u)
         small = self.fonts["small"]
         hint_color = (110, 122, 128)
         self.hints = [
             small.render("Clic : sélectionner   Espace : pause   → : 1 tick", True, hint_color),
-            small.render("D : debug  C : couleur  G : courbes  F : plein écran", True, hint_color),
+            small.render("D : debug  C : couleur  F : plein écran", True, hint_color),
+            small.render("G : courbes   N : graphe du réseau", True, hint_color),
         ]
-        hints_h = sum(h.get_height() for h in self.hints) + 2
+        self._compute_slots()
 
+    def _net_height(self):
+        """Natural height (logical) of the network panel."""
+        rows_h = 15 * (len(config.INPUT_LABELS) + len(config.OUTPUT_LABELS)) + 4
+        return 36 + (GRAPH_H + 12 if self.show_graph else 0) + rows_h + 12
+
+    def _compute_slots(self):
+        """Stack the panels in the side bar. The Génération and Créature cards stretch vertically (ky) to use the
+        room left by the others. Call again when the curves or the graph are toggled."""
+        layout, u = self.layout, self.u
         sb = layout.sidebar
         m, gap = round(12 * u), round(8 * u)
         pw = min(sb.w - 2 * m, round(MAX_PANEL_W * u))
-        items = [("gen", H_GEN), ("creature", H_CREATURE), ("net", H_NET)]
-        if layout.strip is None:
-            items.append(("chart", H_CHART))
-        natural = sum(h for _, h in items) * u
-        avail = sb.h - 2 * m - gap * (len(items) - 1) - hints_h - gap
-        self.ky = max(0.85, min(avail / natural, 1.9))   # Vertical stretch: panels use the room, text stays crisp
+        hints_h = sum(h.get_height() for h in self.hints) + 2 * len(self.hints)
+        # The curves go under the world when there is a strip; else in the side bar, unless the graph needs the room
+        chart_in_sidebar = layout.strip is None and self.show_chart and not self.show_graph
+        net_h = round(self._net_height() * u)
+        chart_h = round(H_CHART * u) if chart_in_sidebar else 0
+        n_panels = 3 + (1 if chart_in_sidebar else 0)
+        avail = sb.h - 2 * m - hints_h - gap * n_panels - net_h - chart_h
+        self.ky = max(0.85, min(avail / (2 * H_CONTENT * u), 1.9))
+        card_h = round(H_CONTENT * u * self.ky)
+
+        self.slots, y = {}, m
+        for name, h in (("gen", card_h), ("creature", card_h), ("net", net_h), ("chart", chart_h)):
+            if h:
+                self.slots[name] = pygame.Rect(m, y, pw, h)
+                y += h + gap
         self.hints_y = sb.h - m - hints_h
-        self.slots = {}   # name -> Rect inside the side bar
-        y = m
-        for name, h in items:
-            ph = round(h * u * self.ky)
-            self.slots[name] = pygame.Rect(m, y, pw, ph)
-            y += ph + gap
         self.bg = {name: _panel(r.w, r.h, u) for name, r in self.slots.items() if name != "chart"}
 
         self.strip_slot = None
@@ -241,15 +277,24 @@ class Hud:
         self._build_charts()
 
     def _build_charts(self):
-        self.chart = None
+        self.chart = None         # Curves in the strip under the world (tall windows only)
+        self.chart_side = None    # Curves in the side bar (no strip)
         if self.layout is None:
             return
         if self.strip_slot is not None:
             r = self.strip_slot
             self.chart = build_chart(self.fonts, self.stats, r.w, r.h, self.u, wide=True)
-        else:
+        if "chart" in self.slots:
             r = self.slots["chart"]
-            self.chart = build_chart(self.fonts, self.stats, r.w, r.h, self.u, wide=False)
+            self.chart_side = build_chart(self.fonts, self.stats, r.w, r.h, self.u, wide=False)
+
+    def toggle_chart(self):
+        self.show_chart = not self.show_chart
+        self._compute_slots()
+
+    def toggle_graph(self):
+        self.show_graph = not self.show_graph
+        self._compute_slots()
 
     def reload_stats(self):
         """Call after a generation has been logged."""
@@ -325,28 +370,34 @@ class Hud:
         return p
 
     def _draw_network(self, world, selected):
-        f, c = self.fonts, Ctx(self.u, self.ky)
+        f, c = self.fonts, Ctx(self.u)   # No vertical stretch: the graph takes the room instead
         p = self.bg["net"].copy()
-        W, pad = p.get_width(), c.x(14)
-        _text(p, f["base"], "Entrées / sorties du réseau", pad, c.y(7), VALUE)
+        W, H, pad = p.get_width(), p.get_height(), c.x(14)
+        _text(p, f["title"], "Réseau de neurones", pad, c.x(8), VALUE)
         if selected is None or not selected.alive:
             note = "Sélectionne une créature vivante." if selected is None else "Créature morte."
-            _text(p, f["small"], note, pad, c.y(36), LABEL)
+            _text(p, f["small"], note, pad, c.x(40), LABEL)
             return p
 
         # World.sense also sets food_nearby (a metric): put it back as it was
         flag = selected.food_nearby
         inputs = world.sense(selected)
         selected.food_nearby = flag
-        outputs = selected.brain.forward(inputs)
+        hidden, outputs = selected.brain.activations(inputs)
 
-        x0 = c.x(96)
-        bw = W - x0 - c.x(70)
-        bar_h = max(3, c.x(5))
         rows = network_rows(inputs, outputs)
         n_in = len(config.INPUT_LABELS)
+        rows_top = c.x(36)
+        if self.show_graph:
+            graph = pygame.Rect(pad, c.x(32), W - 2 * pad, c.x(GRAPH_H))
+            self._draw_graph(p, graph, selected.brain, inputs, hidden, outputs)
+            rows_top = graph.bottom + c.x(12)
+
+        x0 = c.x(96)
+        bw = W - x0 - c.x(84)
+        bar_h = max(3, c.x(5))
         for i, (label, txt, value, signed, color) in enumerate(rows):
-            y = c.y(26 + i * 15 + (4 if i >= n_in else 0))
+            y = rows_top + c.x(i * 15 + (4 if i >= n_in else 0))
             _text(p, f["small"], label, pad, y, LABEL)
             by = y + (f["small"].get_height() - bar_h) // 2
             if signed:
@@ -354,9 +405,42 @@ class Hud:
             else:
                 _bar(p, x0, by, bw, bar_h, value, color)
             _text(p, f["small"], txt, W - pad, y, VALUE, right=True)
-        ly = c.y(26 + n_in * 15) + c.x(1)
+        ly = rows_top + c.x(n_in * 15) + c.x(1)
         pygame.draw.line(p, (255, 255, 255, 30), (pad, ly), (W - pad, ly))
         return p
+
+    def _draw_graph(self, p, rect, brain, x_in, hidden, outputs):
+        """The network as a graph: inputs, hidden layer, outputs. Neuron brightness = activation, link colour = sign of
+        the signal it carries, link strength = size of that signal. Biases are not drawn."""
+        f, c = self.fonts, Ctx(self.u)
+        n_in, n_h, n_out = len(x_in), len(hidden), len(outputs)
+        label_w = c.x(80)
+        xs = (rect.x + label_w, rect.centerx, rect.right - label_w)
+
+        def column(x, n):
+            step = rect.h / n
+            return [(x, int(rect.y + step * (k + 0.5))) for k in range(n)]
+
+        pin, ph, pout = column(xs[0], n_in), column(xs[1], n_h), column(xs[2], n_out)
+        r = max(4, min(c.x(9), int(rect.h / max(n_in, n_h, n_out) / 2.4)))
+        wmax = max(float(abs(brain.w1).max()), float(abs(brain.w2).max()), 1e-9)
+        for h in range(n_h):
+            for i in range(n_in):
+                _edge(p, pin[i], ph[h], float(brain.w1[h, i]), float(x_in[i]), wmax)
+        for o in range(n_out):
+            for h in range(n_h):
+                _edge(p, ph[h], pout[o], float(brain.w2[o, h]), float(hidden[h]), wmax)
+        for pos, v in zip(pin, x_in):
+            _node(p, *pos, r, float(v))
+        for pos, v in zip(ph, hidden):
+            _node(p, *pos, r, float(v))
+        for pos, v in zip(pout, outputs):
+            _node(p, *pos, r, float(v))
+        th = f["small"].get_height()
+        for label, (x, y) in zip(config.INPUT_LABELS, pin):
+            _text(p, f["small"], label, x - r - c.x(6), y - th // 2, LABEL, right=True)
+        for label, (x, y) in zip(config.OUTPUT_LABELS, pout):
+            _text(p, f["small"], label, x + r + c.x(6), y - th // 2, LABEL)
 
     # ---------- frame ----------
 
@@ -364,16 +448,19 @@ class Hud:
         """sidebar: surface of layout.sidebar. strip: surface of layout.strip, or None."""
         sidebar.fill(config.SIDEBAR_BG_COLOR)
         pygame.draw.line(sidebar, (48, 54, 60), (0, 0), (0, sidebar.get_height()))
-        slots = self.slots
-        sidebar.blit(self._draw_generation(world, fps, speed, generation, debug_mode, paused, color_label),
-                     slots["gen"].topleft)
-        sidebar.blit(self._draw_creature(world, selected), slots["creature"].topleft)
-        sidebar.blit(self._draw_network(world, selected), slots["net"].topleft)
-        if "chart" in slots and self.show_chart and self.chart is not None:
-            sidebar.blit(self.chart, slots["chart"].topleft)
+        panels = {
+            "gen": lambda: self._draw_generation(world, fps, speed, generation, debug_mode, paused, color_label),
+            "creature": lambda: self._draw_creature(world, selected),
+            "net": lambda: self._draw_network(world, selected),
+            "chart": lambda: self.chart_side,
+        }
+        for name, rect in self.slots.items():
+            panel = panels[name]()
+            if panel is not None:
+                sidebar.blit(panel, rect.topleft)
         hy = self.hints_y
         for img in self.hints:
-            sidebar.blit(img, (slots["gen"].x + 2, hy))
+            sidebar.blit(img, (self.slots["gen"].x + 2, hy))
             hy += img.get_height() + 2
 
         if strip is not None:

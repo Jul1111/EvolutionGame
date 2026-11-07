@@ -26,6 +26,13 @@ class NeuralNetwork:
         
         return output
 
+    def activations(self, inputs):
+        """Comme forward, mais renvoie aussi la couche cachée : (hidden, output). Sert à l'affichage, ne modifie rien."""
+        x = np.array(inputs, dtype=float)
+        hidden = np.tanh(self.w1 @ x + self.b1)
+        output = np.tanh(self.w2 @ hidden + self.b2)
+        return hidden, output
+
     def get_genome(self):
         """Retourne le génome du réseau sous forme d'un vecteur 1D."""
         return np.concatenate([self.w1.flatten(), self.b1, self.w2.flatten(), self.b2])
