@@ -3,3 +3,4 @@ class Food:
         self.x = x
         self.y = y
         self.energy = energy
+        self.cooldown = 0  # Ticks left before the food is available again (0 = available)

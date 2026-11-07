@@ -17,7 +17,7 @@ WORLD_HEIGHT = SCREEN_HEIGHT
 
 # Configuration for food
 SEED = 42
-FOOD_COUNT = 15
+FOOD_COUNT = 10
 FOOD_RADIUS = 4
 FOOD_COLOR = (90, 200, 110)
 
@@ -75,3 +75,7 @@ DEBUG_LINK_COLOR = (150, 235, 200)
 HUD_PANEL_COLOR = (12, 16, 20, 190)
 HUD_LABEL_COLOR = (150, 165, 170)
 HUD_VALUE_COLOR = (235, 240, 240)
+
+# Configuration for food respawn
+FOOD_RESPAWN_DELAY = 60     # Ticks before an eaten food is available again (starting value, to tune)
+FOOD_FIXED_POSITIONS = False # True: food comes back at the same place; False: at a new random place

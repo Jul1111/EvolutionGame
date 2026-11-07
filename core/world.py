@@ -31,6 +31,11 @@ class World:
 
         # Phase 2: Check for food consumption
         for food in self.foods:
+            # A food that was eaten recently is not there yet: count down and skip it
+            if food.cooldown > 0:
+                food.cooldown -= 1
+                continue
+
             best = None
             best_distance2 = (config.CREATURE_RADIUS + config.FOOD_RADIUS) ** 2
             
@@ -46,9 +51,11 @@ class World:
 
             if best is not None:
                 best.eat_food(food.energy)
-                # Reposition the food to a new random location
-                food.x = self.rng.uniform(0, self.width)
-                food.y = self.rng.uniform(0, self.height)
+                # The food comes back after a delay, at the same place or at a new random one
+                food.cooldown = config.FOOD_RESPAWN_DELAY
+                if not config.FOOD_FIXED_POSITIONS:
+                    food.x = self.rng.uniform(0, self.width)
+                    food.y = self.rng.uniform(0, self.height)
 
         self.tick += 1
 
@@ -72,6 +79,8 @@ class World:
         best_dx = None
         best_dy = None
         for food in self.foods:
+            if food.cooldown > 0:
+                continue  # Not available yet: the creature cannot see it
             dx = torus_delta(creature.x, food.x, self.width)
             dy = torus_delta(creature.y, food.y, self.height)
             distance2 = dx * dx + dy * dy

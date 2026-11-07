@@ -134,6 +134,8 @@ class Scene:
 
         now = pygame.time.get_ticks()  # real time: pulsation does not accelerate with the sim speed
         for i, food in enumerate(world.foods):
+            if food.cooldown > 0:
+                continue  # Eaten, not back yet
             frame = int(now / 90 + i * 3) % FOOD_FRAMES
             self._blit_wrapped(screen, self.food_sprites[frame], food.x, food.y, ww, wh)
 

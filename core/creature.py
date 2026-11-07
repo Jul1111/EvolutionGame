@@ -14,6 +14,10 @@ class Creature:
         self.alive = True
         self.food_eaten = 0 
         self.age = 0
+        # Exploration metrics: what the creature does when it sees no food
+        self.blind_ticks = 0
+        self.blind_speed_sum = 0.0
+        self.blind_turn_sum = 0.0
 
     def update(self, inputs, world_width, world_height):
         if not self.alive:
@@ -29,6 +33,12 @@ class Creature:
 
         self.angle = normalize_angle(self.angle + turn * config.CREATURE_MAX_TURN)
         self.speed = (speed_command + 1.0) / 2.0 * config.CREATURE_MAX_SPEED
+
+        # inputs[0] is the normalised distance to food: 1.0 means nothing in sight (see World.sense)
+        if inputs[0] >= 1.0:
+            self.blind_ticks += 1
+            self.blind_speed_sum += self.speed
+            self.blind_turn_sum += abs(turn)
 
         # Update the creature's position based on its speed and angle
         self.x += self.speed * math.cos(self.angle)
