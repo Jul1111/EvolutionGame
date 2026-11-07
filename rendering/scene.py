@@ -82,6 +82,7 @@ class Scene:
             self.body_sprites = [self._build_body(c) for c in self.bucket_colors]
             self.dead_sprite = self._build_dead()
             self.food_sprites = [self._build_food(f) for f in range(FOOD_FRAMES)]
+            self.poison_sprites = [self._build_poison(f) for f in range(FOOD_FRAMES)]
 
     # ---------- construction (on resize) ----------
 
@@ -148,6 +149,25 @@ class Scene:
         pygame.draw.circle(big, (*core, 255), (c - r * 0.25 * s, c - r * 0.25 * s), r * 0.5 * s)
         return _shrink(big, size)
 
+    def _build_poison(self, frame):
+        """Poison: purple halo and a dark diamond with a light edge. A different shape from food, not only a colour."""
+        k = self.sprite_scale
+        r = config.FOOD_RADIUS * 1.25 * k
+        halo = r * 3.6
+        size, s, big = self._sprite_canvas(halo + k)
+        c = size * s / 2
+        pulse = 0.55 + 0.45 * (0.5 + 0.5 * math.cos(2 * math.pi * frame / FOOD_FRAMES))
+        steps = 10
+        for i in range(steps):
+            radius = halo * s * (1.0 - i / steps)
+            alpha = int(80 * pulse * ((i + 1) / steps) ** 1.5)
+            pygame.draw.circle(big, (*config.POISON_COLOR, alpha), (c, c), radius)
+        d = r * s
+        diamond = [(c, c - d), (c + d, c), (c, c + d), (c - d, c)]
+        pygame.draw.polygon(big, (*_lerp(config.POISON_COLOR, (10, 12, 16), 0.55), 255), diamond)
+        pygame.draw.polygon(big, (*_lerp(config.POISON_COLOR, (255, 255, 255), 0.4), 255), diamond, max(1, int(1.3 * k * s)))
+        return _shrink(big, size)
+
     # ---------- drawing (every frame) ----------
 
     @staticmethod
@@ -181,6 +201,12 @@ class Scene:
                 continue  # Eaten, not back yet
             frame = int(now / 90 + i * 3) % FOOD_FRAMES
             self._blit_wrapped(screen, self.food_sprites[frame], food.x * k, food.y * k, ww, wh)
+
+        for i, poison in enumerate(world.poisons):
+            if poison.cooldown > 0:
+                continue  # Just triggered, not back yet
+            frame = int(now / 110 + i * 5) % FOOD_FRAMES
+            self._blit_wrapped(screen, self.poison_sprites[frame], poison.x * k, poison.y * k, ww, wh)
 
         for c in world.creatures:
             if not c.alive:
@@ -274,6 +300,19 @@ class Scene:
                     best = (dx, dy)
             if best is not None:
                 pygame.draw.aaline(screen, config.DEBUG_LINK_COLOR, (c.x * k, c.y * k),
+                                   ((c.x + best[0]) * k, (c.y + best[1]) * k))
+            # Same for the nearest poison, in the poison colour
+            best, best_d2 = None, vision2
+            for poison in world.poisons:
+                if poison.cooldown > 0:
+                    continue
+                dx = torus_delta(c.x, poison.x, world.width)
+                dy = torus_delta(c.y, poison.y, world.height)
+                d2 = dx * dx + dy * dy
+                if d2 <= best_d2:
+                    best_d2, best = d2, (dx, dy)
+            if best is not None:
+                pygame.draw.aaline(screen, config.POISON_COLOR, (c.x * k, c.y * k),
                                    ((c.x + best[0]) * k, (c.y + best[1]) * k))
             if mode == 1:
                 pygame.draw.circle(screen, (255, 255, 255), center, round((config.CREATURE_RADIUS + 5) * k), 1)

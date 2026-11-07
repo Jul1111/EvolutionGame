@@ -1,6 +1,6 @@
 import pygame
 
-from rendering.hud import VALUE, LABEL, MINT, create_fonts
+from rendering.hud import VALUE, LABEL, MINT, SERIES, create_fonts
 
 BAR_BG = (19, 23, 28)
 LINE = (48, 54, 60)
@@ -28,6 +28,9 @@ MENUS = [
         ("graph", "Graphe du réseau", "toggle", "graph", "N"),
         ("fullscreen", "Plein écran", "toggle", "fullscreen", "F"),
     ]),
+    # One check box per curve of the chart, in the colour of the curve. The menu stays open to pick several.
+    ("Courbes", [("series:" + key, label, "toggle", "s_" + key, "", color) for key, label, color, *_ in SERIES]
+     + [None, ("series_default", "Courbes par défaut", "action", None, "")]),
     # Settings cycle through preset values at each click. A "*" marks a value waiting for the next generation.
     ("Paramètres", [
         ("mutation", "Mutation : {mutation}", "action", None, ""),
@@ -38,6 +41,9 @@ MENUS = [
         ("respawn", "Délai de réapparition : {respawn}", "action", None, ""),
         ("max_eats", "Repas avant épuisement : {max_eats}", "action", None, ""),
         ("fixed", "Positions de la nourriture : {fixed}", "action", None, ""),
+        None,
+        ("poison_count", "Nombre de poisons : {poison_count}", "action", None, ""),
+        ("poison_energy", "Dégâts d'un poison : {poison_energy}", "action", None, ""),
     ]),
     ("Sauvegarde", [
         ("end_gen", "Terminer la génération maintenant", "action", None, ""),
@@ -161,12 +167,13 @@ class MenuBar:
                 continue
             if mouse is not None and rect.collidepoint(mouse):
                 pygame.draw.rect(window, HOVER_BG, rect.inflate(-round(6 * u), 0), border_radius=max(3, round(6 * u)))
-            action, _, kind, key, shortcut = entry
+            action, _, kind, key, shortcut = entry[:5]
+            tick_color = entry[5] if len(entry) > 5 else MINT
             if kind == "toggle":
                 cb = pygame.Rect(rect.x + pad, rect.centery - side // 2, side, side)
                 on = bool(state.get(key))
                 if on:
-                    pygame.draw.rect(window, MINT, cb, border_radius=3)
+                    pygame.draw.rect(window, tick_color, cb, border_radius=3)
                     pts = [(cb.x + side * 0.22, cb.centery), (cb.x + side * 0.43, cb.bottom - side * 0.25),
                            (cb.right - side * 0.2, cb.y + side * 0.25)]
                     pygame.draw.lines(window, BAR_BG, False, pts, max(2, round(2 * u)))

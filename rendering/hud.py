@@ -25,6 +25,8 @@ INPUT_FORMAT = {
     "Distance": lambda v: ("rien en vue" if v >= 1.0 else f"{v:.2f}", False),
     "Angle": lambda v: (f"{v:+.2f}", True),
     "Peut manger": lambda v: ("oui" if v >= 0.5 else "non", False),
+    "Dist. poison": lambda v: ("rien en vue" if v >= 1.0 else f"{v:.2f}", False),
+    "Angle poison": lambda v: (f"{v:+.2f}", True),
 }
 
 
@@ -153,65 +155,138 @@ def _row(surf, fonts, c, y, label, value, value_color=VALUE):
     _text(surf, fonts["base"], value, surf.get_width() - pad, c.y(y), value_color, right=True)
 
 
-def build_chart(fonts, stats, width, height, u, wide):
-    """Pre-render the per-generation curves. Each curve is scaled to its own range.
+def _col(name):
+    return lambda row: row.get(name)
+
+
+def _ratio(num, den):
+    def value(row):
+        a, b = row.get(num), row.get(den)
+        return a / b if a is not None and b else None
+    return value
+
+
+def _per_minute(row):
+    """Meals eaten per minute of simulated time, whole population."""
+    food, ticks = row.get("total_food"), row.get("ticks")
+    return food / (ticks / (config.TICKS_PER_SECOND * 60)) if food is not None and ticks else None
+
+
+# Curves that can be shown: (key, label, colour, value(row), fixed maximum or None = largest value seen, text format).
+# Each curve is scaled to its own range. A column missing from an old CSV row simply leaves a gap.
+SERIES = [
+    ("best_age", "Meilleur âge", AMBER, _col("best_age"), lambda: config.GEN_MAX_TICKS, format_time),
+    ("mean_food", "Nourriture moy. (parents)", (90, 200, 110), _col("mean_food"), None, lambda v: f"{v:.0f}"),
+    ("max_food", "Nourriture max", (178, 224, 120), _col("max_food"), None, lambda v: f"{v:.0f}"),
+    ("total_food", "Nourriture totale", (64, 176, 156), _col("total_food"), None, lambda v: f"{v:.0f}"),
+    ("food_rate", "Repas par minute", (232, 214, 130), _per_minute, None, lambda v: f"{v:.1f}"),
+    ("mean_speed", "Vitesse moy.", BLUE, _col("mean_speed"), lambda: config.CREATURE_MAX_SPEED, lambda v: f"{v:.2f}"),
+    ("blind_speed", "Vitesse sans nourriture en vue", (132, 132, 236), _col("blind_speed"),
+     lambda: config.CREATURE_MAX_SPEED, lambda v: f"{v:.2f}"),
+    ("search_ratio", "Vitesse aveugle / moyenne", (160, 190, 255), _ratio("blind_speed", "mean_speed"), None,
+     lambda v: f"{v:.2f}"),
+    ("blind_frac", "Part aveugle", CORAL, _col("blind_frac"), None, lambda v: f"{v:.0%}"),
+    ("blind_turn", "Virage sans nourriture en vue", (236, 142, 72), _col("blind_turn"), lambda: 1.0,
+     lambda v: f"{v:.2f}"),
+    ("mean_energy", "Énergie moy. (parents)", MINT, _col("mean_energy"), lambda: config.ENERGY_MAX, lambda v: f"{v:.0f}"),
+    ("alive", "Vivantes en fin de génération", (204, 172, 132), _col("alive"), lambda: config.POPULATION_SIZE,
+     lambda v: f"{v:.0f}"),
+    ("mean_poison", "Poison touché (parents)", (176, 96, 214), _col("mean_poison"), None, lambda v: f"{v:.1f}"),
+    ("total_poison", "Poison touché (total)", (230, 122, 182), _col("total_poison"), None, lambda v: f"{v:.0f}"),
+    ("poison_ratio", "Poison / nourriture (total)", (200, 160, 220), _ratio("total_poison", "total_food"), None,
+     lambda v: f"{v:.2f}"),
+]
+SERIES_BY_KEY = {s[0]: s for s in SERIES}
+DEFAULT_SERIES = ("best_age", "mean_food", "mean_speed", "mean_poison")
+
+
+def _clip(font, text, max_w):
+    """Text shortened with an ellipsis so that it is at most max_w pixels wide."""
+    if font.size(text)[0] <= max_w:
+        return text
+    while text and font.size(text + "…")[0] > max_w:
+        text = text[:-1]
+    return text + "…"
+
+
+def _legend(surf, fonts, entries, area, c, values):
+    """Colour dot, label and (when there is room) last value, in one or two columns inside `area`.
+    entries: [(label, colour, last text)]. Entries that do not fit are replaced by a '+N' note."""
+    small = fonts["small"]
+    line_h = small.get_height() + c.x(2)
+    per_col = max(1, area.h // line_h)
+    cols = 1 if len(entries) <= per_col else 2
+    capacity = per_col * cols
+    shown = entries[:capacity]
+    hidden = len(entries) - len(shown)
+    if hidden:
+        shown = entries[:capacity - 1]
+        hidden = len(entries) - len(shown)
+    col_w = area.w // cols
+    for i, (label, color, last) in enumerate(shown):
+        cx = area.x + (i // per_col) * col_w
+        cy = area.y + (i % per_col) * line_h
+        pygame.draw.circle(surf, color, (cx + c.x(6), cy + small.get_height() // 2), max(3, c.x(4)))
+        value_w = small.size(last)[0]
+        with_value = small.size(label)[0] + value_w + c.x(34) <= col_w
+        _text(surf, small, label if with_value else _clip(small, label, col_w - c.x(24)), cx + c.x(16), cy, LABEL)
+        if with_value:
+            _text(surf, small, last, cx + col_w - c.x(8), cy, VALUE, right=True)
+    if hidden:
+        k = len(shown)
+        x = area.x + (k // per_col) * col_w + c.x(16)
+        _text(surf, small, _clip(small, f"+ {hidden} autres (voir le bandeau)", area.right - x), x,
+              area.y + (k % per_col) * line_h, LABEL)
+
+
+def build_chart(fonts, stats, width, height, u, wide, keys):
+    """Pre-render the per-generation curves for the series in `keys`. Each curve is scaled to its own range.
     wide=False: plot on top, legend below (side bar). wide=True: plot on the left, legend on the right (strip)."""
     c = Ctx(u)
     surf = _panel(width, height, u)
     pad = c.x(14)
     _text(surf, fonts["base"], "Courbes par génération", pad, c.x(7), VALUE)
     _text(surf, fonts["small"], "échelles propres", width - pad, c.x(9), LABEL, right=True)
+    selected = [SERIES_BY_KEY[k] for k in (s[0] for s in SERIES) if k in keys]
+    line_h = fonts["small"].get_height() + c.x(2)
 
     if wide:
-        plot = pygame.Rect(pad, c.x(30), int(width * 0.62), height - c.x(30) - pad)
+        plot = pygame.Rect(pad, c.x(30), int(width * 0.60), height - c.x(30) - pad)
+        legend_area = pygame.Rect(plot.right + c.x(20), plot.top, width - plot.right - c.x(20) - pad, plot.height)
     else:
-        legend_h = 4 * c.x(16)
+        legend_h = min(len(selected), 4) * line_h if selected else 0
         plot_h = max(c.x(30), height - c.x(28) - legend_h - c.x(16))
         plot = pygame.Rect(pad, c.x(28), width - 2 * pad, plot_h)
+        legend_area = pygame.Rect(pad, plot.bottom + c.x(6), width - 2 * pad, height - plot.bottom - c.x(6) - c.x(6))
     pygame.draw.rect(surf, (255, 255, 255, 14), plot, border_radius=max(3, c.x(6)))
-    if not stats:
-        msg = fonts["small"].render("Pas encore de données", True, LABEL)
+    if not stats or not selected:
+        text = "Pas encore de données" if not stats else "Aucune courbe choisie (menu Courbes)"
+        msg = fonts["small"].render(text, True, LABEL)
         surf.blit(msg, (plot.centerx - msg.get_width() // 2, plot.centery - msg.get_height() // 2))
         return surf
 
-    def column(key):
-        return [r.get(key) for r in stats]
-
-    food_max = max([v for v in column("mean_food") if v is not None] + [1.0])
-    blind_max = max([v for v in column("blind_frac") if v is not None] + [0.01])
-    series = [
-        ("Meilleur âge", AMBER, "best_age", config.GEN_MAX_TICKS, lambda v: format_time(v)),
-        ("Nourriture moy.", config.FOOD_COLOR, "mean_food", food_max, lambda v: f"{v:.0f}"),
-        ("Vitesse moy.", BLUE, "mean_speed", config.CREATURE_MAX_SPEED, lambda v: f"{v:.2f}"),
-        ("Part aveugle", CORAL, "blind_frac", blind_max, lambda v: f"{v:.0%}"),
-    ]
     n = len(stats)
     margin = c.x(3)
-    for i, (label, color, key, vmax, fmt) in enumerate(series):
-        values = column(key)
+    entries = []
+    for key, label, color, value, fixed_max, fmt in selected:
+        values = [value(r) for r in stats]
+        seen = [v for v in values if v is not None]
+        vmax = fixed_max() if fixed_max else (max(seen) * 1.05 if seen else 1.0)
+        vmax = vmax if vmax > 1e-9 else 1.0
         pts = []
         for j, v in enumerate(values):
             if v is None:
                 continue
             px = plot.left + (plot.width * j / (n - 1) if n > 1 else plot.width / 2)
-            py = plot.bottom - margin - min(v / vmax, 1.0) * (plot.height - 2 * margin)
+            py = plot.bottom - margin - max(0.0, min(v / vmax, 1.0)) * (plot.height - 2 * margin)
             pts.append((px, py))
         if len(pts) > 1:
             pygame.draw.aalines(surf, color, False, pts)
         elif pts:
             pygame.draw.circle(surf, color, (int(pts[0][0]), int(pts[0][1])), max(2, c.x(3)))
-        if wide:
-            row_h = plot.height / 4
-            ly = int(plot.top + i * row_h + row_h / 2 - fonts["small"].get_height() / 2)
-            lx = plot.right + c.x(24)
-        else:
-            ly = plot.bottom + c.x(6) + i * c.x(16)
-            lx = pad
-        dot_r = max(3, c.x(4))
-        pygame.draw.circle(surf, color, (lx + c.x(6), ly + fonts["small"].get_height() // 2), dot_r)
-        _text(surf, fonts["small"], label, lx + c.x(16), ly, LABEL)
         last = next((v for v in reversed(values) if v is not None), None)
-        _text(surf, fonts["small"], fmt(last) if last is not None else "n/a", width - pad, ly, VALUE, right=True)
+        entries.append((label, color, fmt(last) if last is not None else "n/a"))
+    _legend(surf, fonts, entries, legend_area, c, True)
     return surf
 
 
@@ -222,6 +297,7 @@ class Hud:
     def __init__(self):
         self.show_chart = True    # Curves (in the strip when there is one, else in the side bar)
         self.show_graph = False   # Network drawn as a graph above the bars
+        self.chart_keys = set(DEFAULT_SERIES)   # Curves shown (menu Courbes)
         self.layout = None
         self.stats = load_stats()
 
@@ -284,14 +360,23 @@ class Hud:
             return
         if self.strip_slot is not None:
             r = self.strip_slot
-            self.chart = build_chart(self.fonts, self.stats, r.w, r.h, self.u, wide=True)
+            self.chart = build_chart(self.fonts, self.stats, r.w, r.h, self.u, True, self.chart_keys)
         if "chart" in self.slots:
             r = self.slots["chart"]
-            self.chart_side = build_chart(self.fonts, self.stats, r.w, r.h, self.u, wide=False)
+            self.chart_side = build_chart(self.fonts, self.stats, r.w, r.h, self.u, False, self.chart_keys)
 
     def toggle_chart(self):
         self.show_chart = not self.show_chart
         self._compute_slots()
+
+    def toggle_series(self, key):
+        if key in SERIES_BY_KEY:
+            self.chart_keys ^= {key}
+            self._build_charts()
+
+    def reset_series(self):
+        self.chart_keys = set(DEFAULT_SERIES)
+        self._build_charts()
 
     def toggle_graph(self):
         self.show_graph = not self.show_graph
@@ -363,7 +448,7 @@ class Hud:
         _row(p, f, c, 66, "Vitesse", f"{cr.speed:.2f}")
         _bar(p, pad, c.y(87), W - 2 * pad, bar_h, cr.speed / config.CREATURE_MAX_SPEED, BLUE)
         _row(p, f, c, 96, "Âge", format_time(cr.age))
-        _row(p, f, c, 114, "Nourriture mangée", str(cr.food_eaten))
+        _row(p, f, c, 114, "Nourriture / poison", f"{cr.food_eaten} / {cr.poison_hits}")
         blind_share = cr.blind_ticks / cr.age if cr.age else 0.0
         _row(p, f, c, 132, "Temps aveugle", f"{blind_share:.0%}")
         better = sum(1 for o in world.creatures if rank_key(o) > rank_key(cr))

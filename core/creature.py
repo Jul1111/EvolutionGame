@@ -13,6 +13,7 @@ class Creature:
         self.brain = brain
         self.alive = True
         self.food_eaten = 0 
+        self.poison_hits = 0
         self.age = 0
         # Exploration metrics: what the creature does when it sees no food
         self.food_nearby = True  # Set by World.sense each tick
@@ -59,6 +60,13 @@ class Creature:
         self.energy -= config.ENERGY_BASE_COST + config.ENERGY_MOVE_COST * self.speed
 
         self.age += 1 #Added age increment to track how long the creature has been alive
+
+    def hit_by_poison(self, amount):
+        """Touching a poison costs energy. The creature dies at its next update if the energy reaches 0."""
+        if not self.alive:
+            return
+        self.energy -= amount
+        self.poison_hits += 1
 
     def eat_food(self,amount):
         if not self.alive:

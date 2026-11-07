@@ -6,7 +6,7 @@ from collections import deque
 
 from core.world import World
 from evolution.population import brains_from_genomes, select_parents
-from rendering.hud import Hud, format_time
+from rendering.hud import Hud, format_time, SERIES_BY_KEY
 from rendering.menu import MenuBar
 from rendering.scene import Scene, pick_creature
 from rendering.display import Display
@@ -68,13 +68,16 @@ def main():
         blind_speed = sum(c.blind_speed_sum for c in parents) / blind_ticks if blind_ticks else None
         blind_turn = sum(c.blind_turn_sum for c in parents) / blind_ticks if blind_ticks else None
         total_food = sum(c.food_eaten for c in world.creatures)
+        mean_poison = sum(c.poison_hits for c in parents) / len(parents)
+        total_poison = sum(c.poison_hits for c in world.creatures)
         print(f"Gen {generation:>4} | fin {format_time(world.tick)} | "
               f"vivantes {alive_count}/{len(world.creatures)} | "
               f"meilleur âge {format_time(parents[0].age)} | "
               f"nourriture parents moy {mean_food:.1f} max {max_food} | "
               f"vitesse moy parents {mean_speed:.2f} | "
               f"mangé total {total_food} | aveugles {blind_frac:.0%} | "
-              f"énergie moy parents {mean_energy:.0f}")
+              f"énergie moy parents {mean_energy:.0f} | "
+              f"poison parents moy {mean_poison:.1f} total {total_poison}")
         log_generation({
             "generation": generation, "ticks": world.tick, "alive": alive_count,
             "best_age": parents[0].age, "mean_food": mean_food, "max_food": max_food,
@@ -82,6 +85,7 @@ def main():
             "total_food": total_food, "blind_frac": blind_frac,
             "blind_speed": blind_speed, "blind_turn": blind_turn,
             "mean_energy": mean_energy,
+            "mean_poison": mean_poison, "total_poison": total_poison,
         })  # The settings of config.py are added by log_generation, before apply_pending() changes them
         hud.reload_stats()
         genomes = [p.brain.get_genome() for p in parents]
@@ -119,6 +123,8 @@ def main():
         "respawn": ("FOOD_RESPAWN_DELAY", [0, 30, 60, 120, 300], lambda v: f"{v} ticks"),
         "max_eats": ("FOOD_MAX_EATS", [1, 2, 3, 5, 10], str),
         "fixed": ("FOOD_FIXED_POSITIONS", [False, True], lambda v: "fixes" if v else "aléatoires"),
+        "poison_count": ("POISON_COUNT", [0, 3, 5, 8, 12], str),
+        "poison_energy": ("POISON_ENERGY", [20.0, 40.0, 60.0, 80.0], lambda v: f"{v:g}"),
     }
     pending = {}   # action → value waiting for the next generation
 
@@ -156,6 +162,12 @@ def main():
             display.toggle_fullscreen()
         elif action == "end_gen":
             end_generation()
+        elif action.startswith("series:"):
+            hud.toggle_series(action[len("series:"):])
+            return True   # Menu stays open to pick several curves
+        elif action == "series_default":
+            hud.reset_series()
+            return True
         elif action in PARAMS:
             # The value is only noted here (pending) and written to config when the next generation is built.
             # The menu stays open to click again.
@@ -259,6 +271,7 @@ def main():
             "speed": speed, "paused": paused, "debug": ("off", "sélection", "toutes")[debug_mode],
             "color": scene.color_label(), "chart": hud.show_chart, "graph": hud.show_graph,
             "fullscreen": display.fullscreen,
+            **{"s_" + key: key in hud.chart_keys for key in SERIES_BY_KEY},
             **{a: fmt(pending.get(a, getattr(config, name))) + ("  *" if a in pending else "")
                for a, (name, _, fmt) in PARAMS.items()},
             "reset": "Confirmer : tout effacer ?" if reset_pending else "Repartir de zéro",

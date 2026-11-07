@@ -7,7 +7,8 @@ import config
 
 # Measures of the generation, computed by main.py
 BASE_HEADER = ["generation", "ticks", "alive", "best_age", "mean_food", "max_food", "mean_speed",
-               "food_count", "total_food", "blind_frac", "blind_speed", "blind_turn", "mean_energy"]
+               "food_count", "total_food", "blind_frac", "blind_speed", "blind_turn", "mean_energy",
+               "mean_poison", "total_poison"]
 
 # Every constant of config.py is logged too (column = its name in lower case), so a CSV says which settings produced it.
 # Machine-specific paths are left out.
@@ -19,8 +20,10 @@ OLD_NAMES = {"parents": "parents_count", "respawn_delay": "food_respawn_delay",
 
 
 def _config_names():
+    # A constant whose lower-case name is already a measure column (FOOD_COUNT / food_count) is not duplicated
     return [n for n in sorted(dir(config))
-            if n.isupper() and n not in CONFIG_EXCLUDED and isinstance(getattr(config, n), (int, float, bool, str, tuple, list))]
+            if n.isupper() and n not in CONFIG_EXCLUDED and n.lower() not in BASE_HEADER
+            and isinstance(getattr(config, n), (int, float, bool, str, tuple, list))]
 
 
 def _cell(value):
