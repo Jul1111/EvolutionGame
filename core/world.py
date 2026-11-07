@@ -52,15 +52,18 @@ class World:
 
         self.tick += 1
 
+    def add_creature(self, brain):
+        x = self.rng.uniform(0, self.width)
+        y = self.rng.uniform(0, self.height)
+        angle = self.rng.uniform(-math.pi, math.pi)
+        creature = Creature(x, y, angle, config.INITIAL_ENERGY, brain)
+        self.creatures.append(creature)
+
     def add_population(self,count):
         for _ in range(count):
-            x = self.rng.uniform(0, self.width)
-            y = self.rng.uniform(0, self.height)
-            angle = self.rng.uniform(-math.pi, math.pi)
             brain = NeuralNetwork(config.NN_INPUTS, config.NN_HIDDEN, config.NN_OUTPUTS)
             brain.randomize(self.rng, config.NN_INIT_STD)
-            creature = Creature(x, y, angle, config.INITIAL_ENERGY, brain)
-            self.creatures.append(creature)
+            self.add_creature(brain)
 
     def sense(self, creature):
         """Retourne les entrées du réseau : [distance, angle relatif, énergie], toutes normalisées."""

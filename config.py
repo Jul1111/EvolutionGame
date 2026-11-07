@@ -52,3 +52,6 @@ NN_HIDDEN = 6
 NN_OUTPUTS = 2              # turn, speed
 NN_INIT_STD = 0.5           # Std of the initial random weights
 CREATURE_MAX_TURN = 0.15    # Max rotation per tick (radians) when the turn output is +/-1
+
+# Configuration for mutation
+MUTATION_STD = 0.1          # Std of the gaussian noise added to each weight of a child

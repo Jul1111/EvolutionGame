@@ -4,7 +4,8 @@ import random
 import time
 
 from core.world import World
-from rendering.hud import create_font, draw_hud
+from evolution.population import next_generation_brains, select_parents
+from rendering.hud import create_font, draw_hud, format_time
 
 
 def main():
@@ -22,6 +23,8 @@ def main():
 
     world = World(rng)
     world.add_population(config.POPULATION_SIZE)
+
+    generation = 1
 
     speed_index = 0
     last_speed = config.SPEED_STEPS[speed_index]
@@ -64,6 +67,20 @@ def main():
         t0 = time.perf_counter()
         for _ in range(speed):
             world.update()
+            if world.is_over():
+                # End of the generation: parents + mutated children form the next one
+                parents = select_parents(world.creatures, config.PARENTS_COUNT)
+                mean_food = sum(c.food_eaten for c in parents) / len(parents)
+                print(f"Gen {generation:>4} | fin {format_time(world.tick)} | "
+                      f"meilleur âge {format_time(parents[0].age)} | "
+                      f"nourriture parents moy {mean_food:.1f} max {max(c.food_eaten for c in parents)} | "
+                      f"vitesse moy parents {sum(c.speed for c in parents) / len(parents):.2f}")
+                brains = next_generation_brains(world.creatures, rng)
+                world = World(rng)
+                for brain in brains:
+                    world.add_creature(brain)
+                generation += 1
+                break
         t1 = time.perf_counter()
 
         # Draw all food items and creatures on the screen
@@ -87,10 +104,10 @@ def main():
         frames += 1
         if t3 - window_start >= 1.0:
             ms = 1000.0 / frames
-            print(f"x{speed} | update {update_time * ms:.2f} ms/image "
-                  f"({update_time * ms / speed:.3f} ms/tick) | "
-                  f"dessin {draw_time * ms:.2f} ms | flip {flip_time * ms:.2f} ms | "
-                  f"{frames} images")
+            #print(f"x{speed} | update {update_time * ms:.2f} ms/image "
+                  #f"({update_time * ms / speed:.3f} ms/tick) | "
+                  #f"dessin {draw_time * ms:.2f} ms | flip {flip_time * ms:.2f} ms | "
+                  #f"{frames} images")
             update_time = draw_time = flip_time = 0.0
             frames = 0
             window_start = t3
