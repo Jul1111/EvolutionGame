@@ -23,7 +23,8 @@ DEAD_COLOR = (90, 90, 90)
 
 # Configuration for world
 WORLD_SCALE = 1             # Side of the world in screens (a screen = SCREEN_WIDTH x SCREEN_HEIGHT). 2 = 4 times the area,
-                            # food, obstacles, founders and cap included; about 4 times slower. Menu Paramètres, next restart
+                            # food, obstacles and computing cap included (not the founders); about 4 times slower once the
+                            # population has grown. The view opens at the scale of one screen. Menu Paramètres, next restart
 WORLD_WIDTH = round(SCREEN_WIDTH * WORLD_SCALE)
 WORLD_HEIGHT = round(SCREEN_HEIGHT * WORLD_SCALE)
 # FOOD_COUNT, POISON_COUNT and OBSTACLE_COUNT are given per screen-sized area: the world holds WORLD_SCALE² times more
@@ -69,7 +70,7 @@ CREATURE_ACCELERATION = 0.25  # Max change of speed per tick, accelerating or br
 
 # Configuration for continuous evolution (evolution/continuous.py): no generations, creatures are born and die.
 # Starting values, to tune (see the project doc conception-evolution-continue.md)
-INITIAL_POPULATION = 200    # Random creatures at the start, per screen-sized area (split between ACTIVE_PROFILES)
+INITIAL_POPULATION = 200    # Random creatures at the start, whatever the world size (split between ACTIVE_PROFILES)
 REPRO_THRESHOLD = 120.0     # Energy needed to give birth (150: random founders rarely reach it, extinction)
 REPRO_COST = 60.0           # Energy the parent loses at a birth
 REPRO_CHILD_ENERGY = 50.0   # Energy of the newborn (less than the cost: no perpetual motion)
@@ -115,8 +116,8 @@ HUD_LABEL_COLOR = (150, 165, 170)
 HUD_VALUE_COLOR = (235, 240, 240)
 
 # Configuration for food respawn
-FOOD_RESPAWN_DELAY = 60     # Ticks before an eaten food is available again (starting value, to tune)
-FOOD_FIXED_POSITIONS = True  # True: food comes back at the same place; False: at a new random place
+FOOD_RESPAWN_DELAY = 60     # Ticks before an eaten food is available again, always at a new random place
+SPAWN_CLEARANCE = 20        # Food and poison never reappear closer than this to the edge of a creature (never on one)
 POISON_COUNT = 5            # Poison sources in the world (0 = no poison). The network sees the nearest one
 POISON_ENERGY = 40.0        # Energy lost by the creature that touches a poison (starting value, to tune)
 POISON_COLOR = (176, 96, 214)
@@ -128,7 +129,6 @@ OBSTACLE_RADIUS_MIN = 20    # Radius range of the circle around the shape (world
 OBSTACLE_RADIUS_MAX = 45
 OBSTACLE_MIN_GAP = 30       # Minimum free space between two obstacles (a creature is 16 wide: it can always pass)
 OBSTACLE_COLOR = (92, 102, 112)
-FOOD_MAX_EATS = 3           # Times a source can be eaten before it moves elsewhere (starting value, to tune)
 
 
 def refresh_derived():

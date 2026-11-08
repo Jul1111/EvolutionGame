@@ -57,11 +57,10 @@ def main():
         "food": ("FOOD_COUNT", [5, 10, 20, 30, 40, 60], str),
         "food_energy": ("FOOD_ENERGY", [15.0, 30.0, 45.0, 60.0], lambda v: f"{v:g}"),
         "respawn": ("FOOD_RESPAWN_DELAY", [0, 30, 60, 120, 300], lambda v: f"{v} ticks"),
-        "max_eats": ("FOOD_MAX_EATS", [1, 2, 3, 5, 10], str),
-        "fixed": ("FOOD_FIXED_POSITIONS", [False, True], lambda v: "fixes" if v else "aléatoires"),
         "poison_count": ("POISON_COUNT", [0, 3, 5, 8, 12, 20, 30], str),
         "poison_energy": ("POISON_ENERGY", [20.0, 40.0, 60.0, 80.0], lambda v: f"{v:g}"),
         "obstacle_count": ("OBSTACLE_COUNT", [0, 3, 6, 10, 15, 25, 35], str),
+        "founders": ("INITIAL_POPULATION", [50, 100, 200, 300, 400], str),
         "size_mode": ("SIZE_MODE", ["fixe", "neutre", "actif"], str),
         "world_scale": ("WORLD_SCALE", [1, 2, 3], lambda v: f"{v}×{v} écrans"),
     }
@@ -74,7 +73,7 @@ def main():
               + " (valeurs de config.py ignorées ; LOAD_SETTINGS = False pour les désactiver)")
     # Settings that only take effect on a new world (obstacles are drawn when the world is created).
     # Every other setting applies at once.
-    RESTART_PARAMS = {"obstacle_count", "world_scale", "size_mode"}   # size_mode: bodies are set at birth
+    RESTART_PARAMS = {"obstacle_count", "world_scale", "size_mode", "founders"}   # size_mode: bodies are set at birth
     pending_profiles = None   # Species ticked in the menu (list), applied at the next restart from zero
 
     # Continuous evolution (evolution/continuous.py): births, deaths, no generations. timeline.csv feeds the curves.
@@ -89,16 +88,13 @@ def main():
         if os.path.exists(timeline):
             os.replace(timeline, timeline[:-4] + time.strftime("_ancien_%Y%m%d_%H%M%S.csv"))
 
-    sim = None
-    if config.LOAD_ON_START and os.path.exists(autosave_path()):
-        founders, tick = load_population(autosave_path(), with_tick=True)
-        if founders:
-            sim = new_sim(founders, start_tick=tick, append=True)
-            print(f"Population reprise : {len(sim.world.creatures)} créatures, temps {format_time(tick)}")
-    if sim is None:
-        archive_timeline()
-        sim = new_sim()
+    # Setup screen: the simulation does not run until it is launched from the settings panel. Behind it, a preview
+    # world (nothing written to timeline.csv). setup = None (running) or {"resume": bool, "cancel": bool}.
+    sim = ContinuousSimulation(rng)
     world = sim.world
+    setup = {"resume": config.LOAD_ON_START and os.path.exists(autosave_path()), "cancel": False}
+    overlay.setup = setup
+    overlay.params_open = True
     hud.reload_stats(sorted({c.profile for c in world.creatures}, key=list(PROFILES).index))
     last_saved = latest_snapshot()
 
@@ -118,10 +114,42 @@ def main():
         trail.clear()
         hud.reload_stats(list(founders) if founders else config.ACTIVE_PROFILES)
 
+    def open_setup(can_cancel):
+        """Settings screen before a new simulation: everything set there applies when it is launched."""
+        nonlocal setup, paused
+        setup = {"resume": False, "cancel": can_cancel}
+        overlay.setup = setup
+        overlay.params_open = True
+        paused = True
+
+    def close_setup():
+        nonlocal setup
+        setup = None
+        overlay.setup = None
+        overlay.params_open = False
+
+    def resume_autosave():
+        """Start from the population kept when the game was last closed, with its timeline."""
+        nonlocal sim, world, selected, paused
+        founders, tick = load_population(autosave_path(), with_tick=True)
+        if not founders:
+            return False
+        apply_pending()
+        config.refresh_derived()
+        scene.world_changed()
+        sim = new_sim(founders, start_tick=tick, append=True)
+        world = sim.world
+        selected, paused = None, False
+        trail.clear()
+        hud.reload_stats(list(founders))
+        overlay.toast(f"Population reprise : {len(world.creatures)} créatures, temps {format_time(tick)}")
+        return True
+
     def apply_param(key, value):
-        """Setting changed in the menu: now, or at the next restart for RESTART_PARAMS."""
+        """Setting changed in the menu: now, or at the next restart for RESTART_PARAMS (or for every setting while
+        the setup screen is open: nothing runs yet)."""
         name = PARAMS[key][0]
-        if key in RESTART_PARAMS:
+        if key in RESTART_PARAMS or setup is not None:
             if value == getattr(config, name):
                 pending.pop(key, None)
             else:
@@ -168,6 +196,9 @@ def main():
     def do(action):
         nonlocal speed_index, debug_mode, paused, step_request, reset_pending, selected, follow, pending_profiles, \
             cam_follow, last_saved
+        if setup is not None and action in ("pause", "step", "params_panel", "params_close", "end_gen", "restart_now",
+                                            "save_pop", "load_pop", "reset"):
+            return False   # Setup screen: only its own buttons, the settings, the species and the view
         if action == "speed_up":
             speed_index = min(speed_index + 1, len(config.SPEED_STEPS) - 1)
         elif action == "speed_down":
@@ -220,6 +251,8 @@ def main():
             scene.zoom_by(1.25 if action == "zoom_in" else 0.8, (vw / 2, vh / 2))
         elif action == "view_fit":
             scene.view_all()
+        elif action == "view_screen":
+            scene.view_screen()
         elif action == "cam_follow":
             cam_follow = not cam_follow
         elif action.startswith("param:"):
@@ -268,11 +301,19 @@ def main():
             apply_param(action, next_step(steps, pending.get(action, getattr(config, name))))
             return True
         elif action == "reset":
-            if not reset_pending:
-                reset_pending = True   # First click asks for confirmation, the menu stays open
-                return True
-            reset_pending = False
+            open_setup(can_cancel=True)
+        elif action == "setup_launch":
             restart()
+            close_setup()
+        elif action == "setup_resume":
+            if resume_autosave():
+                close_setup()
+        elif action == "setup_cancel":
+            pending.clear()
+            pending_profiles = None
+            persist_settings()
+            close_setup()
+            paused = False
         return False
 
     KEYS = {pygame.K_UP: "speed_up", pygame.K_DOWN: "speed_down", pygame.K_d: "debug", pygame.K_c: "color",
@@ -281,7 +322,7 @@ def main():
             pygame.K_p: "params_panel", pygame.K_b: "best", pygame.K_t: "follow", pygame.K_s: "save_pop",
             pygame.K_EQUALS: "zoom_in", pygame.K_PLUS: "zoom_in", pygame.K_KP_PLUS: "zoom_in",
             pygame.K_MINUS: "zoom_out", pygame.K_KP_MINUS: "zoom_out", pygame.K_0: "view_fit",
-            pygame.K_KP0: "view_fit", pygame.K_v: "cam_follow"}
+            pygame.K_KP0: "view_fit", pygame.K_1: "view_screen", pygame.K_KP1: "view_screen", pygame.K_v: "cam_follow"}
     reset_pending = False
 
     speed_index = 0
@@ -307,6 +348,13 @@ def main():
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                 if menu.open_index is not None:
                     menu.close()               # First Escape closes the open menu
+                elif setup is not None and overlay.help_open:
+                    overlay.help_open = False
+                elif setup is not None:
+                    if setup["cancel"]:
+                        do("setup_cancel")     # Setup opened from «Nouvelle simulation»: back to the running one
+                    else:
+                        running = False        # Setup screen at launch: Escape quits
                 elif overlay.any_modal():
                     overlay.close_modals()     # Then the help or the settings panel
                 elif display.fullscreen:
@@ -356,7 +404,7 @@ def main():
         speed = config.SPEED_STEPS[speed_index]
 
         # Run several simulation ticks per frame, according to the chosen speed
-        ticks_to_run = 1 if step_request else (0 if paused else speed)
+        ticks_to_run = 0 if setup is not None else (1 if step_request else (0 if paused else speed))
         for _ in range(ticks_to_run):
             going = sim.step()
             if selected is not None:
@@ -381,7 +429,8 @@ def main():
         # Draw the world, then the heads-up display (HUD)
         scene.draw(world_view, world, debug_mode, selected, trail)
         hud.draw(sidebar, strip_view, world, clock.get_fps(), speed,
-                 {"births": sim.total_births, "deaths": sim.total_deaths, "extinct": sim.extinct, "pop_max": sim.pop_max},
+                 {"births": sim.total_births, "deaths": sim.total_deaths, "extinct": sim.extinct, "pop_max": sim.pop_max,
+                  "setup": setup is not None},
                  debug_mode, paused, selected, scene.color_label())
         net_state = 2 if overlay.net_big else (1 if hud.show_graph else 0)
         params_info = [(a, *PARAM_INFO.get(a, (a, "")), fmt(getattr(config, name)),
@@ -405,7 +454,7 @@ def main():
             **{"pl_" + n: profile_label(n) + ("  *" if pending_profiles is not None
                                               and (n in pending_profiles) != (n in config.ACTIVE_PROFILES) else "")
                for n in PROFILES},
-            "reset": "Confirmer : tout effacer ?" if reset_pending else "Repartir de zéro",
+            "reset": "Nouvelle simulation...",
         })
         overlay.draw_tips(window, world, selected, menu.open_index is not None)
 
@@ -413,7 +462,10 @@ def main():
         clock.tick(config.FPS)
 
     # The population is kept for the next launch (LOAD_ON_START). After an extinction there is nothing to keep.
-    if sim.extinct or not world.creatures:
+    # Quitting from the setup screen at launch keeps the saved one untouched (the preview world is not a run).
+    if setup is not None and not setup["cancel"]:
+        pass
+    elif sim.extinct or not world.creatures:
         if os.path.exists(autosave_path()):
             os.remove(autosave_path())
     else:

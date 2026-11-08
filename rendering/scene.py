@@ -72,7 +72,7 @@ class Scene:
         self.cam_y = config.WORLD_HEIGHT / 2
         self.max_zoom = 4.0
         self._fit_world()
-        self.zoom = self.fit_zoom  # Starts on the whole world
+        self.zoom = 1.0  # Starts at the scale of one screen (the whole world when it is 1×1)
         self.color_mode = 0
         self.bucket_colors = [energy_color(i / (ENERGY_BUCKETS - 1)) for i in range(ENERGY_BUCKETS)]
 
@@ -125,15 +125,21 @@ class Scene:
         self.min_zoom = self.fit_zoom * MIN_ZOOM_RATIO
 
     def world_changed(self):
-        """Call after WORLD_SCALE changed (new world): new zoom limits, view on the whole world."""
+        """Call after WORLD_SCALE changed (new world): new zoom limits, view at the scale of one screen
+        (same look as a 1×1 world; zoom out or drag to see the rest)."""
         self._fit_world()
         if self.size is not None:
-            self.view_all()
+            self.view_screen()
         else:
-            self.zoom = self.fit_zoom
+            self.zoom = 1.0
 
     def zoom_by(self, factor, anchor=None):
         self.set_zoom(self.zoom * factor, anchor)
+
+    def view_screen(self):
+        """Scale of one screen (1×1): creatures look the same whatever the world size. Centred on the world."""
+        self.cam_x, self.cam_y = config.WORLD_WIDTH / 2, config.WORLD_HEIGHT / 2
+        self.set_zoom(1.0)
 
     def view_all(self):
         """The whole world in view."""

@@ -32,6 +32,7 @@ MENUS = [
         ("zoom_in", "Zoom avant", "action", None, "+  /  molette"),
         ("zoom_out", "Zoom arrière", "action", None, "-"),
         ("view_fit", "Voir toute la carte", "action", None, "0"),
+        ("view_screen", "Vue à l'échelle d'un écran", "action", None, "1"),
         ("cam_follow", "Caméra sur la sélection", "toggle", "cam_follow", "V"),
         None,
         ("best", "Sélectionner la créature qui a eu le plus de petits", "action", None, "B"),
@@ -55,8 +56,6 @@ MENUS = [
         ("food", "Nombre de nourritures : {food}", "action", None, ""),
         ("food_energy", "Énergie d'une nourriture : {food_energy}", "action", None, ""),
         ("respawn", "Délai de réapparition : {respawn}", "action", None, ""),
-        ("max_eats", "Repas avant épuisement : {max_eats}", "action", None, ""),
-        ("fixed", "Positions de la nourriture : {fixed}", "action", None, ""),
         None,
         ("poison_count", "Nombre de poisons : {poison_count}", "action", None, ""),
         ("poison_energy", "Dégâts d'un poison : {poison_energy}", "action", None, ""),
@@ -74,7 +73,7 @@ MENUS = [
         ("save_pop", "Sauvegarder cette population", "action", None, "S"),
         ("load_pop", "{load_pop}", "action", None, ""),
         None,
-        ("reset", "{reset}", "action", None, ""),
+        ("reset", "{reset}", "action", None, ""),   # Opens the setup screen (main.open_setup)
     ]),
     ("Aide", [
         ("help", "Aide et raccourcis", "action", None, "H"),

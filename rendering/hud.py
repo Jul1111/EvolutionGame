@@ -431,7 +431,9 @@ class Hud:
         gens = [cr.lineage_gen for cr in creatures]
 
         _text(p, f["title"], f"Population {n}", pad, c.y(8), VALUE)
-        if info.get("extinct"):
+        if info.get("setup"):
+            status, status_color = "Réglages", AMBER
+        elif info.get("extinct"):
             status, status_color = "Extinction", CORAL
         elif paused:
             status, status_color = "Pause", AMBER

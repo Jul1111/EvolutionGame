@@ -49,3 +49,19 @@ def test_sense_length_matches_profile():
     w.update()
     for c in w.creatures:
         assert len(w.sense(c)) == len(input_labels(c.profile))
+
+
+def test_food_and_poison_never_reappear_on_or_near_a_creature():
+    config.FOOD_RESPAWN_DELAY = 5
+    config.POISON_COUNT = 10
+    w = _world(5)
+    for _ in range(600):
+        before = {id(f): f.cooldown for f in w.foods + w.poisons}
+        w.update()
+        for f in w.foods + w.poisons:
+            if before[id(f)] == 1 and f.cooldown == 0:   # Came back during this tick: check where
+                for c in w.creatures:
+                    if c.alive:
+                        d = math.hypot(torus_delta(c.x, f.x, w.width), torus_delta(c.y, f.y, w.height))
+                        assert d >= c.radius + config.FOOD_RADIUS + config.SPAWN_CLEARANCE - 1e-9
+    assert w.eaten > 0 and w.poisoned > 0

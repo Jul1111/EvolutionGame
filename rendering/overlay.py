@@ -49,10 +49,9 @@ PARAM_INFO = {
     "food": ("Nombre de nourritures", "Sources de nourriture dans le monde."),
     "food_energy": ("Énergie d'une nourriture", "Énergie gagnée à chaque repas."),
     "respawn": ("Délai de réapparition", "Temps avant qu'une nourriture mangée soit de nouveau disponible."),
-    "max_eats": ("Repas avant épuisement", "Repas possibles avant que la source change de place."),
-    "fixed": ("Positions de la nourriture", "Fixes : elle revient au même endroit. Aléatoires : nouvel endroit à chaque fois."),
     "poison_count": ("Nombre de poisons", "Sources de poison dans le monde. 0 = aucun."),
     "poison_energy": ("Dégâts d'un poison", "Énergie perdue au contact d'un poison."),
+    "founders": ("Créatures au départ", "Fondateurs aux réseaux tirés au hasard, quelle que soit la taille du monde. Au prochain départ."),
     "size_mode": ("Gène de taille", "Fixe : tous à 1. Neutre : la taille mute sans rien changer (témoin de dérive). Actif : plus grand = touche de plus loin, réserve plus grande, coûte plus. Au prochain départ de zéro."),
     "world_scale": ("Taille du monde", "Côté du monde en écrans. 2×2 = 4 fois plus de surface, de nourriture et de créatures, et environ 4 fois plus lent. Au prochain départ de zéro."),
     "obstacle_count": ("Nombre d'obstacles", "Obstacles (formes et places tirées au hasard). S'applique au prochain départ de zéro. 0 = aucun."),
@@ -93,7 +92,7 @@ HELP_KEYS = [
     ("L", "Légende"), ("G", "Courbes"), ("N", "Réseau : masqué / petit / grand"),
     ("B", "Sélectionner la créature qui a eu le plus de petits"), ("T", "Suivre la lignée"),
     ("S", "Sauvegarder la population"),
-    ("+  -  0", "Zoom avant, arrière, toute la carte"), ("V", "Caméra sur la sélection"),
+    ("+  -  0  1", "Zoom avant, arrière, toute la carte, échelle d'un écran"), ("V", "Caméra sur la sélection"),
     ("P", "Paramètres"), ("F", "Plein écran"), ("H  ?", "Cette aide"), ("Échap", "Fermer, puis quitter"),
 ]
 HELP_MOUSE = [
@@ -205,6 +204,7 @@ class Overlay:
         self.params_open = False
         self.net_big = False
         self.toast_text, self.toast_until = None, 0.0   # Short message at the bottom of the world (toast())
+        self.setup = None   # Settings screen before a simulation (main.py): {"resume": bool, "cancel": bool} or None
         self.mouse = None
         self.mouse_since = 0.0
         self.state = {}
@@ -277,8 +277,8 @@ class Overlay:
                 if rect.collidepoint(x, y):
                     return True, action
             panel = self._rects.get("params")
-            if not (panel and panel.collidepoint(x, y)):
-                self.params_open = False
+            if not (panel and panel.collidepoint(x, y)) and self.setup is None:
+                self.params_open = False   # The setup screen only closes through its buttons
             return True, None
         for rect, action, *_ in self.buttons:
             if rect.collidepoint(x, y):
@@ -439,7 +439,7 @@ class Overlay:
         head_h, foot_h = round(86 * u), round(54 * u)
         n = max(len(params), 1)
         row_h = min(round(46 * u), (w.h - round(30 * u) - head_h - foot_h) // n)
-        show_desc = row_h >= round(38 * u)
+        show_desc = row_h >= f["base"].get_height() + f["small"].get_height() + round(10 * u)   # Room for both lines
         pw = min(round(640 * u), w.w - round(24 * u))
         rect = pygame.Rect(0, 0, pw, head_h + n * row_h + foot_h)
         rect.center = w.center
@@ -447,9 +447,16 @@ class Overlay:
         pygame.draw.rect(window, PANEL, rect, border_radius=round(12 * u))
         pygame.draw.rect(window, BORDER, rect, width=1, border_radius=round(12 * u))
         self._rects["params"] = rect
-        window.blit(f["title"].render("Paramètres de simulation", True, VALUE), (rect.x + pad, rect.y + round(12 * u)))
-        for k, line in enumerate(("Les changements s'appliquent tout de suite, sauf obstacles et taille du monde (orange = en attente).",
-                                  "« Repartir de zéro » relance une population au hasard avec tous les réglages.")):
+        title = "Nouvelle simulation" if self.setup is not None else "Paramètres de simulation"
+        window.blit(f["title"].render(title, True, VALUE), (rect.x + pad, rect.y + round(12 * u)))
+        if self.setup is not None:
+            lines = ("Règle le monde avant de lancer : rien ne tourne encore (orange = changé). Espèces : menu Réseau.",
+                     "« Reprendre » repart de la population gardée à la dernière fermeture, avec ces réglages."
+                     if self.setup["resume"] else "« Lancer » crée une population au hasard avec ces réglages.")
+        else:
+            lines = ("Les changements s'appliquent tout de suite, sauf obstacles, taille du monde, gène de taille et fondateurs.",
+                     "« Repartir de zéro » relance une population au hasard avec tous les réglages.")
+        for k, line in enumerate(lines):
             window.blit(f["small"].render(_clip(f["small"], line, pw - 2 * pad), True, LABEL),
                         (rect.x + pad, rect.y + round((42 + 17 * k) * u)))
         mouse = self.mouse
@@ -485,8 +492,16 @@ class Overlay:
         # Footer buttons, right to left
         by, bh = rect.bottom - foot_h + round(12 * u), round(30 * u)
         x = rect.right - pad
-        buttons = (("params_close", "Fermer", True, False), ("restart_now", "Repartir de zéro", True, any_pending),
-                   ("params_cancel", "Annuler les changements", any_pending, False))
+        if self.setup is not None:
+            buttons = (("setup_launch", "Lancer", True, True),)
+            if self.setup["resume"]:
+                buttons += (("setup_resume", "Reprendre la population gardée", True, False),)
+            if self.setup["cancel"]:
+                buttons += (("setup_cancel", "Annuler", True, False),)
+            buttons += (("params_cancel", "Annuler les changements", any_pending, False),)
+        else:
+            buttons = (("params_close", "Fermer", True, False), ("restart_now", "Repartir de zéro", True, any_pending),
+                       ("params_cancel", "Annuler les changements", any_pending, False))
         for action, text, enabled, accent in buttons:
             bw = f["small"].size(text)[0] + round(24 * u)
             r = pygame.Rect(x - bw, by, bw, bh)

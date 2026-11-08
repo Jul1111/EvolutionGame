@@ -51,7 +51,7 @@ class ContinuousSimulation:
                     brain.set_genome(genome)
                     self._add(brain, name, size=size if config.SIZE_MODE != "fixe" else 1.0)
             else:
-                for _ in range(_share(round(config.INITIAL_POPULATION * self.world.area_factor), index, len(profiles))):
+                for _ in range(_share(config.INITIAL_POPULATION, index, len(profiles))):
                     brain = new_brain(name)
                     brain.randomize(rng, config.NN_INIT_STD)
                     self._add(brain, name)

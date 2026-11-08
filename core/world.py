@@ -66,6 +66,37 @@ class World:
                 break
         return x, y
 
+    def _place_item(self, item):
+        """Where a food or a poison reappears: a random place outside the obstacles and at least SPAWN_CLEARANCE from
+        the edge of every living creature (never on one, never right next to one). Returns False when no such place
+        was found in 100 tries (crowded world): the item then waits one more tick and tries again."""
+        reach = config.CREATURE_RADIUS + config.FOOD_RADIUS
+        living = [c for c in self.creatures if c.alive]
+        n = len(living)
+        if n:
+            cx = np.fromiter((c.x for c in living), float, n)
+            cy = np.fromiter((c.y for c in living), float, n)
+            keep = (np.fromiter((c.radius for c in living), float, n) + config.FOOD_RADIUS
+                    + config.SPAWN_CLEARANCE) ** 2
+        for _ in range(100):
+            x, y = self.rng.uniform(0, self.width), self.rng.uniform(0, self.height)
+            if self._blocked(x, y, reach):
+                continue
+            if n:
+                dx = (cx - x + self.width / 2) % self.width - self.width / 2
+                dy = (cy - y + self.height / 2) % self.height - self.height / 2
+                if (dx * dx + dy * dy < keep).any():
+                    continue
+            item.x, item.y = x, y
+            return True
+        return False
+
+    def _item_returns(self, item):
+        """Count down an eaten food or a used poison; on the tick it comes back, it is placed (or waits one more tick)."""
+        item.cooldown -= 1
+        if item.cooldown == 0 and not self._place_item(item):
+            item.cooldown = 1
+
     def _collide(self, creature, obstacles=None):
         """A creature cannot enter an obstacle: it is pushed back to the edge, so it slides along it.
         `obstacles`: the ones to test (default: all of them)."""
@@ -112,7 +143,7 @@ class World:
         else:
             for item in self.foods + self.poisons:
                 if item.cooldown > 0:
-                    item.cooldown -= 1
+                    self._item_returns(item)
         self.tick += 1
 
     def _contacts(self, items, alive, X, Y, E, body, effect, fits):
@@ -134,7 +165,7 @@ class World:
         touching = (d2 < reach2[None, :]).any(axis=1)
         for j, item in enumerate(items):
             if item.cooldown > 0:
-                item.cooldown -= 1
+                self._item_returns(item)   # May place it: it is only available from the next tick
                 continue
             if not touching[j]:
                 continue
@@ -150,17 +181,12 @@ class World:
     def _eat(self, food, creature):
         creature.eat_food(food.energy)
         self.eaten += 1
-        food.cooldown = config.FOOD_RESPAWN_DELAY
-        food.eats += 1
-        if not config.FOOD_FIXED_POSITIONS or food.eats >= config.FOOD_MAX_EATS:
-            food.x, food.y = self._free_position(config.CREATURE_RADIUS + config.FOOD_RADIUS)
-            food.eats = 0
+        food.cooldown = max(1, config.FOOD_RESPAWN_DELAY)   # Placed elsewhere when it comes back (_item_returns)
 
     def _poisoned(self, poison, creature):
         creature.hit_by_poison(poison.energy)
         self.poisoned += 1
-        poison.cooldown = config.FOOD_RESPAWN_DELAY
-        poison.x, poison.y = self._free_position(config.CREATURE_RADIUS + config.FOOD_RADIUS)
+        poison.cooldown = max(1, config.FOOD_RESPAWN_DELAY)   # Placed elsewhere when it comes back (_item_returns)
 
     def _collide_all(self, alive, X, Y):
         """Obstacle collisions: a numpy test finds, for each creature, the obstacles whose bounding circle it
@@ -260,9 +286,9 @@ class World:
 
         # Phase 2: Check for food consumption
         for food in self.foods:
-            # A food that was eaten recently is not there yet: count down and skip it
+            # A food that was eaten recently is not there yet: count down and skip it (placed when it comes back)
             if food.cooldown > 0:
-                food.cooldown -= 1
+                self._item_returns(food)
                 continue
 
             best = None
@@ -280,18 +306,13 @@ class World:
 
             if best is not None:
                 best.eat_food(food.energy)
-                # The food comes back after a delay. A source that has been eaten FOOD_MAX_EATS
-                # times is exhausted: it comes back at a new random place instead
-                food.cooldown = config.FOOD_RESPAWN_DELAY
-                food.eats += 1
-                if not config.FOOD_FIXED_POSITIONS or food.eats >= config.FOOD_MAX_EATS:
-                    food.x, food.y = self._free_position(config.CREATURE_RADIUS + config.FOOD_RADIUS)
-                    food.eats = 0
+                # The food comes back after a delay, at a new random place away from the creatures
+                food.cooldown = max(1, config.FOOD_RESPAWN_DELAY)
 
         # Phase 3: poison. The closest creature touching it is hurt; the poison then moves to a new random place
         for poison in self.poisons:
             if poison.cooldown > 0:
-                poison.cooldown -= 1
+                self._item_returns(poison)
                 continue
             victim = None
             best_gap = math.inf
@@ -306,8 +327,7 @@ class World:
                     victim = creature
             if victim is not None:
                 victim.hit_by_poison(poison.energy)
-                poison.cooldown = config.FOOD_RESPAWN_DELAY
-                poison.x, poison.y = self._free_position(config.CREATURE_RADIUS + config.FOOD_RADIUS)
+                poison.cooldown = max(1, config.FOOD_RESPAWN_DELAY)
 
         self.tick += 1
 
@@ -320,7 +340,10 @@ class World:
             target = self._count(count)
             del items[target:]
             while len(items) < target:
-                items.append(Food(*self._free_position(reach), energy))
+                item = Food(*self._free_position(reach), energy)
+                if not self._place_item(item):
+                    item.cooldown = 1   # No room away from the creatures now: it will try again next tick
+                items.append(item)
             for item in items:
                 item.energy = energy
 

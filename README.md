@@ -28,7 +28,7 @@ Au lancement, le terminal liste les réglages du menu qui remplacent `config.py`
 | ↑ / ↓ | Vitesse de simulation (×1 à ×100) |
 | Espace / → | Pause / avancer d'un tick (en pause) |
 | Clic | Sélectionner une créature, ou utiliser les menus |
-| Molette, glisser, + - 0 | Zoom (jusqu'à 4 fois plus loin que la carte entière : le tore apparaît répété, assombri, autour de la carte encadrée), déplacer la vue, toute la carte |
+| Molette, glisser, + - 0 1 | Zoom (jusqu'à 4 fois plus loin que la carte entière : le tore apparaît répété, assombri, autour de la carte encadrée), déplacer la vue, toute la carte, échelle d'un écran |
 | V | Caméra sur la créature sélectionnée |
 | B | Sélectionner la créature qui a eu le plus de petits |
 | T | Suivre la lignée : à la mort de la sélection, passer à son plus jeune descendant vivant |
@@ -40,23 +40,24 @@ Au lancement, le terminal liste les réglages du menu qui remplacent `config.py`
 
 ## Interface
 
+- **Écran «Nouvelle simulation»** : à chaque lancement, rien ne tourne avant d'avoir cliqué. On y règle tout (dont le nombre de créatures au départ, la taille du monde, le gène de taille ; les espèces dans le menu Réseau), puis «Lancer», ou «Reprendre la population gardée» si le jeu a été fermé en cours de partie. Échap quitte. Le menu Sauvegarde → «Nouvelle simulation...» rouvre cet écran, avec «Annuler» pour revenir à la partie en cours.
 - **Panneau Population** : vivantes sur le plafond de calcul, temps simulé, naissances et morts depuis le départ, génération de lignée moyenne et maximale. Statut «Extinction» quand tout le monde est mort.
 - **Panneau Créature** : énergie, vitesse, âge, repas et poisons, temps aveugle, taille, génération de lignée et nombre de petits.
 - **Réseau** : entrées et sorties de la créature sélectionnée, en barres ou en graphe.
 - **Courbes dans le temps** (menu Courbes) : une valeur toutes les 10 s simulées, lue dans `saves/timeline.csv`. Population, naissances, morts (faim, vieillesse), repas et poisons par 1000 ticks de vie, vitesse, énergie, génération de lignée, âge à la mort, nourriture disponible, naissances bloquées par le plafond.
-- **Paramètres** (touche P) : mutation, seuil de reproduction, âge maximal, champ de vision, nourriture (nombre, énergie, délai, épuisement, positions), poison (nombre, dégâts), obstacles, taille du monde (1×1, 2×2 ou 3×3 écrans), gène de taille (fixe, neutre, actif). Tout s'applique tout de suite, sauf les obstacles, la taille du monde et le gène de taille (au prochain départ de zéro, marqués en orange). Nourriture, obstacles, fondateurs et plafond sont donnés par écran : un monde 2×2 en a 4 fois plus, et tourne environ 4 fois plus lentement. Les choix sont gardés dans `saves/settings.json`, qui ne contient que les écarts avec `config.py`.
+- **Paramètres** (touche P) : mutation, seuil de reproduction, âge maximal, champ de vision, nourriture (nombre, énergie, délai), poison (nombre, dégâts), obstacles, taille du monde (1×1, 2×2 ou 3×3 écrans), gène de taille (fixe, neutre, actif). Tout s'applique tout de suite, sauf les obstacles, la taille du monde et le gène de taille (au prochain départ de zéro, marqués en orange). Nourriture, obstacles et plafond sont donnés par écran : un monde 2×2 en a 4 fois plus. Les fondateurs restent 200. La vue s'ouvre à l'échelle d'un écran (touche 1) : dézoomer (molette, 0) pour voir toute la carte. Une fois la population développée, un monde 2×2 tourne environ 4 fois plus lentement. Les choix sont gardés dans `saves/settings.json`, qui ne contient que les écarts avec `config.py`.
 - **Menu Réseau** : espèces des fondateurs, appliquées au prochain départ de zéro.
-- **Menu Sauvegarde** : sauvegarder la population, charger la dernière sauvegardée, repartir de zéro (confirmation demandée).
+- **Menu Sauvegarde** : sauvegarder la population, charger la dernière sauvegardée, nouvelle simulation (ouvre l'écran de réglages).
 - **Extinction** : la simulation se met en pause avec un message. Repartir de zéro ou charger une population.
-- À la fermeture, la population est gardée (`saves/autosave.npz`) et reprise au lancement suivant (`LOAD_ON_START`). Après une extinction, il n'y a rien à garder.
+- À la fermeture, la population est gardée (`saves/autosave.npz`) et proposée au lancement suivant (bouton «Reprendre»). Après une extinction, il n'y a rien à garder.
 
 ## Comment ça marche
 
 **Le monde.** Un tore de 1280 × 720 : ce qui sort d'un côté rentre de l'autre. 40 sources de nourriture, 5 poisons et 6 obstacles (valeurs par écran, `WORLD_SCALE` multiplie la surface).
 
-**La nourriture.** Une nourriture mangée disparaît 60 ticks puis revient au même endroit. Après 3 repas, la source se déplace au hasard. Quand plusieurs créatures la touchent, la plus proche gagne. Une créature ne mange que si le repas rentre en entier sous le maximum d'énergie (200).
+**La nourriture.** Une nourriture mangée disparaît 60 ticks puis réapparaît toujours ailleurs, au hasard : hors obstacles, jamais sur une créature ni à moins de 20 de son bord (`SPAWN_CLEARANCE`). L'endroit est tiré au moment où elle réapparaît ; s'il n'y a aucune place libre, elle attend le tick suivant. Quand plusieurs créatures la touchent, celle dont le bord est le plus proche gagne. Une créature ne mange que si le repas rentre en entier dans sa réserve.
 
-**Le poison.** La créature la plus proche qui le touche perd 40 d'énergie. Il réapparaît ensuite ailleurs.
+**Le poison.** La créature la plus proche qui le touche perd 40 d'énergie. Il disparaît 60 ticks puis réapparaît ailleurs, avec la même règle que la nourriture : jamais sur une créature ni à moins de 20 de son bord.
 
 **Les obstacles.** Disques, carrés ou triangles pleins (dessinés en anémones). On ne peut pas y entrer : la créature glisse le long, et dépense de l'énergie en poussant.
 
