@@ -7,13 +7,14 @@ import pygame
 
 import config
 from evolution.continuous import (ContinuousSimulation, success_key, save_population, load_population, snapshot_path,
-                                  autosave_path, latest_snapshot)
+                                  autosave_path, latest_snapshot, populations_dir)
 from utils.timefmt import format_time
 from rendering.hud import Hud, SERIES_BY_KEY
 from rendering.menu import MenuBar, profile_label
 from brain.profiles import PROFILES
 from rendering.overlay import Overlay, PARAM_INFO
 from utils.presets import PresetBrowser
+from rendering.startmenu import StartMenu
 from rendering.scene import Scene, pick_creature
 from rendering.display import Display
 from rendering.layout import compute_layout
@@ -96,9 +97,10 @@ def main():
     # world (nothing written to timeline.csv). setup = None (running) or {"resume": bool, "cancel": bool}.
     sim = ContinuousSimulation(rng)
     world = sim.world
-    setup = {"resume": config.LOAD_ON_START and os.path.exists(autosave_path()), "cancel": False}
+    # At launch: the start menu (Continuer / Charger / Nouvelle simulation), then the setup screen for a new one
+    setup = {"resume": False, "cancel": False, "from_start": True}
     overlay.setup = setup
-    overlay.params_open = True
+    overlay.start = StartMenu(autosave_path() if config.LOAD_ON_START else None, populations_dir())
     hud.reload_stats(sorted({c.profile for c in world.creatures}, key=list(PROFILES).index))
     last_saved = latest_snapshot()
 
@@ -199,7 +201,7 @@ def main():
     # Every command, from the keyboard or from the menu, goes through do(). Returns True to keep the menu open.
     def do(action):
         nonlocal speed_index, debug_mode, paused, step_request, reset_pending, selected, follow, pending_profiles, \
-            cam_follow, last_saved
+            cam_follow, last_saved, running
         if setup is not None and action in ("pause", "step", "params_panel", "params_close", "end_gen", "restart_now",
                                             "save_pop", "load_pop", "reset"):
             return False   # Setup screen: only its own buttons, the settings, the species and the view
@@ -342,6 +344,32 @@ def main():
             name, steps, _ = PARAMS[action]
             apply_param(action, next_step(steps, pending.get(action, getattr(config, name))))
             return True
+        elif action == "start_continue":
+            if resume_autosave():
+                overlay.start = None
+                close_setup()
+        elif action == "start_load_list":
+            overlay.start.view = "load"
+        elif action == "start_back":
+            overlay.params_open = False   # Back from the settings of a new simulation, or from the load list
+            if overlay.start is None:
+                overlay.start = StartMenu(autosave_path() if config.LOAD_ON_START else None, populations_dir())
+            overlay.start.view = "main"
+        elif action == "start_new":
+            overlay.start = None
+            overlay.params_open = True
+        elif action.startswith("start_load:"):
+            path = action[len("start_load:"):]
+            founders = load_population(path)
+            if founders:
+                restart(founders)
+                last_saved = path
+                overlay.start = None
+                close_setup()
+                paused = False
+                overlay.toast(f"Population chargée : {os.path.basename(path)}")
+        elif action == "quit":
+            running = False
         elif action == "reset":
             open_setup(can_cancel=True)
         elif action == "setup_launch":
@@ -396,8 +424,12 @@ def main():
                 elif setup is not None:
                     if setup["cancel"]:
                         do("setup_cancel")     # Setup opened from «Nouvelle simulation»: back to the running one
+                    elif overlay.start is not None and overlay.start.view == "load":
+                        do("start_back")             # Load list: back to the start menu
+                    elif overlay.start is None and setup.get("from_start"):
+                        do("start_back")             # Settings of a new simulation: back to the start menu
                     else:
-                        running = False        # Setup screen at launch: Escape quits
+                        running = False        # Start menu: Escape quits
                 elif overlay.any_modal():
                     overlay.close_modals()     # Then the help or the settings panel
                 elif display.fullscreen:
@@ -405,7 +437,9 @@ def main():
                 else:
                     running = False
             elif event.type == pygame.KEYDOWN:
-                if event.key in KEYS:
+                if overlay.start is not None and not overlay.params_open and event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
+                    do(overlay.start.default_action())   # Start menu: Enter = Continuer (or Nouvelle simulation)
+                elif event.key in KEYS:
                     do(KEYS[event.key])
                 elif event.unicode == "?":
                     do("help")

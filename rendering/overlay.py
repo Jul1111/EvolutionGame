@@ -237,6 +237,7 @@ class Overlay:
         self._hits = []           # (rect, action) of the settings panel, rebuilt at each draw
         self._rects = {}          # name → rect of the panels drawn last (for clicks)
         self._cache = {}
+        self.start = None             # rendering.startmenu.StartMenu at launch (set by main.py)
         self.chart_big = False        # Large curves view (key G, third press)
         self.charts = ChartView(hud)
         self.minimap = MiniMap()      # Key M
@@ -247,7 +248,7 @@ class Overlay:
     # ---------- state ----------
 
     def any_modal(self):
-        return self.help_open or self.params_open
+        return self.help_open or self.params_open or self.start is not None
 
     def close_modals(self):
         self.help_open = self.params_open = False
@@ -325,6 +326,8 @@ class Overlay:
         self.mouse = (x, y)
 
     def click(self, x, y):
+        if self.start is not None and not self.params_open:
+            return True, self.start.click(x, y)   # Start menu: it takes every click
         """Left click. Returns (consumed, action). The settings panel and the help are modal; the legend and the
         large network only take the clicks that land on them, so another creature can still be picked."""
         if self.help_open:
@@ -416,6 +419,8 @@ class Overlay:
             self._draw_params(window, params)
         if self.help_open:
             self._draw_help(window)
+        if self.start is not None and not self.params_open:
+            self.start.draw(window, self.layout, f, u, self.mouse)
 
     def _draw_legend(self, window):
         u, f, w = self.u, self.fonts, self.area
@@ -683,6 +688,8 @@ class Overlay:
                 buttons += (("setup_resume", "Reprendre la population gardée", True, False),)
             if self.setup["cancel"]:
                 buttons += (("setup_cancel", "Annuler", True, False),)
+            if self.setup.get("from_start"):
+                buttons += (("start_back", "Retour", True, False),)
             buttons += (("params_cancel", "Annuler les changements", any_pending, False),)
         else:
             buttons = (("params_close", "Fermer", True, False), ("restart_now", "Repartir de zéro", True, any_pending),
@@ -804,7 +811,8 @@ class Overlay:
 
     def draw_tips(self, window, world, selected, menu_open):
         """Hover tips, drawn last. Buttons and labels explain themselves after a short rest; a creature gets a summary."""
-        if self.mouse is None or menu_open or self.params_open or self.help_open or self.layout is None:
+        if (self.mouse is None or menu_open or self.params_open or self.help_open or self.layout is None
+                or self.start is not None):
             return
         x, y = self.mouse
         dwell = time.monotonic() - self.mouse_since
