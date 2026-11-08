@@ -9,6 +9,7 @@ An extinction ends the run.
 Measures: one line of timeline.csv every SAMPLE_TICKS ticks (see SAMPLE_HEADER).
 """
 import csv
+import math
 import os
 import statistics
 import time
@@ -22,13 +23,13 @@ from evolution.mutation import mutate
 
 SAMPLE_HEADER = ["tick", "population", "births", "deaths_hunger", "deaths_age", "mean_age_at_death",
                  "mean_lineage_gen", "max_lineage_gen", "food_rate", "poison_rate", "mean_speed", "mean_energy",
-                 "cap_blocked", "food_available"]
+                 "cap_blocked", "food_available", "mean_size", "size_std", "min_size", "max_size"]
 
 
 class ContinuousSimulation:
     def __init__(self, rng, timeline_path=None, founders=None, verbose=False, start_tick=0, append=False,
                  log_deaths=False):
-        """`founders`: {profile: [genomes]} to start from a saved population (load_population); else random founders
+        """`founders`: {profile: [(genome, size)]} to start from a saved population (load_population); else random founders
         of config.ACTIVE_PROFILES. `start_tick` and `append`: resume a saved run, adding to its timeline.csv."""
         self.rng = rng
         self.verbose = verbose
@@ -45,10 +46,10 @@ class ContinuousSimulation:
         profiles = list(founders) if founders else list(config.ACTIVE_PROFILES)
         for index, name in enumerate(profiles):
             if founders:
-                for genome in founders[name]:
+                for genome, size in founders[name]:
                     brain = new_brain(name)
                     brain.set_genome(genome)
-                    self._add(brain, name)
+                    self._add(brain, name, size=size if config.SIZE_MODE != "fixe" else 1.0)
             else:
                 for _ in range(_share(round(config.INITIAL_POPULATION * self.world.area_factor), index, len(profiles))):
                     brain = new_brain(name)
@@ -129,19 +130,29 @@ class ContinuousSimulation:
     # ---------- births ----------
 
     def _can_give_birth(self, c):
-        return (c.energy >= config.REPRO_THRESHOLD and c.age >= config.MATURITY_AGE
+        # Threshold, cost and energy of the newborn scale with the body: a small creature has a small reserve
+        return (c.energy >= config.REPRO_THRESHOLD * c.body and c.age >= config.MATURITY_AGE
                 and (c.last_birth_age is None or c.age - c.last_birth_age >= config.REPRO_COOLDOWN))
 
     def _give_birth(self, parent):
-        parent.energy -= config.REPRO_COST
+        parent.energy -= config.REPRO_COST * parent.body
         parent.last_birth_age = parent.age
         parent.children += 1
         brain = new_brain(parent.profile)
         brain.set_genome(mutate(parent.brain.get_genome(), self.rng, config.MUTATION_STD))
-        self._add(brain, parent.profile, energy=config.REPRO_CHILD_ENERGY, near=(parent.x, parent.y),
-                  parent_id=parent.uid, lineage_gen=parent.lineage_gen + 1)
+        child = self._add(brain, parent.profile, energy=config.REPRO_CHILD_ENERGY * parent.body,
+                          near=(parent.x, parent.y), parent_id=parent.uid, lineage_gen=parent.lineage_gen + 1,
+                          size=self._child_size(parent.size))
+        child.energy = min(child.energy, child.energy_max)
         self.births += 1
         self.total_births += 1
+
+    def _child_size(self, size):
+        """Body gene of a newborn: the parent's, times a random factor (mutation), kept in [SIZE_MIN, SIZE_MAX]."""
+        if config.SIZE_MODE == "fixe":
+            return 1.0
+        size *= math.exp(self.rng.gauss(0.0, config.SIZE_MUTATION_STD))
+        return min(config.SIZE_MAX, max(config.SIZE_MIN, size))
 
     def _add(self, brain, profile, **kwargs):
         c = self.world.add_creature(brain, profile, uid=self.next_uid, birth_tick=self.world.tick, **kwargs)
@@ -180,6 +191,11 @@ class ContinuousSimulation:
             "mean_energy": sum(c.energy for c in cs) / n if n else None,
             "cap_blocked": self.cap_blocked,
             "food_available": sum(1 for f in self.world.foods if f.cooldown <= 0),
+            # Body gene (whatever SIZE_MODE: in "neutre" it drifts without effect)
+            "mean_size": statistics.mean(c.size for c in cs) if n else None,
+            "size_std": statistics.pstdev(c.size for c in cs) if n else None,
+            "min_size": min((c.size for c in cs), default=None),
+            "max_size": max((c.size for c in cs), default=None),
         }
 
     def _sample(self):
@@ -211,13 +227,15 @@ def save_population(sim, path):
         members = [c for c in sim.world.creatures if c.profile == name]
         data[f"genomes__{name}"] = np.array([c.brain.get_genome() for c in members])
         data[f"lineage__{name}"] = np.array([c.lineage_gen for c in members])
+        data[f"sizes__{name}"] = np.array([c.size for c in members])
     tmp = path[:-4] + "_tmp.npz" if path.endswith(".npz") else path + "_tmp.npz"
     np.savez(tmp, **data)
     os.replace(tmp, path if path.endswith(".npz") else path + ".npz")
 
 
 def load_population(path, with_tick=False):
-    """{profile: [genomes]} from save_population. with_tick=True: (founders, tick of the save).
+    """{profile: [(genome, size)]} from save_population (size 1 for saves made before the size gene).
+    with_tick=True: (founders, tick of the save).
     Profiles that no longer exist, or whose network changed size, are left out (message printed)."""
     from brain.profiles import PROFILES, n_params
     founders = {}
@@ -229,7 +247,8 @@ def load_population(path, with_tick=False):
             if name not in PROFILES or genomes.ndim != 2 or genomes.shape[1] != n_params(name):
                 print(f"{os.path.basename(path)} : espèce {name} ignorée (inconnue ou réseau modifié)")
                 continue
-            founders[name] = list(genomes)
+            sizes = data[f"sizes__{name}"] if f"sizes__{name}" in data.files else np.ones(len(genomes))
+            founders[name] = [(g, float(sz)) for g, sz in zip(genomes, sizes)]
         tick = int(data["tick"]) if "tick" in data.files else 0
     return (founders, tick) if with_tick else founders
 

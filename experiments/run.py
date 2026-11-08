@@ -3,6 +3,7 @@
     python -m experiments.run --name base --seeds 1 2 3 4 --ticks 120000
     python -m experiments.run --name moins_nourr --set FOOD_COUNT=30
     python -m experiments.run --name suite --from-population saves/populations/<fichier>.npz
+    python -m experiments.run --name suite --from-population experiments/results/<run>/seed_{seed}/population_finale.npz
 
 Each run writes experiments/results/<date>_<name>/:
     run.json                    command, git commit, every constant of config.py (after --set)
@@ -57,7 +58,7 @@ def run_seed(seed, out_dir, overrides, ticks, profiles, population_file):
     config.SEED = seed
     config.ACTIVE_PROFILES = list(profiles)
     seed_dir = os.path.join(out_dir, f"seed_{seed}")
-    founders = load_population(population_file) if population_file else None
+    founders = load_population(population_file.format(seed=seed)) if population_file else None
     sim = ContinuousSimulation(random.Random(seed), os.path.join(seed_dir, "timeline.csv"), founders=founders)
     start = time.time()
     played = sim.run(ticks)
@@ -84,7 +85,8 @@ def main(argv=None):
     parser.add_argument("--seeds", type=int, nargs="+", default=[1, 2, 3, 4, 5])
     parser.add_argument("--ticks", type=int, default=60000, help="Durée (arrêt avant en cas d'extinction)")
     parser.add_argument("--profiles", nargs="+", default=None, help="Espèces fondatrices (défaut : ACTIVE_PROFILES)")
-    parser.add_argument("--from-population", default=None, help="Population sauvegardée de départ (.npz)")
+    parser.add_argument("--from-population", default=None,
+                        help="Population sauvegardée de départ (.npz). {seed} est remplacé par le numéro de graine")
     parser.add_argument("--set", nargs="*", default=[], metavar="NOM=VALEUR", help="Remplace une constante de config.py")
     parser.add_argument("--jobs", type=int, default=os.cpu_count(), help="Graines lancées en parallèle")
     args = parser.parse_args(argv)

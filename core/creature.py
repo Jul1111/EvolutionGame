@@ -5,7 +5,8 @@ from core.physics import normalize_angle
 from brain.profiles import PROFILES
 
 class Creature:
-    def __init__(self, x, y, angle, energy, brain, profile, uid=0, parent_id=None, birth_tick=0, lineage_gen=0):
+    def __init__(self, x, y, angle, energy, brain, profile, uid=0, parent_id=None, birth_tick=0, lineage_gen=0,
+                 size=1.0):
         self.x = float(x)
         self.y = float(y)
         self.angle = angle
@@ -15,6 +16,7 @@ class Creature:
         self.profile = profile   # Name of its network profile (species), see brain/profiles.py
         self._spec = PROFILES[profile]
         self.alive = True
+        self.set_size(size)
         self.death_cause = None   # "faim" or "vieillesse" (poison kills through hunger)
         # Lineage (continuous evolution): identity, parent, birth, depth of the lineage (0 = random founder)
         self.uid = uid
@@ -35,6 +37,16 @@ class Creature:
         self.blind_speed_sum = 0.0
         self.blind_turn_sum = 0.0
         self.speed_sum = 0.0     # Sum of its speed over its life: mean speed = speed_sum / age
+
+    def set_size(self, size):
+        """Body gene. `body` is the size that acts (1 unless SIZE_MODE is "actif"); everything the body changes is
+        computed here once: contact radius, energy reserve, base and moving costs."""
+        self.size = size
+        self.body = size if config.SIZE_MODE == "actif" else 1.0
+        self.radius = config.CREATURE_RADIUS * self.body
+        self.energy_max = config.ENERGY_MAX * self.body
+        self.base_cost = config.ENERGY_BASE_COST * self.body ** config.SIZE_BASE_EXPONENT
+        self.move_cost = config.ENERGY_MOVE_COST * self.body
 
     def update(self, inputs, world_width, world_height):
         if not self.alive:
@@ -80,7 +92,7 @@ class Creature:
         self.y  %= world_height
 
         # Moving costs energy: base cost + cost proportional to speed
-        self.energy -= config.ENERGY_BASE_COST + config.ENERGY_MOVE_COST * self.speed
+        self.energy -= self.base_cost + self.move_cost * self.speed
 
         self.age += 1 #Added age increment to track how long the creature has been alive
         self.speed_sum += self.speed
@@ -95,6 +107,6 @@ class Creature:
     def eat_food(self,amount):
         if not self.alive:
             return
-        self.energy = min(self.energy + amount, config.ENERGY_MAX)  # The excess is lost
+        self.energy = min(self.energy + amount, self.energy_max)  # The excess is lost
         self.food_eaten += 1
         

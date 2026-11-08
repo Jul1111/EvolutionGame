@@ -12,7 +12,7 @@ ENERGY_BUCKETS = 16   # Number of pre-rendered creature sprites (one per energy 
 FOOD_FRAMES = 12      # Number of pre-rendered food pulsation frames
 MIN_ZOOM_RATIO = 0.25   # Zooming out stops at a quarter of the zoom that fits the whole world
 COPY_VEIL_ALPHA = 120   # Darkening of the torus copies around the real map (0-255)
-COLOR_MODES = ("espèce", "énergie", "vitesse", "nourriture")  # What the creature colour encodes (key C)
+COLOR_MODES = ("espèce", "énergie", "vitesse", "nourriture", "taille")  # What the creature colour encodes (key C)
 TRAIL_COLOR = (255, 226, 140)
 TRAIL_FADE = (24, 30, 34)
 SUPERSAMPLE = 4       # Sprites are drawn 4x bigger then shrunk, for smooth edges
@@ -100,6 +100,7 @@ class Scene:
             self.dead_sprite = self._build_dead()
             self.food_sprites = [self._build_food(f) for f in range(FOOD_FRAMES)]
             self.poison_sprites = [self._build_poison(f) for f in range(FOOD_FRAMES)]
+            self._sized = {}   # Body sprites resized for the size gene: (id of sprite, size step) → sprite
 
     # ---------- camera ----------
 
@@ -287,6 +288,17 @@ class Scene:
 
     # ---------- drawing (every frame) ----------
 
+    def _sized_sprite(self, sprite, body):
+        """The body sprite drawn at `body` times its size (steps of 0.05, cached): bigger creatures look bigger."""
+        step = round(body * 20) / 20
+        if abs(step - 1.0) < 1e-9:
+            return sprite
+        key = (id(sprite), step)
+        if key not in self._sized:
+            w = max(2, round(sprite.get_width() * step))
+            self._sized[key] = pygame.transform.smoothscale(sprite, (w, w))
+        return self._sized[key]
+
     def _blit_at(self, screen, sprite, positions):
         hw, hh = sprite.get_width() / 2, sprite.get_height() / 2
         for px, py in positions:
@@ -318,14 +330,14 @@ class Scene:
         if trail is not None:
             self._draw_trail(screen, trail, world)
 
-        r = config.CREATURE_RADIUS * k
+        r0 = config.CREATURE_RADIUS * k
         nub_radius = max(1, round(2 * k))
         max_food = max([c.food_eaten for c in world.creatures if c.alive] + [1])
         mode = COLOR_MODES[self.color_mode]
         for c in world.creatures:
             if not c.alive:
                 continue
-            images = self._images(world, c.x, c.y, 14 + c.speed * 3)
+            images = self._images(world, c.x, c.y, 14 * c.body + c.speed * 3)
             if not images:
                 continue
             if mode == "espèce":
@@ -333,7 +345,9 @@ class Scene:
                 sprite = self.species_sprites[c.profile]
             else:
                 if mode == "énergie":
-                    ratio = c.energy / config.ENERGY_INPUT_MAX
+                    ratio = c.energy / c.energy_max
+                elif mode == "taille":
+                    ratio = (c.size - config.SIZE_MIN) / (config.SIZE_MAX - config.SIZE_MIN)
                 elif mode == "vitesse":
                     ratio = c.speed / config.CREATURE_MAX_SPEED
                 else:
@@ -342,6 +356,8 @@ class Scene:
                 bucket = int(ratio * (ENERGY_BUCKETS - 1) + 0.5)
                 color = self.bucket_colors[bucket]
                 sprite = self.body_sprites[bucket]
+            sprite = self._sized_sprite(sprite, c.body)
+            r = r0 * c.body
             cos_a, sin_a = math.cos(c.angle), math.sin(c.angle)
             tail_color = _lerp(color, (10, 12, 16), 0.35)
             nub_color = _lerp(color, (255, 255, 255), 0.75)
@@ -361,6 +377,7 @@ class Scene:
 
         if selected is not None:
             width = max(1, round(k))
+            r = r0 * selected.body
             for px, py in self._images(world, selected.x, selected.y, 20):
                 center = (round(px), round(py))
                 pygame.draw.circle(screen, (255, 255, 255), center, round(r + 6 * k), width)
@@ -427,4 +444,4 @@ class Scene:
                     _, dx, dy = best
                     pygame.draw.aaline(screen, color, (cx, cy), (cx + dx * k, cy + dy * k))
             if mode == 1:
-                pygame.draw.circle(screen, (255, 255, 255), center, round((config.CREATURE_RADIUS + 5) * k), 1)
+                pygame.draw.circle(screen, (255, 255, 255), center, round((c.radius + 5) * k), 1)

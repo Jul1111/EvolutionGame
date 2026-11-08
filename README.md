@@ -41,10 +41,10 @@ Au lancement, le terminal liste les réglages du menu qui remplacent `config.py`
 ## Interface
 
 - **Panneau Population** : vivantes sur le plafond de calcul, temps simulé, naissances et morts depuis le départ, génération de lignée moyenne et maximale. Statut «Extinction» quand tout le monde est mort.
-- **Panneau Créature** : énergie, vitesse, âge, repas et poisons, temps aveugle, génération de lignée et nombre de petits.
+- **Panneau Créature** : énergie, vitesse, âge, repas et poisons, temps aveugle, taille, génération de lignée et nombre de petits.
 - **Réseau** : entrées et sorties de la créature sélectionnée, en barres ou en graphe.
 - **Courbes dans le temps** (menu Courbes) : une valeur toutes les 10 s simulées, lue dans `saves/timeline.csv`. Population, naissances, morts (faim, vieillesse), repas et poisons par 1000 ticks de vie, vitesse, énergie, génération de lignée, âge à la mort, nourriture disponible, naissances bloquées par le plafond.
-- **Paramètres** (touche P) : mutation, seuil de reproduction, âge maximal, champ de vision, nourriture (nombre, énergie, délai, épuisement, positions), poison (nombre, dégâts), obstacles, taille du monde (1×1, 2×2 ou 3×3 écrans). Tout s'applique tout de suite, sauf les obstacles et la taille du monde (au prochain départ de zéro, marqués en orange). Nourriture, obstacles, fondateurs et plafond sont donnés par écran : un monde 2×2 en a 4 fois plus, et tourne environ 4 fois plus lentement. Les choix sont gardés dans `saves/settings.json`, qui ne contient que les écarts avec `config.py`.
+- **Paramètres** (touche P) : mutation, seuil de reproduction, âge maximal, champ de vision, nourriture (nombre, énergie, délai, épuisement, positions), poison (nombre, dégâts), obstacles, taille du monde (1×1, 2×2 ou 3×3 écrans), gène de taille (fixe, neutre, actif). Tout s'applique tout de suite, sauf les obstacles, la taille du monde et le gène de taille (au prochain départ de zéro, marqués en orange). Nourriture, obstacles, fondateurs et plafond sont donnés par écran : un monde 2×2 en a 4 fois plus, et tourne environ 4 fois plus lentement. Les choix sont gardés dans `saves/settings.json`, qui ne contient que les écarts avec `config.py`.
 - **Menu Réseau** : espèces des fondateurs, appliquées au prochain départ de zéro.
 - **Menu Sauvegarde** : sauvegarder la population, charger la dernière sauvegardée, repartir de zéro (confirmation demandée).
 - **Extinction** : la simulation se met en pause avec un message. Repartir de zéro ou charger une population.
@@ -62,11 +62,17 @@ Au lancement, le terminal liste les réglages du menu qui remplacent `config.py`
 
 **L'énergie et le mouvement.** Coût par tick : 0,04 + 0,03 × vitesse. Vitesse de 0 à 4, qui change progressivement. Plus on va vite, moins on tourne.
 
+**Le gène de taille** (`SIZE_MODE`). Chaque créature porte une taille, de 0,5 à 2. Les fondateurs ont 1 ; un petit reçoit la taille de son parent multipliée par un facteur au hasard (exp(N(0 ; 0,05))).
+- `actif` (défaut) : rayon de contact (nourriture, poison, obstacles), réserve d'énergie et énergie d'une naissance (seuil, coût, petit) proportionnels à la taille. Coût de base ∝ taille^0,75 (loi de Kleiber : un grand corps coûte moins cher à entretenir par unité de taille), coût du mouvement ∝ taille. Une nourriture donne toujours 30 : un grand doit manger plus pour faire un petit, mais tient plus longtemps sans manger.
+- `neutre` : la taille mute mais ne change rien. Témoin : ce que la taille fait par simple hasard (dérive génétique).
+- `fixe` : tout le monde à 1.
+- Couleur «taille» (touche C) : de petit (rouge) à grand (vert). Les créatures sont dessinées à leur taille.
+
 **Le réseau** (espèce `complet`). 9 entrées → 6 neurones cachés → 2 sorties (virage, vitesse demandée), 74 poids. Entrées : distance et angle de la nourriture visible la plus proche, énergie, vitesse, «peut manger», distance et angle du poison, distance au bord et angle de l'obstacle. La vision est un cône de 120° et de portée 200. Pas de mémoire.
 
 **La vie et la mort** (`evolution/continuous.py`).
 1. Départ : 200 créatures aux réseaux tirés au hasard.
-2. Une créature d'au moins 10 s qui a 120 d'énergie fait un petit (au plus un toutes les 5 s) : elle perd 60, le petit naît à côté avec 50 et hérite de son réseau plus un bruit gaussien (écart-type 0,1).
+2. Une créature d'au moins 10 s qui a 120 d'énergie fait un petit (au plus un toutes les 5 s) : elle perd 60, le petit naît à côté avec 50 et hérite de son réseau plus un bruit gaussien (écart-type 0,1), et de sa taille mutée. Seuil, coût et énergie du petit sont multipliés par la taille du parent quand le gène est actif.
 3. Mort de faim (énergie 0) ou de vieillesse (100 s).
 4. Plafond de calcul : 400 créatures. Les naissances qu'il bloque sont comptées : si ce n'est pas 0, la population n'est plus réglée par la nourriture.
 5. Une extinction arrête tout.
@@ -163,9 +169,9 @@ Le monde durci (×2, 5 nourritures, 20 poisons à 80, 25 obstacles) avec une sé
 ## Limites connues
 
 - Le réseau n'a pas de mémoire : quand rien n'est en vue, ses entrées sont constantes.
-- Le corps n'évolue pas encore (prochaine étape : gène de taille).
+- Gène de taille codé et testé, pas encore étudié : la question «la taille s'écarte-t-elle de 1, et dans quel sens selon la nourriture ?» demande une expérience actif contre neutre, à plusieurs niveaux de nourriture.
 - La simulation est lente au-delà de quelques centaines de créatures (réseaux calculés un par un).
 
 ## Pistes
 
-Dans l'ordre : gène de taille avec son coût (et un témoin de dérive), reproduction à deux parents, environnement qui change, interactions (prédateurs, partage), signaux, apprentissage et transmission.
+Dans l'ordre : expérience sur le gène de taille (actif contre neutre, nourriture 20/30/40), reproduction à deux parents, environnement qui change, interactions (prédateurs, partage), signaux, apprentissage et transmission.

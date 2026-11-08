@@ -24,7 +24,7 @@ def nearest_of(kind):
 
 
 def _energy(world, c, ctx):
-    return [max(0.0, min(c.energy / config.ENERGY_INPUT_MAX, 1.0))]
+    return [max(0.0, min(c.energy / c.energy_max, 1.0))]   # Share of its own reserve (depends on its size)
 
 
 def _speed(world, c, ctx):
@@ -33,7 +33,7 @@ def _speed(world, c, ctx):
 
 def _can_eat(world, c, ctx):
     # 1.0 if a meal would fit (same rule as the food phase), else 0.0
-    return [1.0 if c.energy + config.FOOD_ENERGY <= config.ENERGY_MAX else 0.0]
+    return [1.0 if c.energy + config.FOOD_ENERGY <= c.energy_max else 0.0]
 
 
 def _compass(world, c, ctx):

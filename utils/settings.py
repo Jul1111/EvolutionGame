@@ -8,6 +8,10 @@ import config
 DEFAULTS = {name: getattr(config, name) for name in dir(config) if name.isupper()}
 
 
+# Text settings: the values accepted from settings.json (anything else is ignored)
+ALLOWED = {"SIZE_MODE": ("fixe", "neutre", "actif")}
+
+
 def _path():
     return os.path.join(config.SAVE_DIR, "settings.json")
 
@@ -40,7 +44,7 @@ def load_settings(names):
             if not value:
                 continue
         elif isinstance(default, str):
-            if not isinstance(value, str):
+            if not isinstance(value, str) or value not in ALLOWED.get(name, (value,)):
                 continue
         elif isinstance(value, bool) or not isinstance(value, (int, float)):
             continue

@@ -62,6 +62,7 @@ def main():
         "poison_count": ("POISON_COUNT", [0, 3, 5, 8, 12, 20, 30], str),
         "poison_energy": ("POISON_ENERGY", [20.0, 40.0, 60.0, 80.0], lambda v: f"{v:g}"),
         "obstacle_count": ("OBSTACLE_COUNT", [0, 3, 6, 10, 15, 25, 35], str),
+        "size_mode": ("SIZE_MODE", ["fixe", "neutre", "actif"], str),
         "world_scale": ("WORLD_SCALE", [1, 2, 3], lambda v: f"{v}×{v} écrans"),
     }
     # Settings chosen in an earlier session replace the values of config.py (saves/settings.json)
@@ -73,7 +74,7 @@ def main():
               + " (valeurs de config.py ignorées ; LOAD_SETTINGS = False pour les désactiver)")
     # Settings that only take effect on a new world (obstacles are drawn when the world is created).
     # Every other setting applies at once.
-    RESTART_PARAMS = {"obstacle_count", "world_scale"}
+    RESTART_PARAMS = {"obstacle_count", "world_scale", "size_mode"}   # size_mode: bodies are set at birth
     pending_profiles = None   # Species ticked in the menu (list), applied at the next restart from zero
 
     # Continuous evolution (evolution/continuous.py): births, deaths, no generations. timeline.csv feeds the curves.

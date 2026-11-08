@@ -79,6 +79,17 @@ AGE_MAX = 6000              # Death of old age (100 s). 0 = never
 POP_MAX = 400               # Computing cap per screen-sized area: at the cap births are blocked and counted (cap_blocked)
 SAMPLE_TICKS = 600          # One line of timeline.csv every SAMPLE_TICKS ticks
 
+# Configuration for the body gene: size (core/creature.py). Founders have size 1; a newborn gets the size of its
+# parent × exp(N(0, SIZE_MUTATION_STD)), kept in [SIZE_MIN, SIZE_MAX].
+# SIZE_MODE: "fixe" = everyone 1, no mutation. "neutre" = the size mutates but changes nothing (drift control).
+# "actif" = trade-offs: contact radius, energy reserve and the energy of a birth ∝ size; base cost ∝ size^SIZE_BASE_EXPONENT
+# (Kleiber's law: a big body is cheaper to keep per unit of size); cost of moving ∝ size. Starting values, to tune
+SIZE_MODE = "actif"
+SIZE_MUTATION_STD = 0.05
+SIZE_MIN = 0.5
+SIZE_MAX = 2.0
+SIZE_BASE_EXPONENT = 0.75
+
 # Configuration for mutation
 MUTATION_STD = 0.1          # Std of the gaussian noise added to each weight of a child (0.2 was chosen on one seed only)
 

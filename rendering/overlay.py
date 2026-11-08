@@ -53,6 +53,7 @@ PARAM_INFO = {
     "fixed": ("Positions de la nourriture", "Fixes : elle revient au même endroit. Aléatoires : nouvel endroit à chaque fois."),
     "poison_count": ("Nombre de poisons", "Sources de poison dans le monde. 0 = aucun."),
     "poison_energy": ("Dégâts d'un poison", "Énergie perdue au contact d'un poison."),
+    "size_mode": ("Gène de taille", "Fixe : tous à 1. Neutre : la taille mute sans rien changer (témoin de dérive). Actif : plus grand = touche de plus loin, réserve plus grande, coûte plus. Au prochain départ de zéro."),
     "world_scale": ("Taille du monde", "Côté du monde en écrans. 2×2 = 4 fois plus de surface, de nourriture et de créatures, et environ 4 fois plus lent. Au prochain départ de zéro."),
     "obstacle_count": ("Nombre d'obstacles", "Obstacles (formes et places tirées au hasard). S'applique au prochain départ de zéro. 0 = aucun."),
 }
@@ -65,12 +66,12 @@ GEN_TIPS = [
     (104, "Génération de lignée : nombre d'ancêtres depuis les fondateurs tirés au hasard (0)."),
 ]
 CREATURE_TIPS = [
-    (36, "Énergie restante. À 0, la créature meurt. Plafond : {energy_max:g}."),
+    (36, "Énergie restante. À 0, la créature meurt. Plafond : {energy_max:g} × taille (si la taille agit)."),
     (66, "Vitesse actuelle, de 0 à {speed_max:g}. Elle change progressivement vers la vitesse demandée par le réseau."),
     (96, "Âge : durée de vie de cette créature (temps simulé)."),
     (114, "Nourritures mangées / poisons touchés depuis sa naissance."),
     (132, "Temps aveugle : part de sa vie passée sans aucune nourriture dans son champ de vision (cône)."),
-    (150, "Génération de lignée et nombre de petits. Les petits sont la seule chose que la sélection naturelle récompense."),
+    (150, "Taille (gène du corps, de {size_min:g} à {size_max:g}), génération de lignée et nombre de petits. Les petits sont la seule chose que la sélection naturelle récompense."),
 ]
 NET_TIPS = {
     "Distance": "Distance à la nourriture visible la plus proche, divisée par la portée. 1 = rien en vue.",
@@ -574,7 +575,7 @@ class Overlay:
             return None
         lx, ly = x - sb.x, y - sb.y
         u, ky = hud.u, hud.ky
-        fmt = dict(pop_max=config.POP_MAX, energy_max=config.ENERGY_MAX, speed_max=config.CREATURE_MAX_SPEED)
+        fmt = dict(size_min=config.SIZE_MIN, size_max=config.SIZE_MAX, pop_max=config.POP_MAX, energy_max=config.ENERGY_MAX, speed_max=config.CREATURE_MAX_SPEED)
         for name, rows in (("gen", GEN_TIPS), ("creature", CREATURE_TIPS)):
             slot = hud.slots.get(name)
             if slot and slot.collidepoint(lx, ly):
@@ -620,7 +621,7 @@ class Overlay:
             c = pick_creature(world, wx, wy, self.scene.pick_radius())
             if c is not None:
                 t = int(c.age / config.TICKS_PER_SECOND)
-                lines = [(f"{PROFILES[c.profile]['title']}  ·  gén. {c.lineage_gen}  ·  {c.children} petits" + ("" if c.alive else "  ·  morte"), "base", VALUE),
+                lines = [(f"{PROFILES[c.profile]['title']}  ·  taille {c.size:.2f}  ·  gén. {c.lineage_gen}  ·  {c.children} petits" + ("" if c.alive else "  ·  morte"), "base", VALUE),
                          (f"Énergie {max(c.energy, 0):.0f}   Vitesse {c.speed:.1f}", "small", LABEL),
                          (f"Âge {t // 60:02d}:{t % 60:02d}   Nourriture {c.food_eaten}   Poison {c.poison_hits}", "small", LABEL),
                          ("Clic : fiche complète", "small", DIM)]

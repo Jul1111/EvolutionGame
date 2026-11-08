@@ -175,12 +175,14 @@ SERIES = [
     ("food_rate", "Repas / 1000 ticks de vie", (90, 200, 110), _col("food_rate"), None, lambda v: f"{v:.2f}"),
     ("poison_rate", "Poisons / 1000 ticks de vie", (176, 96, 214), _col("poison_rate"), None, lambda v: f"{v:.2f}"),
     ("mean_speed", "Vitesse moy.", BLUE, _col("mean_speed"), lambda: config.CREATURE_MAX_SPEED, lambda v: f"{v:.2f}"),
-    ("mean_energy", "Énergie moy.", AMBER, _col("mean_energy"), lambda: config.ENERGY_MAX, lambda v: f"{v:.0f}"),
+    ("mean_energy", "Énergie moy.", AMBER, _col("mean_energy"), None, lambda v: f"{v:.0f}"),
     ("mean_lineage_gen", "Génération de lignée moy.", (160, 190, 255), _col("mean_lineage_gen"), None,
      lambda v: f"{v:.1f}"),
     ("mean_age_at_death", "Âge moyen à la mort", (236, 142, 72), _col("mean_age_at_death"), lambda: config.AGE_MAX or None,
      format_time),
     ("food_available", "Nourritures disponibles", (178, 224, 120), _col("food_available"), None, lambda v: f"{v:.0f}"),
+    ("mean_size", "Taille moy.", (236, 200, 120), _col("mean_size"), lambda: config.SIZE_MAX, lambda v: f"{v:.2f}"),
+    ("size_std", "Écart de taille", (200, 170, 110), _col("size_std"), None, lambda v: f"{v:.2f}"),
     ("cap_blocked", "Naissances bloquées (plafond)", (230, 122, 182), _col("cap_blocked"), None, lambda v: f"{v:.0f}"),
 ]
 SERIES_BY_KEY = {s[0]: s for s in SERIES}
@@ -483,7 +485,7 @@ class Hud:
                            max(3, c.x(4)))
 
         bar_h = max(3, c.x(5))
-        energy_ratio = cr.energy / config.ENERGY_INPUT_MAX
+        energy_ratio = cr.energy / cr.energy_max
         _row(p, f, c, 36, "Énergie", f"{max(cr.energy, 0):.1f}")
         _bar(p, pad, c.y(57), W - 2 * pad, bar_h, energy_ratio, energy_color(max(0.0, min(energy_ratio, 1.0))))
         _row(p, f, c, 66, "Vitesse", f"{cr.speed:.2f}")
@@ -492,7 +494,7 @@ class Hud:
         _row(p, f, c, 114, "Nourriture / poison", f"{cr.food_eaten} / {cr.poison_hits}")
         blind_share = cr.blind_ticks / cr.age if cr.age else 0.0
         _row(p, f, c, 132, "Temps aveugle", f"{blind_share:.0%}")
-        _row(p, f, c, 150, "Génération / petits", f"{cr.lineage_gen} / {cr.children}")
+        _row(p, f, c, 150, "Taille / génération / petits", f"{cr.size:.2f} / {cr.lineage_gen} / {cr.children}")
         return p
 
     def _draw_network(self, world, selected):

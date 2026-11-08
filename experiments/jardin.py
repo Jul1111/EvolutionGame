@@ -33,7 +33,7 @@ def garden(source, density, seed, ticks, warmup, profile):
         config.ACTIVE_PROFILES = [profile]
         config.INITIAL_POPULATION = density
     else:
-        pool = [g for gs in load_population(source).values() for g in gs]
+        pool = [f for fs in load_population(source).values() for f in fs]   # (genome, size)
         name = next(iter(load_population(source)))
         founders = {name: [pool[rng.randrange(len(pool))] for _ in range(density)]}
     sim = ContinuousSimulation(rng, founders=founders)

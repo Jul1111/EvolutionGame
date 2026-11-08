@@ -74,9 +74,9 @@ class World:
             for o in self.obstacles if obstacles is None else obstacles:
                 dx = torus_delta(o.x, creature.x, self.width)   # From the obstacle to the creature
                 dy = torus_delta(o.y, creature.y, self.height)
-                if dx * dx + dy * dy >= (o.radius + config.CREATURE_RADIUS) ** 2:
+                if dx * dx + dy * dy >= (o.radius + creature.radius) ** 2:
                     continue   # Outside the bounding circle
-                pushed = o.push(dx, dy, config.CREATURE_RADIUS)
+                pushed = o.push(dx, dy, creature.radius)
                 if pushed:
                     creature.x = (o.x + pushed[0]) % self.width
                     creature.y = (o.y + pushed[1]) % self.height
@@ -103,40 +103,47 @@ class World:
                 X = np.fromiter((c.x for c in alive), float, n)   # Collisions moved some of them
                 Y = np.fromiter((c.y for c in alive), float, n)
             E = np.fromiter((c.energy for c in alive), float, n)
+            body = (np.fromiter((c.radius for c in alive), float, n),       # Contact radius (body size)
+                    np.fromiter((c.energy_max for c in alive), float, n))   # Energy reserve (body size)
             # Phase 2: food goes to the closest creature in contact that still has room for the whole meal
-            self._contacts(self.foods, alive, X, Y, E, self._eat, fits=True)
+            self._contacts(self.foods, alive, X, Y, E, body, self._eat, fits=True)
             # Phase 3: poison hurts the closest creature in contact, then moves to a new random place
-            self._contacts(self.poisons, alive, X, Y, E, self._poisoned, fits=False)
+            self._contacts(self.poisons, alive, X, Y, E, body, self._poisoned, fits=False)
         else:
             for item in self.foods + self.poisons:
                 if item.cooldown > 0:
                     item.cooldown -= 1
         self.tick += 1
 
-    def _contacts(self, items, alive, X, Y, E, effect, fits):
+    def _contacts(self, items, alive, X, Y, E, body, effect, fits):
         """For each available item, in list order: the closest living creature in contact gets `effect`.
-        fits=True: only creatures for which the item energy fits under ENERGY_MAX are eligible.
+        body = (contact radius, energy reserve) of each creature.
+        fits=True: only creatures for which the item energy fits under their reserve are eligible.
         A cheap numpy pass finds the items that touch someone; only those are resolved one by one (an item
         changes E, which matters for the next one)."""
         m = len(items)
         if m == 0:
             return
-        reach2 = (config.CREATURE_RADIUS + config.FOOD_RADIUS) ** 2
+        radius, emax = body
+        reach2 = (radius + config.FOOD_RADIUS) ** 2   # One value per creature
         ix = np.fromiter((i.x for i in items), float, m)
         iy = np.fromiter((i.y for i in items), float, m)
         dx = (ix[:, None] - X[None, :] + self.width / 2) % self.width - self.width / 2
         dy = (iy[:, None] - Y[None, :] + self.height / 2) % self.height - self.height / 2
         d2 = dx * dx + dy * dy
-        touching = (d2 < reach2).any(axis=1)
+        touching = (d2 < reach2[None, :]).any(axis=1)
         for j, item in enumerate(items):
             if item.cooldown > 0:
                 item.cooldown -= 1
                 continue
             if not touching[j]:
                 continue
-            row = np.where(E + item.energy <= config.ENERGY_MAX, d2[j], np.inf) if fits else d2[j]
-            i = int(np.argmin(row))
-            if row[i] < reach2:
+            # Closest creature in contact; the distance is measured to its edge, as the bodies differ in size
+            gap = np.where(d2[j] < reach2, np.sqrt(d2[j]) - radius, np.inf)
+            if fits:
+                gap = np.where(E + item.energy <= emax, gap, np.inf)
+            i = int(np.argmin(gap))
+            if gap[i] < np.inf:
                 effect(item, alive[i])
                 E[i] = alive[i].energy
 
@@ -165,10 +172,12 @@ class World:
             return False
         ox = np.fromiter((o.x for o in self.obstacles), float, m)
         oy = np.fromiter((o.y for o in self.obstacles), float, m)
-        lim = (np.fromiter((o.radius for o in self.obstacles), float, m) + config.CREATURE_RADIUS) ** 2
+        orad = np.fromiter((o.radius for o in self.obstacles), float, m)
+        crad = np.fromiter((c.radius for c in alive), float, len(alive))
+        lim = (orad[None, :] + crad[:, None]) ** 2
         dx = (X[:, None] - ox[None, :] + self.width / 2) % self.width - self.width / 2
         dy = (Y[:, None] - oy[None, :] + self.height / 2) % self.height - self.height / 2
-        near = dx * dx + dy * dy < lim[None, :]
+        near = dx * dx + dy * dy < lim
         moved = False
         for i in np.nonzero(near.any(axis=1))[0]:
             # A creature pushed out of one obstacle can land in a neighbour: neighbours = obstacles near it
@@ -257,16 +266,16 @@ class World:
                 continue
 
             best = None
-            best_distance2 = (config.CREATURE_RADIUS + config.FOOD_RADIUS) ** 2
-            
+            best_gap = math.inf
+
             for creature in self.creatures:
-                if not creature.alive or creature.energy + food.energy > config.ENERGY_MAX:
+                if not creature.alive or creature.energy + food.energy > creature.energy_max:
                     continue  # Dead, or the meal would not fit: leaves the food to the others
                 dx = torus_delta(creature.x, food.x, self.width)
                 dy = torus_delta(creature.y, food.y, self.height)
-                distance2 = dx * dx + dy * dy
-                if distance2 < best_distance2:
-                    best_distance2 = distance2
+                distance = math.hypot(dx, dy)
+                if distance < creature.radius + config.FOOD_RADIUS and distance - creature.radius < best_gap:
+                    best_gap = distance - creature.radius
                     best = creature
 
             if best is not None:
@@ -285,15 +294,15 @@ class World:
                 poison.cooldown -= 1
                 continue
             victim = None
-            best_distance2 = (config.CREATURE_RADIUS + config.FOOD_RADIUS) ** 2
+            best_gap = math.inf
             for creature in self.creatures:
                 if not creature.alive:
                     continue
                 dx = torus_delta(creature.x, poison.x, self.width)
                 dy = torus_delta(creature.y, poison.y, self.height)
-                distance2 = dx * dx + dy * dy
-                if distance2 < best_distance2:
-                    best_distance2 = distance2
+                distance = math.hypot(dx, dy)
+                if distance < creature.radius + config.FOOD_RADIUS and distance - creature.radius < best_gap:
+                    best_gap = distance - creature.radius
                     victim = creature
             if victim is not None:
                 victim.hit_by_poison(poison.energy)
@@ -317,23 +326,25 @@ class World:
 
     def add_creature(self, brain, profile, energy=None, near=None, **lineage):
         """Adds a creature at a random free place, or close to `near` = (x, y) (a newborn next to its parent).
-        `lineage`: uid, parent_id, birth_tick, lineage_gen (see Creature)."""
-        x, y = self._free_position(config.CREATURE_RADIUS) if near is None else self._free_near(*near)
+        `lineage`: uid, parent_id, birth_tick, lineage_gen, size (see Creature)."""
+        margin = config.CREATURE_RADIUS * lineage.get("size", 1.0)
+        x, y = self._free_position(margin) if near is None else self._free_near(*near, margin)
         angle = self.rng.uniform(-math.pi, math.pi)
         creature = Creature(x, y, angle, config.INITIAL_ENERGY if energy is None else energy, brain, profile,
                             **lineage)
         self.creatures.append(creature)
         return creature
 
-    def _free_near(self, x, y):
+    def _free_near(self, x, y, margin=None):
         """Free position a few radii from (x, y); a random free place if the surroundings are blocked."""
+        margin = config.CREATURE_RADIUS if margin is None else margin
         for _ in range(20):
             a = self.rng.uniform(-math.pi, math.pi)
-            d = self.rng.uniform(2, 4) * config.CREATURE_RADIUS
+            d = self.rng.uniform(2, 4) * margin
             nx, ny = (x + d * math.cos(a)) % self.width, (y + d * math.sin(a)) % self.height
-            if not self._blocked(nx, ny, config.CREATURE_RADIUS):
+            if not self._blocked(nx, ny, margin):
                 return nx, ny
-        return self._free_position(config.CREATURE_RADIUS)
+        return self._free_position(margin)
 
     def add_population(self, profile, count):
         """`count` creatures of the profile with random networks."""
