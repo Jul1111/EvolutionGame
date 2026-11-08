@@ -77,11 +77,6 @@ class ContinuousSimulation:
         living = [c for c in world.creatures if c.alive]
         self.life_ticks += len(living)
         for c in living:
-            if not c.food_nearby:   # Nothing available in view: what does it do? (exploration measures)
-                self.blind_ticks += 1
-                self.blind_speed += c.speed
-                self.blind_turn += abs(c.last_turn)
-        for c in living:
             if config.AGE_MAX and c.age >= config.AGE_MAX:
                 c.alive = False
                 c.death_cause = "vieillesse"
@@ -178,9 +173,8 @@ class ContinuousSimulation:
         self.death_ages = []
         self.cap_blocked = 0
         self.life_ticks = 0
-        self.blind_ticks = 0
-        self.blind_speed = 0.0
-        self.blind_turn = 0.0
+        w = getattr(self, "world", None)
+        self._blind0 = (w.blind_ticks, w.blind_speed, w.blind_turn) if w is not None else (0, 0.0, 0.0)
         self._eaten0 = getattr(self.world, "eaten", 0)
         self._poisoned0 = getattr(self.world, "poisoned", 0)
 
@@ -189,6 +183,7 @@ class ContinuousSimulation:
         cs = self.world.creatures
         n = len(cs)
         per_k = 1000 / self.life_ticks if self.life_ticks else 0.0
+        blind = self.world.blind_ticks - self._blind0[0]   # Exploration counters kept by the world (core/batch.py)
         return {
             "tick": self.world.tick,
             "population": n,
@@ -212,9 +207,9 @@ class ContinuousSimulation:
             "max_size": max((c.size for c in cs), default=None),
             # Exploration: share of the life ticks with no available food in view, and the speed and |turn| then.
             # Exploring = moving fast and fairly straight when nothing is in view
-            "blind_frac": self.blind_ticks / self.life_ticks if self.life_ticks else None,
-            "blind_speed": self.blind_speed / self.blind_ticks if self.blind_ticks else None,
-            "blind_turn": self.blind_turn / self.blind_ticks if self.blind_ticks else None,
+            "blind_frac": blind / self.life_ticks if self.life_ticks else None,
+            "blind_speed": (self.world.blind_speed - self._blind0[1]) / blind if blind else None,
+            "blind_turn": (self.world.blind_turn - self._blind0[2]) / blind if blind else None,
             **{f"pop__{p}": sum(1 for c in cs if c.profile == p) for p in self.species},
         }
 

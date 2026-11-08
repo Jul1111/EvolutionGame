@@ -399,6 +399,7 @@ def main():
     reset_pending = False
 
     speed_index = 0
+    real_speed = 0.0   # Ticks per frame actually run (time budget), smoothed
 
     running = True
     while running:
@@ -487,7 +488,14 @@ def main():
 
         # Run several simulation ticks per frame, according to the chosen speed
         ticks_to_run = 0 if setup is not None else (1 if step_request else (0 if paused else speed))
+        # Time budget: at high speed the simulation stops for this frame once SIM_FRAME_BUDGET_MS is spent, so the
+        # window stays fluid. The real speed (ticks per frame actually run) is shown next to the asked one.
+        deadline = time.perf_counter() + config.SIM_FRAME_BUDGET_MS / 1000
+        ran = 0
         for _ in range(ticks_to_run):
+            if ran and time.perf_counter() > deadline:
+                break
+            ran += 1
             going = sim.step()
             if selected is not None:
                 if selected.alive:
@@ -525,14 +533,16 @@ def main():
         params_info = [(a, *PARAM_INFO.get(a, (a, "")), fmt(getattr(config, name)),
                         fmt(pending[a]) if a in pending else None)
                        for a, (name, _, fmt) in PARAMS.items()] if overlay.params_open else []
-        overlay.draw(window, {"paused": paused, "speed": speed, "debug": debug_mode, "follow": follow,
+        real_speed = 0.9 * real_speed + 0.1 * ran if ticks_to_run else 0.0   # Smoothed ticks per frame
+        overlay.draw(window, {"paused": paused, "speed": speed, "real_speed": real_speed, "debug": debug_mode, "follow": follow,
                               "graph": net_state, "chart": chart_state, "cam_follow": cam_follow,
                               "profiles": list(config.ACTIVE_PROFILES if pending_profiles is None else pending_profiles),
                               "profiles_pending": pending_profiles is not None}, world, selected, params_info)
         if menu.open_index is None:
             reset_pending = False
         menu.draw(window, {
-            "speed": speed, "paused": paused, "debug": ("off", "sélection", "toutes")[debug_mode],
+            "speed": speed, "real_speed": real_speed, "paused": paused,
+            "debug": ("off", "sélection", "toutes")[debug_mode],
             "color": scene.color_label(), "chart": ("non", "panneau", "grand")[chart_state], "graph": ("non", "petit", "grand")[net_state],
             "legend": overlay.legend_open, "follow": follow,
             "fullscreen": display.fullscreen,

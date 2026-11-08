@@ -47,6 +47,7 @@ TICKS_PER_SECOND = 60
 
 # Configuration for simulation speed
 SPEED_STEPS = [1, 2, 5, 10, 20, 50, 100]
+SIM_FRAME_BUDGET_MS = 25   # At most this much simulation per frame: the window stays around 30 FPS or more at any speed
 
 # Configuration for senses
 VISION_RANGE = 200          # Maximum distance at which a creature sees food

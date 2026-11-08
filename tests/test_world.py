@@ -95,3 +95,19 @@ def test_unseen_ticks_count_and_reset():
     for c in w.creatures:
         if c.alive:
             assert c.unseen_ticks == 0 if c.food_nearby else c.unseen_ticks >= 1
+
+
+def test_batched_update_matches_reference_for_every_species():
+    """core/batch.py (all creatures at once) against Creature.update one by one, for every profile: memory, noise,
+    hunger, fixed speed and the scripted brain included."""
+    from brain.profiles import PROFILES
+    config.POISON_COUNT = 8
+    fast, ref = _world(11, profiles=tuple(PROFILES)), _world(11, profiles=tuple(PROFILES))
+    for _ in range(200):
+        fast.update()
+        ref._update_reference()
+    for a, b in zip(fast.creatures, ref.creatures):
+        assert a.alive == b.alive and a.food_eaten == b.food_eaten
+        assert abs(torus_delta(a.x, b.x, fast.width)) < 1e-6 and abs(torus_delta(a.y, b.y, fast.height)) < 1e-6
+        assert abs(a.energy - b.energy) < 1e-6 and a.unseen_ticks == b.unseen_ticks
+        assert all(abs(m - n) < 1e-6 for m, n in zip(a.memory, b.memory))

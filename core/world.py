@@ -9,6 +9,7 @@ from core.physics import torus_delta, normalize_angle
 from core.creature import Creature
 from brain.profiles import PROFILES, needed_items, new_brain
 from core.sensors import SENSORS
+from core.batch import decide_and_move
 
 class World:
     def __init__(self, rng):
@@ -25,6 +26,9 @@ class World:
         # Poison: same kind of object as food, but its `energy` is the damage. Seen through its own two inputs
         self.poisons = [Food(*self._free_position(reach), config.POISON_ENERGY) for _ in range(self._count(config.POISON_COUNT))]
         self.tick = 0
+        self.blind_ticks = 0       # Ticks of life with no available food in view, speed and |turn| then (core/batch.py)
+        self.blind_speed = 0.0
+        self.blind_turn = 0.0
         self.eaten = 0             # Meals and poison hits since the start (continuous measures)
         self.poisoned = 0
         # Every kind of item a creature can perceive, by name. A new kind of item: add it here, then a sensor
@@ -119,12 +123,11 @@ class World:
     def update(self):
         """One tick. Same rules as _update_reference (tests/test_world.py checks it), computed for all creatures at once."""
         # Phase 0: what every creature sees, computed together (items do not move during phase 1)
-        self.sense_all()
+        seeing = self.sense_all()
 
-        # Phase 1: every creature decides and moves, then obstacles push it back
-        for creature in self.creatures:
-            if creature.alive:
-                creature.update(self.sense(creature), self.width, self.height)
+        # Phase 1: every creature decides and moves (all at once, core/batch.py), then obstacles push it back
+        if seeing:
+            decide_and_move(self, seeing, self._near)
         alive = [c for c in self.creatures if c.alive]
         if alive:
             n = len(alive)
@@ -216,11 +219,13 @@ class World:
     def sense_all(self):
         """Nearest food, poison and obstacle in view of every living creature, for all of them at once (numpy).
         Same rule as nearest(): within range, inside the field of view, available, closest wins (an exact tie goes
-        to the last item of the list, like nearest). The result is cached on each creature for this tick."""
+        to the last item of the list, like nearest). Keeps, for this tick, {kind: (distance², dx, dy)} arrays aligned
+        with the returned list of living creatures (distance² = inf when nothing is seen); World.sense reads them."""
         alive = [c for c in self.creatures if c.alive]
         n = len(alive)
+        self._near, self._near_tick = {}, self.tick
         if not n:
-            return
+            return alive
         needed = needed_items({c.profile for c in alive})
         cx = np.fromiter((c.x for c in alive), float, n)
         cy = np.fromiter((c.y for c in alive), float, n)
@@ -229,18 +234,13 @@ class World:
         range2 = range_ ** 2
         all_around = config.VISION_FOV_DEGREES >= 360
         half_fov = math.radians(config.VISION_FOV_DEGREES) / 2.0
-        for c in alive:
-            c._near = {}
-            c._near_tick = self.tick
         rows = np.arange(n)
+        food_seen = np.zeros(n, dtype=bool)
         for key in sorted(needed):
             items = self.items[key]
             m = len(items)
             if m == 0:
-                for c in alive:
-                    c._near[key] = None
-                    if key == "food":
-                        c.food_nearby = False
+                self._near[key] = (np.full(n, np.inf), np.zeros(n), np.zeros(n))
                 continue
             ix = np.fromiter((i.x for i in items), float, m)
             iy = np.fromiter((i.y for i in items), float, m)
@@ -265,14 +265,13 @@ class World:
             in_view = np.isfinite(masked).any(axis=1)   # An available item in view
             j_best = m - 1 - np.argmin(masked[:, ::-1], axis=1)   # Last of equal minima, like nearest()
             best = masked[rows, j_best]
-            for i, c in enumerate(alive):
-                if key == "food":
-                    c.food_nearby = bool(in_view[i])
-                if best[i] < np.inf:
-                    j = j_best[i]
-                    c._near[key] = (float(best[i]), float(dx[i, j]), float(dy[i, j]))
-                else:
-                    c._near[key] = None
+            self._near[key] = (best, dx[rows, j_best], dy[rows, j_best])
+            if key == "food":
+                food_seen = in_view
+        for i, (c, seen) in enumerate(zip(alive, food_seen.tolist())):
+            c.food_nearby = seen
+            c._near_i, c._near_tick = i, self.tick
+        return alive
 
     def _update_reference(self):
         """Plain loop version of update(), one creature at a time. Slow: kept as the reference the tests compare to."""
@@ -423,8 +422,10 @@ class World:
         Uses what sense_all found for this tick when it is there, else looks up the nearest items itself
         (the interface calls it for the selected creature). The nearest food is always looked up: it feeds the
         `food_nearby` metric."""
-        if getattr(creature, "_near_tick", -1) == self.tick:
-            ctx = creature._near
+        if getattr(creature, "_near_tick", -1) == self.tick == getattr(self, "_near_tick", -2):
+            i = creature._near_i
+            ctx = {k: (float(d2[i]), float(dx[i]), float(dy[i])) if np.isfinite(d2[i]) else None
+                   for k, (d2, dx, dy) in self._near.items()}
         else:
             food, in_view = self.nearest(creature, self.foods)
             creature.food_nearby = in_view  # An available food in view

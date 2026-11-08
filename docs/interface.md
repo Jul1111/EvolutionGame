@@ -4,7 +4,7 @@
 
 | Touche | Action |
 |---|---|
-| ↑ / ↓ | Vitesse de simulation (×1 à ×100) |
+| ↑ / ↓ | Vitesse de simulation demandée (×1 à ×100). La simulation ne prend pas plus de 25 ms par image (`SIM_FRAME_BUDGET_MS`) pour garder la fenêtre fluide : quand la machine ne suit pas, la vitesse réelle s'affiche en orange |
 | Espace / → | Pause / avancer d'un tick (en pause) |
 | Clic | Sélectionner une créature, ou utiliser les menus |
 | Molette, glisser, + - 0 1 | Zoom (jusqu'à 4 fois plus loin que la carte entière : le tore apparaît répété, assombri, autour de la carte encadrée), déplacer la vue, toute la carte, échelle d'un écran |

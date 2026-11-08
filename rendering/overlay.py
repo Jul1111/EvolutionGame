@@ -394,7 +394,9 @@ class Overlay:
             _icon(window, name, rect, (MINT if on else (VALUE if enabled else DIM)), f, u)
         for sx in self.seps:
             pygame.draw.line(window, BORDER, (sx, self.bar_rect.y + round(8 * u)), (sx, self.bar_rect.bottom - round(8 * u)))
-        sp = f["base"].render(f"x{state['speed']}", True, VALUE)
+        limited = state.get("real_speed", 0) and state["real_speed"] < state["speed"] * 0.95 and not state["paused"]
+        sp = f["base"].render(f"x{state['real_speed']:.0f}" if limited else f"x{state['speed']}", True,
+                              AMBER if limited else VALUE)   # Amber: the machine cannot keep the asked speed
         window.blit(sp, (self.speed_rect.centerx - sp.get_width() // 2, self.speed_rect.centery - sp.get_height() // 2))
 
         if state["paused"]:
@@ -824,7 +826,8 @@ class Overlay:
             if rect.collidepoint(x, y) and dwell > 0.3:
                 lines = [(title, "base", VALUE)] + ([(f"Raccourci : {shortcut}", "small", DIM)] if shortcut else [])
         if lines is None and self.speed_rect.collidepoint(x, y) and dwell > 0.3:
-            lines = [(f"Vitesse de simulation : {self.state.get('speed', 1)} ticks par image", "base", VALUE),
+            lines = [(f"Vitesse demandée : {self.state.get('speed', 1)} ticks par image, réelle : "
+                      f"{self.state.get('real_speed', 0):.0f} (en orange quand la machine ne suit pas)", "base", VALUE),
                      ("Flèches haut / bas", "small", DIM)]
         if lines is None and dwell > 0.45:
             text = self._hud_tip(x, y, selected)

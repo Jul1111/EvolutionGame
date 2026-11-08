@@ -187,7 +187,10 @@ class MenuBar:
             window.blit(text, (r.centerx - text.get_width() // 2, r.centery - text.get_height() // 2))
 
         # Status on the right: speed and pause, always visible even when a panel is not
-        status = f"x{state['speed']}" + ("  ·  Pause" if state["paused"] else "")
+        real = state.get("real_speed", 0)
+        limited = real and real < state["speed"] * 0.95 and not state["paused"]
+        status = (f"x{state['speed']} demandé · x{real:.0f} réel" if limited else f"x{state['speed']}") + \
+            ("  ·  Pause" if state["paused"] else "")
         img = f["small"].render(status, True, LABEL)
         window.blit(img, (bar.right - round(14 * u) - img.get_width(), bar.centery - img.get_height() // 2))
 
