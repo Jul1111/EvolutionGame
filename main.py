@@ -50,6 +50,7 @@ def main():
     debug_mode = 0  # 0 = off, 1 = selected (else oldest living) creature, 2 = all living creatures
     paused = False
     selected = None                            # Creature picked with a click
+    auto_best = False   # True after B: when the selected creature dies, the new best one is selected
     trail = deque(maxlen=config.TRAIL_LENGTH)  # Recent positions of the selected creature, one per tick
 
     # Settings editable from the menu: action → (config name, values it cycles through, text shown).
@@ -201,7 +202,7 @@ def main():
     # Every command, from the keyboard or from the menu, goes through do(). Returns True to keep the menu open.
     def do(action):
         nonlocal speed_index, debug_mode, paused, step_request, reset_pending, selected, follow, pending_profiles, \
-            cam_follow, last_saved, running
+            cam_follow, last_saved, running, auto_best
         if setup is not None and action in ("pause", "step", "params_panel", "params_close", "end_gen", "restart_now",
                                             "save_pop", "load_pop", "reset"):
             return False   # Setup screen: only its own buttons, the settings, the species and the view
@@ -309,6 +310,7 @@ def main():
                 selected = max(world.creatures, key=success_key)
                 trail.clear()
                 cam_follow = True
+                auto_best = True   # Stays on «the best»: at its death, the new best one
         elif action == "follow":
             follow = not follow
             if follow and selected is None and world.creatures:
@@ -462,6 +464,7 @@ def main():
                     # A click without drag: select the creature under the pointer
                     wx, wy = scene.screen_to_world(drag_start[0] - layout.world.x, drag_start[1] - layout.world.y)
                     selected = pick_creature(world, wx, wy, scene.pick_radius())
+                    auto_best = False   # A creature chosen by hand: no automatic switch (except T, lineage)
                     trail.clear()
                     cam_follow = selected is not None   # The camera follows the creature just selected
                 drag_start, dragging = None, False
@@ -489,8 +492,14 @@ def main():
             if selected is not None:
                 if selected.alive:
                     trail.append((selected.x, selected.y))
-                elif follow:
-                    heir = sim.descendant_of(selected)   # The lineage goes on through its youngest living descendant
+                elif follow or auto_best:
+                    # T: the lineage goes on through its youngest living descendant; if the lineage is extinct,
+                    # or after B: the new best one (most children)
+                    heir = sim.descendant_of(selected) if follow else None
+                    if heir is None and world.creatures:
+                        heir = max((c for c in world.creatures if c.alive), key=success_key, default=None)
+                        if heir is not None:
+                            overlay.toast(f"Morte. Nouvelle meilleure : {heir.children} petits, génération {heir.lineage_gen}", 2.5)
                     if heir is not None:
                         selected = heir
                         trail.clear()

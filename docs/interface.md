@@ -9,8 +9,8 @@
 | Clic | Sélectionner une créature, ou utiliser les menus |
 | Molette, glisser, + - 0 1 | Zoom (jusqu'à 4 fois plus loin que la carte entière : le tore apparaît répété, assombri, autour de la carte encadrée), déplacer la vue, toute la carte, échelle d'un écran |
 | V | Caméra sur la créature sélectionnée |
-| B | Sélectionner la créature qui a eu le plus de petits |
-| T | Suivre la lignée : à la mort de la sélection, passer à son plus jeune descendant vivant |
+| B | Sélectionner la créature qui a eu le plus de petits ; à sa mort, la sélection passe à la nouvelle meilleure (jusqu'au prochain clic sur une créature) |
+| T | Suivre la lignée : à la mort de la sélection, passer à son plus jeune descendant vivant, ou à la nouvelle meilleure si la lignée est éteinte |
 | S | Sauvegarder la population (`saves/populations/<date>_manuelle.npz`) |
 | D, C, L | Debug (cône de vision et cibles), couleur des créatures (espèce, énergie, vitesse, nourriture, taille, lignée), légende |
 | G, N | Courbes (masquées, panneau, grand), graphe du réseau (masqué, petit, grand) |
