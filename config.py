@@ -73,6 +73,7 @@ SAVE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "saves")
 GENOMES_FILE = os.path.join(SAVE_DIR, "latest.npz")
 STATS_FILE = os.path.join(SAVE_DIR, "stats.csv")
 LOAD_ON_START = True        # Resume from saves/latest.npz if it exists
+LOAD_SETTINGS = True        # Reuse the settings changed from the menu (saves/settings.json). False = values of this file
 
 # Configuration for rendering (organic style)
 BG_CENTER_COLOR = (30, 40, 46)       # Centre of the "petri dish" background

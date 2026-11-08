@@ -13,6 +13,7 @@ from rendering.display import Display
 from rendering.layout import compute_layout
 from utils.persistence import save_genomes, load_genomes, archive_genomes
 from utils.logger import log_generation, archive_stats
+from utils.settings import load_settings, save_settings
 
 
 def main():
@@ -39,6 +40,27 @@ def main():
     paused = False
     selected = None                            # Creature picked with a click (cleared at each new generation)
     trail = deque(maxlen=config.TRAIL_LENGTH)  # Recent positions of the selected creature, one per tick
+
+    # Settings editable from the menu: action → (config name, values it cycles through, text shown).
+    # All of them are applied at the start of the next generation, so one generation never mixes two settings.
+    PARAMS = {
+        "mutation": ("MUTATION_STD", [0.02, 0.05, 0.1, 0.2, 0.3], lambda v: f"{v:g}"),
+        "parents": ("PARENTS_COUNT", [10, 20, 30, 50], str),
+        "fov": ("VISION_FOV_DEGREES", [60, 90, 120, 180, 270, 360], lambda v: "tout autour" if v >= 360 else f"{v}°"),
+        "food": ("FOOD_COUNT", [5, 10, 15, 20, 30], str),
+        "food_energy": ("FOOD_ENERGY", [15.0, 30.0, 45.0, 60.0], lambda v: f"{v:g}"),
+        "respawn": ("FOOD_RESPAWN_DELAY", [0, 30, 60, 120, 300], lambda v: f"{v} ticks"),
+        "max_eats": ("FOOD_MAX_EATS", [1, 2, 3, 5, 10], str),
+        "fixed": ("FOOD_FIXED_POSITIONS", [False, True], lambda v: "fixes" if v else "aléatoires"),
+        "poison_count": ("POISON_COUNT", [0, 3, 5, 8, 12], str),
+        "poison_energy": ("POISON_ENERGY", [20.0, 40.0, 60.0, 80.0], lambda v: f"{v:g}"),
+        "obstacle_count": ("OBSTACLE_COUNT", [0, 3, 6, 10, 15], str),
+    }
+    # Settings chosen in an earlier session replace the values of config.py (saves/settings.json)
+    restored = load_settings({name for name, _, _ in PARAMS.values()})
+    if restored:
+        print("Réglages du menu repris : " + ", ".join(f"{n} {old} → {new}" for n, (old, new) in restored.items())
+              + " (valeurs de config.py ignorées ; LOAD_SETTINGS = False pour les désactiver)")
 
     world = World(rng)
     loaded = load_genomes() if config.LOAD_ON_START else None
@@ -117,22 +139,11 @@ def main():
         trail.clear()
         hud.reload_stats()
 
-    # Settings editable from the menu: action → (config name, values it cycles through, text shown).
-    # All of them are applied at the start of the next generation, so one generation never mixes two settings.
-    PARAMS = {
-        "mutation": ("MUTATION_STD", [0.02, 0.05, 0.1, 0.2, 0.3], lambda v: f"{v:g}"),
-        "parents": ("PARENTS_COUNT", [10, 20, 30, 50], str),
-        "fov": ("VISION_FOV_DEGREES", [60, 90, 120, 180, 270, 360], lambda v: "tout autour" if v >= 360 else f"{v}°"),
-        "food": ("FOOD_COUNT", [5, 10, 15, 20, 30], str),
-        "food_energy": ("FOOD_ENERGY", [15.0, 30.0, 45.0, 60.0], lambda v: f"{v:g}"),
-        "respawn": ("FOOD_RESPAWN_DELAY", [0, 30, 60, 120, 300], lambda v: f"{v} ticks"),
-        "max_eats": ("FOOD_MAX_EATS", [1, 2, 3, 5, 10], str),
-        "fixed": ("FOOD_FIXED_POSITIONS", [False, True], lambda v: "fixes" if v else "aléatoires"),
-        "poison_count": ("POISON_COUNT", [0, 3, 5, 8, 12], str),
-        "poison_energy": ("POISON_ENERGY", [20.0, 40.0, 60.0, 80.0], lambda v: f"{v:g}"),
-        "obstacle_count": ("OBSTACLE_COUNT", [0, 3, 6, 10, 15], str),
-    }
     pending = {}   # action → value waiting for the next generation
+
+    def persist_settings():
+        """Keeps the settings chosen in the menu (pending ones included) for the next launch."""
+        save_settings({name: pending.get(action, getattr(config, name)) for action, (name, _, _) in PARAMS.items()})
 
     def apply_pending():
         for action, value in pending.items():
@@ -187,6 +198,7 @@ def main():
             overlay.params_open = False
         elif action == "params_cancel":
             pending.clear()
+            persist_settings()
         elif action.startswith("param:"):
             # Arrows of the settings panel: previous / next preset. Back to the value in force = nothing pending.
             _, direction, key = action.split(":")
@@ -197,6 +209,7 @@ def main():
                 pending.pop(key, None)
             else:
                 pending[key] = value
+            persist_settings()
             return True
         elif action == "best":
             if world.creatures:
@@ -222,6 +235,7 @@ def main():
             # The menu stays open to click again.
             name, steps, _ = PARAMS[action]
             pending[action] = next_step(steps, pending.get(action, getattr(config, name)))
+            persist_settings()
             return True
         elif action == "reset":
             if not reset_pending:
