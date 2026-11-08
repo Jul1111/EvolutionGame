@@ -195,16 +195,23 @@ class Scene:
     def _draw_copies_veil(self, screen, world):
         """Zoomed out beyond the map: the copies of the torus around the real map are darkened and the map is
         outlined, so one sees where the world ends and how creatures pass from one edge to the other."""
-        if self.zoom >= self.fit_zoom - 1e-9:
+        if self.zoom >= self.fit_zoom - 1e-9 or getattr(self, "_in_tile", False):
             return
         k = self.scale
         vw, vh = self.size
         tile = pygame.Rect(round(vw / 2 - self.cam_x * k), round(vh / 2 - self.cam_y * k),
                            round(world.width * k), round(world.height * k))
-        veil = pygame.Surface((vw, vh), pygame.SRCALPHA)
-        veil.fill((0, 0, 0, COPY_VEIL_ALPHA))
-        veil.fill((0, 0, 0, 0), tile)
-        screen.blit(veil, (0, 0))
+        veil = getattr(self, "_veil", None)
+        if veil is None or veil.get_size() != (vw, vh):
+            veil = self._veil = pygame.Surface((vw, vh), pygame.SRCALPHA)
+            veil.fill((0, 0, 0, COPY_VEIL_ALPHA))
+        # Four bands around the real map (no new surface each frame)
+        inner = tile.clip(screen.get_rect())
+        for band in (pygame.Rect(0, 0, vw, max(0, inner.top)), pygame.Rect(0, inner.bottom, vw, max(0, vh - inner.bottom)),
+                     pygame.Rect(0, inner.top, max(0, inner.left), inner.h),
+                     pygame.Rect(inner.right, inner.top, max(0, vw - inner.right), inner.h)):
+            if band.w > 0 and band.h > 0:
+                screen.blit(veil, band.topleft, band)
         pygame.draw.rect(screen, (150, 165, 170), tile, 1)
 
     def _project(self, world, x, y):
@@ -318,9 +325,43 @@ class Scene:
             screen.blit(sprite, (round(px - hw), round(py - hh)))
 
     def draw(self, screen, world, debug_mode, selected=None, trail=None):
+        if self.zoom < self.fit_zoom - 1e-9 and not getattr(self, "_in_tile", False):
+            return self._draw_tiled(screen, world, debug_mode, selected, trail)
+        self._draw_view(screen, world, debug_mode, selected, trail)
+
+    def _draw_tiled(self, screen, world, debug_mode, selected, trail):
+        """Zoomed out beyond the map: the map is drawn once on its own surface (camera on its centre, view = the map),
+        then that picture is copied wherever a copy of the torus is visible. Before, every creature, food and anemone
+        was drawn once per copy (up to 16 times at the widest zoom)."""
+        k = self.scale
+        vw, vh = self.size
+        tw, th = max(1, round(world.width * k)), max(1, round(world.height * k))
+        tile = getattr(self, "_tile", None)
+        if tile is None or tile.get_size() != (tw, th):
+            tile = self._tile = pygame.Surface((tw, th), pygame.SRCALPHA)
+        saved = (self.cam_x, self.cam_y, self.size)
+        self.cam_x, self.cam_y, self.size = world.width / 2, world.height / 2, (tw, th)
+        self._in_tile = True
+        try:
+            self._draw_view(tile, world, debug_mode, selected, trail)
+        finally:
+            self.cam_x, self.cam_y, self.size = saved
+            self._in_tile = False
+        screen.blit(self.background, (0, 0))   # One background under all the copies, as before
+        ox, oy = vw / 2 - self.cam_x * k, vh / 2 - self.cam_y * k   # Where the real map starts on screen
+        W, H = world.width * k, world.height * k
+        for i in range(math.floor(-ox / W), math.ceil((vw - ox) / W) + 1):
+            for j in range(math.floor(-oy / H), math.ceil((vh - oy) / H) + 1):
+                screen.blit(tile, (round(ox + i * W), round(oy + j * H)))
+        self._draw_copies_veil(screen, world)
+
+    def _draw_view(self, screen, world, debug_mode, selected=None, trail=None):
         """screen: the world area. debug_mode: 0 = off, 1 = selected (else oldest living) creature, 2 = all living."""
         k = self.scale
-        screen.blit(self.background, (0, 0))
+        if getattr(self, "_in_tile", False):
+            screen.fill((0, 0, 0, 0))   # Transparent map: the screen background shows under every copy
+        else:
+            screen.blit(self.background, (0, 0))
         self.lineage.update(world)
         self.effects.update(world)
         now = pygame.time.get_ticks()  # real time: pulsation does not accelerate with the sim speed

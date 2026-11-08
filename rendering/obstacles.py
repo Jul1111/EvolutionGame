@@ -20,7 +20,7 @@ PALETTES = [
 CORNER = {"square": 0.20, "triangle": 0.17}     # Corner rounding of the collision shape, in radii
 FRAMES = 12                                     # Frames of the sway loop (two neighbours are cross-faded: smooth at any speed)
 PERIOD_MS = 1500                                # Duration of one loop
-BUILDS_PER_TICK = 2                             # New frames built per game frame at most (a new generation never stalls)
+BUILDS_PER_TICK = 1                             # New frames built per game frame at most (a new generation never stalls)
 SS = 2                                          # Tentacles are drawn 2x bigger then shrunk, for smooth edges
 SHADOW_OFFSET = (0.04, 0.07)
 SHADOW_BLUR = 0.50
@@ -61,18 +61,17 @@ def _signed_distance(shape, rotation, R):
 def _boundary(shape, rotation, R):
     """Function angle → distance from the centre to the collision outline (a little less at rounded corners)."""
     if shape not in CORNER:
-        return lambda th: R
+        return lambda th: R if np.ndim(th) == 0 else np.full(np.shape(th), float(R))
     n = 4 if shape == "square" else 3
     apothem = R * math.cos(math.pi / n)
     angles = [rotation + math.pi * (2 * k + 1) / n for k in range(n)]
 
-    def b(th):
-        best = R
-        for a in angles:
-            c = math.cos(th - a)
-            if c > 1e-3:
-                best = min(best, apothem / c)
-        return best * 0.94
+    angs = np.array(angles)
+
+    def b(th):   # Works on one angle or on a numpy array of angles
+        c = np.cos(np.asarray(th, dtype=float)[..., None] - angs)
+        d = np.minimum(np.where(c > 1e-3, apothem / np.maximum(c, 1e-3), np.inf).min(axis=-1), R) * 0.94
+        return float(d) if np.ndim(th) == 0 else d
     return b
 
 
@@ -114,7 +113,8 @@ def _sides(shape):
 def _outline_angles(bound, n, th0, rng, jitter):
     """n directions whose points on the outline are evenly spaced along its length (starting at angle th0, a corner)."""
     ths = th0 + np.linspace(0.0, 2 * math.pi, 1441)
-    pts = np.array([[bound(t) * math.cos(t), bound(t) * math.sin(t)] for t in ths])
+    b = bound(ths)
+    pts = np.column_stack([b * np.cos(ths), b * np.sin(ths)])
     cum = np.concatenate([[0.0], np.cumsum(np.hypot(*np.diff(pts, axis=0).T))])
     step = cum[-1] / n
     return [float(np.interp((i + rng.uniform(-jitter, jitter)) * step, cum, ths)) for i in range(n)]
@@ -147,12 +147,30 @@ def _make_tentacles(o, k, rng):
     return specs
 
 
+_color_cache = {}
+
+
+def _segment_colors(pal, layer, steps):
+    """Colours along a tentacle (base → tip): the same for every frame, computed once per palette and crown."""
+    key = (pal, layer, steps)
+    if key not in _color_cache:
+        shade = (0.56, 0.72, 0.88, 1.0)[layer]
+        cols = []
+        for i in range(steps + 1):
+            t = (i / steps) ** 1.8
+            sh = shade + (1.0 - shade) * t
+            cols.append(tuple(int(min(255, v * sh)) for v in _mix(pal[1], pal[2], t)))
+        _color_cache[key] = cols
+    return _color_cache[key]
+
+
 def _draw_tentacle(layer_surf, spec, c, pal, phi):
     layer, th, r0, r1, curl, wph, w0 = spec
     L = r1 - r0
     steps = 12
     shade = (0.56, 0.72, 0.88, 1.0)[layer]
     amp = 0.15 * L
+    colors = _segment_colors(pal, layer, steps)
     cos_t, sin_t = math.cos(th), math.sin(th)
     prev = None
     for i in range(steps + 1):
@@ -162,10 +180,7 @@ def _draw_tentacle(layer_surf, spec, c, pal, phi):
         x = c + (r * cos_t - lat * sin_t) * SS
         y = c + (r * sin_t + lat * cos_t) * SS
         w = w0 * (1.0 - 0.50 * s)                       # Tapers towards the tip
-        t = s ** 1.8
-        col = _mix(pal[1], pal[2], t)
-        sh = shade + (1.0 - shade) * t
-        col = tuple(int(min(255, v * sh)) for v in col)
+        col = colors[i]
         if prev is not None:                            # Thick segment + round joint = smooth tube
             pygame.draw.line(layer_surf, col, prev, (x, y), max(1, int(w * SS)))
         pygame.draw.circle(layer_surf, col, (x, y), max(1.0, w * 0.5 * SS))
@@ -211,37 +226,87 @@ def _entry(o, k):
         R = o.radius * k
         entry = {"pal": pal, "base": base, "center": center, "R": R, "half": int(math.ceil(R)) + 4,
                  "bound": _boundary(o.shape, o.rotation, R), "th0": o.rotation if _sides(o.shape) else 0.0,
-                 "specs": _make_tentacles(o, k, rng), "frames": [None] * FRAMES, "offset": rng.uniform(0, FRAMES)}
+                 "specs": _make_tentacles(o, k, rng), "frames": [None] * FRAMES, "offset": rng.uniform(0, FRAMES),
+                 "k": k, "scaled": {}, "scaled_k": None}
         _cache[key] = entry
     return entry
 
 
-def draw_obstacle(screen, o, px, py, k):
-    """Draws the anemone centred on (px, py). The sway is a loop of FRAMES pictures; the two pictures around the current
-    time are cross-faded, so the motion is smooth. Frames are built as they are needed, a couple per game frame."""
-    entry = _entry(o, k)
-    now = pygame.time.get_ticks()
+SETTLE_MS = 180   # New pictures are only built once the zoom has stopped changing for this long
+_latest = {}   # (shape, radius, rotation) → last entry with built frames, used while another zoom level is built
+
+
+def _bucket(k):
+    """Zoom levels the pictures are built at: steps of ×1.41, at or above the scale on screen (pictures are only shrunk).
+    A wheel notch (×1.15) usually stays on the same level: it rescales the pictures instead of drawing them again."""
+    return 2 ** (math.ceil(math.log2(max(k, 1e-3)) * 2 - 1e-6) / 2)
+
+
+def _can_build(now):
     if _state["tick"] != now:
         _state["tick"], _state["builds"] = now, 0
-    frames = entry["frames"]
-    pos = now / PERIOD_MS * FRAMES + entry["offset"]
+    return _state["builds"] < BUILDS_PER_TICK
+
+
+def _scaled(src, idx, k):
+    """Frame idx of `src` at scale k (cached for the current k), and its centre."""
+    frame = src["frames"][idx]
+    ratio = k / src["k"]
+    if abs(ratio - 1.0) < 0.01:
+        return frame, src["center"]
+    if src["scaled_k"] != round(k, 4):
+        src["scaled"], src["scaled_k"] = {}, round(k, 4)
+    if idx not in src["scaled"]:
+        size = max(2, round(frame.get_width() * ratio))
+        src["scaled"][idx] = pygame.transform.smoothscale(frame, (size, size))
+    return src["scaled"][idx], round(src["center"] * ratio)
+
+
+def draw_obstacle(screen, o, px, py, k):
+    """Draws the anemone centred on (px, py). The sway is a loop of FRAMES pictures; the two pictures around the current
+    time are cross-faded, so the motion is smooth. Pictures are built at a few zoom levels (_bucket) and shrunk to the
+    exact scale; new ones are built a couple per game frame, the previous level standing in meanwhile."""
+    now = pygame.time.get_ticks()
+    if _state.get("k") != round(k, 4):          # Zoom changing: show the pictures already built, rescaled
+        _state["k"], _state["k_since"] = round(k, 4), now
+    settled = now - _state.get("k_since", 0) >= SETTLE_MS
+    kq = _bucket(k)
+    base_key = (o.shape, round(o.radius, 3), round(o.rotation, 3))
+    key = base_key + (round(kq, 4),)
+    entry = _cache.get(key)
+    first_time = base_key not in _latest
+    if entry is None and (first_time or (settled and _can_build(now))):
+        entry = _entry(o, kq)
+        _state["builds"] += 1
+    if entry is not None:
+        frames = entry["frames"]
+        pos = now / PERIOD_MS * FRAMES + entry["offset"]
+        a = int(pos) % FRAMES
+        for idx in (a, (a + 1) % FRAMES):
+            if frames[idx] is None and ((first_time and all(f is None for f in frames)) or (settled and _can_build(now))):
+                frames[idx] = _build_frame(entry, idx)
+                _state["builds"] += 1
+        if any(f is not None for f in frames):
+            _latest[base_key] = entry
+    src = entry if entry is not None and any(f is not None for f in entry["frames"]) else _latest.get(base_key)
+    if src is None:
+        return
+    frames = src["frames"]
+    pos = now / PERIOD_MS * FRAMES + src["offset"]
     a, frac = int(pos) % FRAMES, pos - int(pos)
     b = (a + 1) % FRAMES
-    for idx in (a, b):
-        if frames[idx] is None and (all(f is None for f in frames) or _state["builds"] < BUILDS_PER_TICK):
-            frames[idx] = _build_frame(entry, idx)
-            _state["builds"] += 1
     if frames[a] is None:                          # Not built yet: the closest built frame takes over
         built = [i for i, f in enumerate(frames) if f is not None]
         a = min(built, key=lambda i: min((i - a) % FRAMES, (a - i) % FRAMES))
         frac = 0.0
-    c = entry["center"]
+    img, c = _scaled(src, a, k)
     dest = (round(px) - c, round(py) - c)
-    frames[a].set_alpha(255)
-    screen.blit(frames[a], dest)
+    img.set_alpha(255)
+    screen.blit(img, dest)
     if frames[b] is not None and b != a and frac > 0.02:
-        frames[b].set_alpha(int(frac * 255))
-        screen.blit(frames[b], dest)
+        img, c = _scaled(src, b, k)
+        img.set_alpha(int(frac * 255))
+        screen.blit(img, (round(px) - c, round(py) - c))
 
 
 def obstacle_sprite(o, k):
