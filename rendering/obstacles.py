@@ -18,14 +18,15 @@ PALETTES = [
     ((62, 56, 108), (142, 126, 204), (228, 218, 255)),    # lilac
 ]
 CORNER = {"square": 0.20, "triangle": 0.17}     # Corner rounding of the collision shape, in radii
-FRAMES = 10                                     # Frames of the sway loop
-PERIOD_MS = 2400                                # Duration of one loop
-SS = 3                                          # Tentacles are drawn 3x bigger then shrunk, for smooth edges
-SHADOW_OFFSET = (0.06, 0.10)
-SHADOW_BLUR = 0.30
-SHADOW_STRENGTH = 0.42
+FRAMES = 12                                     # Frames of the sway loop (two neighbours are cross-faded: smooth at any speed)
+PERIOD_MS = 1500                                # Duration of one loop
+BUILDS_PER_TICK = 2                             # New frames built per game frame at most (a new generation never stalls)
+SS = 2                                          # Tentacles are drawn 2x bigger then shrunk, for smooth edges
+SHADOW_OFFSET = (0.04, 0.07)
+SHADOW_BLUR = 0.50
+SHADOW_STRENGTH = 0.22
 _cache = {}
-_last_build_tick = [-1]
+_state = {"tick": -1, "builds": 0}
 
 
 def _signed_distance(shape, rotation, R):
@@ -92,10 +93,9 @@ def _build_base(o, k, pal):
     depth = np.maximum(-sd, 0.0)
     rr = np.clip(np.sqrt(X * X + Y * Y) / R, 0.0, 1.0)
     mat = np.array(pal[0], dtype=np.float32)[None, None, :] * (0.50 + 0.55 * (1.0 - rr) ** 1.6)[:, :, None]
-    # A thin lighter line on the exact collision outline: what you see is what blocks
-    line = np.exp(-((depth - 0.9 * k) / (0.9 * k + 0.3)) ** 2) * 0.55
-    mat += np.array(pal[1], dtype=np.float32)[None, None, :] * line[:, :, None]
-    body_a = np.clip(0.5 - sd, 0.0, 1.0) * 0.94
+    # The mat fades out towards the edge: no outline, the tentacles alone draw the silhouette
+    t = np.clip(depth / (0.5 * R), 0.0, 1.0)
+    body_a = np.clip(0.5 - sd, 0.0, 1.0) * (0.10 + 0.82 * t * t * (3.0 - 2.0 * t))
     s_sd = sd_fn(X - SHADOW_OFFSET[0] * R, Y - SHADOW_OFFSET[1] * R)
     shadow_a = SHADOW_STRENGTH * np.clip(1.0 - s_sd / (SHADOW_BLUR * R + 1e-6), 0.0, 1.0) ** 2
     shadow_a = np.where(s_sd <= 0, SHADOW_STRENGTH, shadow_a)
@@ -107,23 +107,43 @@ def _build_base(o, k, pal):
     return surf, size // 2
 
 
+def _sides(shape):
+    return {"square": 4, "triangle": 3}.get(shape, 0)
+
+
+def _outline_angles(bound, n, th0, rng, jitter):
+    """n directions whose points on the outline are evenly spaced along its length (starting at angle th0, a corner)."""
+    ths = th0 + np.linspace(0.0, 2 * math.pi, 1441)
+    pts = np.array([[bound(t) * math.cos(t), bound(t) * math.sin(t)] for t in ths])
+    cum = np.concatenate([[0.0], np.cumsum(np.hypot(*np.diff(pts, axis=0).T))])
+    step = cum[-1] / n
+    return [float(np.interp((i + rng.uniform(-jitter, jitter)) * step, cum, ths)) for i in range(n)]
+
+
 def _make_tentacles(o, k, rng):
-    """Geometry of every tentacle (final pixels), fixed for the obstacle: (layer, angle, r0, r1, curl, wave phase, width)."""
+    """Geometry of every tentacle (final pixels), fixed for the obstacle: (layer, angle, r0, r1, curl, wave phase, width).
+    Each crown starts on a scaled copy of the outline and ends near the outline itself, so a triangular obstacle is a
+    triangular anemone."""
     R = o.radius * k
     bound = _boundary(o.shape, o.rotation, R)
-    n1 = 11 + int(o.radius * 0.30)
-    counts = (n1, int(n1 * 0.8), int(n1 * 0.55))
-    reach = (0.94, 0.76, 0.54)
-    widths = (0.125, 0.11, 0.095)
+    sides = _sides(o.shape)
+    th0 = o.rotation if sides else 0.0
+    n1 = 15 + int(o.radius * 0.50)
+    counts = [n1, int(n1 * 0.82), int(n1 * 0.62), int(n1 * 0.42)]
+    if sides:                                       # A multiple of the number of corners: one tentacle on each corner
+        counts = [max(sides, int(math.ceil(c / sides)) * sides) for c in counts]
+    reach = (1.0, 0.82, 0.62, 0.42)                 # Where each crown ends, as a fraction of the outline distance
+    start_at = (0.50, 0.34, 0.20, 0.10)
+    widths = (0.13, 0.12, 0.105, 0.09)
     specs = []
-    for layer in range(3):
+    for layer in range(4):
         n = counts[layer]
-        for i in range(n):
-            th = 2 * math.pi * (i + 0.5 * layer + rng.uniform(-0.18, 0.18)) / n
-            r1 = bound(th) * reach[layer] * (1.0 + rng.uniform(-0.07, 0.05))
-            r0 = 0.15 * R * (1.0 + 0.2 * layer)
-            curl = 0.26 + rng.uniform(-0.12, 0.10)           # All curl the same way: a gentle spiral
-            specs.append((layer, th, r0, r1, curl, rng.uniform(0, 2 * math.pi), max(1.3, R * widths[layer])))
+        for i, th in enumerate(_outline_angles(bound, n, th0, rng, 0.12)):
+            b = bound(th)
+            r1 = b * reach[layer] * (1.0 + rng.uniform(-0.07, 0.0))      # Never past the outline
+            r0 = b * start_at[layer]
+            curl = (0.26 if not sides else 0.15) + rng.uniform(-0.08, 0.08)   # Same direction: a gentle spiral
+            specs.append((layer, th, r0, r1, curl, 3.0 * th + rng.uniform(-0.6, 0.6), max(1.3, R * widths[layer])))
     return specs
 
 
@@ -131,8 +151,8 @@ def _draw_tentacle(layer_surf, spec, c, pal, phi):
     layer, th, r0, r1, curl, wph, w0 = spec
     L = r1 - r0
     steps = 12
-    shade = (0.60, 0.82, 1.0)[layer]
-    amp = 0.10 * L
+    shade = (0.56, 0.72, 0.88, 1.0)[layer]
+    amp = 0.15 * L
     cos_t, sin_t = math.cos(th), math.sin(th)
     prev = None
     for i in range(steps + 1):
@@ -141,7 +161,7 @@ def _draw_tentacle(layer_surf, spec, c, pal, phi):
         lat = curl * L * s ** 1.5 + amp * math.sin(phi + wph + s * 3.0) * s
         x = c + (r * cos_t - lat * sin_t) * SS
         y = c + (r * sin_t + lat * cos_t) * SS
-        w = w0 * (1.0 - 0.62 * s)                       # Tapers towards the tip
+        w = w0 * (1.0 - 0.50 * s)                       # Tapers towards the tip
         t = s ** 1.8
         col = _mix(pal[1], pal[2], t)
         sh = shade + (1.0 - shade) * t
@@ -151,7 +171,7 @@ def _draw_tentacle(layer_surf, spec, c, pal, phi):
         pygame.draw.circle(layer_surf, col, (x, y), max(1.0, w * 0.5 * SS))
         prev = (x, y)
     tip = tuple(int(min(255, v * (shade + (1 - shade) * 0.85))) for v in pal[2])
-    pygame.draw.circle(layer_surf, tip, prev, max(1.0, w * 0.62 * SS))
+    pygame.draw.circle(layer_surf, tip, prev, max(1.0, w * 0.78 * SS))
     pygame.draw.circle(layer_surf, (255, 255, 255), (prev[0] - w * 0.18 * SS, prev[1] - w * 0.18 * SS), max(1.0, w * 0.16 * SS))
 
 
@@ -164,11 +184,13 @@ def _build_frame(entry, frame):
     c = half * SS
     for spec in specs:                            # Outer crown first, inner crown last
         _draw_tentacle(layer, spec, c, pal, phi)
-    # Mouth
-    r0 = 0.15 * R
-    pygame.draw.circle(layer, _mix(pal[0], (0, 0, 0), 0.45), (c, c), r0 * 1.25 * SS)
-    pygame.draw.circle(layer, pal[1], (c, c), r0 * 1.25 * SS, max(1, int(0.28 * r0 * SS)))
-    pygame.draw.circle(layer, _mix(pal[2], pal[1], 0.4), (c, c), r0 * 0.38 * SS)
+    # Mouth: a small copy of the outline
+    bound, th0 = entry["bound"], entry["th0"]
+    mouth = [(c + 0.19 * bound(t) * math.cos(t) * SS, c + 0.19 * bound(t) * math.sin(t) * SS)
+             for t in (th0 + 2 * math.pi * i / 48 for i in range(48))]
+    pygame.draw.polygon(layer, _mix(pal[0], (0, 0, 0), 0.45), mouth)
+    pygame.draw.polygon(layer, pal[1], mouth, max(1, int(0.045 * R * SS)))
+    pygame.draw.circle(layer, _mix(pal[2], pal[1], 0.4), (c, c), max(1.0, 0.045 * R * SS))
     small = pygame.transform.smoothscale(layer, (2 * half, 2 * half))
     sprite = entry["base"].copy()
     cx = entry["center"]
@@ -176,8 +198,7 @@ def _build_frame(entry, frame):
     return sprite
 
 
-def obstacle_sprite(o, k):
-    """(surface, (cx, cy)) for an obstacle at scale k, at the current time. Frames are built one per game frame at most."""
+def _entry(o, k):
     key = (o.shape, round(o.radius, 3), round(o.rotation, 3), round(k, 4))
     entry = _cache.get(key)
     if entry is None:
@@ -189,16 +210,45 @@ def obstacle_sprite(o, k):
         base, center = _build_base(o, k, pal)
         R = o.radius * k
         entry = {"pal": pal, "base": base, "center": center, "R": R, "half": int(math.ceil(R)) + 4,
-                 "specs": _make_tentacles(o, k, rng), "frames": [None] * FRAMES, "offset": rng.randrange(FRAMES)}
+                 "bound": _boundary(o.shape, o.rotation, R), "th0": o.rotation if _sides(o.shape) else 0.0,
+                 "specs": _make_tentacles(o, k, rng), "frames": [None] * FRAMES, "offset": rng.uniform(0, FRAMES)}
         _cache[key] = entry
+    return entry
+
+
+def draw_obstacle(screen, o, px, py, k):
+    """Draws the anemone centred on (px, py). The sway is a loop of FRAMES pictures; the two pictures around the current
+    time are cross-faded, so the motion is smooth. Frames are built as they are needed, a couple per game frame."""
+    entry = _entry(o, k)
     now = pygame.time.get_ticks()
-    want = (int(now / (PERIOD_MS / FRAMES)) + entry["offset"]) % FRAMES
+    if _state["tick"] != now:
+        _state["tick"], _state["builds"] = now, 0
     frames = entry["frames"]
-    if frames[want] is None:
-        have = [f for f in frames if f is not None]
-        if not have or _last_build_tick[0] != now:     # The first frame at once, the others one at a time
-            _last_build_tick[0] = now
-            frames[want] = _build_frame(entry, want)
-        else:
-            return have[0], (entry["center"], entry["center"])
-    return frames[want], (entry["center"], entry["center"])
+    pos = now / PERIOD_MS * FRAMES + entry["offset"]
+    a, frac = int(pos) % FRAMES, pos - int(pos)
+    b = (a + 1) % FRAMES
+    for idx in (a, b):
+        if frames[idx] is None and (all(f is None for f in frames) or _state["builds"] < BUILDS_PER_TICK):
+            frames[idx] = _build_frame(entry, idx)
+            _state["builds"] += 1
+    if frames[a] is None:                          # Not built yet: the closest built frame takes over
+        built = [i for i, f in enumerate(frames) if f is not None]
+        a = min(built, key=lambda i: min((i - a) % FRAMES, (a - i) % FRAMES))
+        frac = 0.0
+    c = entry["center"]
+    dest = (round(px) - c, round(py) - c)
+    frames[a].set_alpha(255)
+    screen.blit(frames[a], dest)
+    if frames[b] is not None and b != a and frac > 0.02:
+        frames[b].set_alpha(int(frac * 255))
+        screen.blit(frames[b], dest)
+
+
+def obstacle_sprite(o, k):
+    """(surface, (cx, cy)) of the frame at the current time, without the cross-fade (kept for other callers)."""
+    entry = _entry(o, k)
+    frames = entry["frames"]
+    idx = int(pygame.time.get_ticks() / PERIOD_MS * FRAMES + entry["offset"]) % FRAMES
+    if frames[idx] is None:
+        frames[idx] = _build_frame(entry, idx)
+    return frames[idx], (entry["center"], entry["center"])

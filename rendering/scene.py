@@ -5,7 +5,7 @@ import pygame
 
 import config
 from core.physics import torus_delta
-from rendering.obstacles import obstacle_sprite
+from rendering.obstacles import draw_obstacle
 
 ENERGY_BUCKETS = 16   # Number of pre-rendered creature sprites (one per energy level)
 FOOD_FRAMES = 12      # Number of pre-rendered food pulsation frames
@@ -273,9 +273,8 @@ class Scene:
                     self._draw_obstacle_shape(screen, o, px, py, k, fill, edge, width)
 
     def _draw_obstacle_shape(self, screen, o, px, py, k, fill, edge, width):
-        """Stone sprite with its shadow (rendering/obstacles.py), centred on (px, py)."""
-        sprite, (ox, oy) = obstacle_sprite(o, k)
-        screen.blit(sprite, (round(px) - ox, round(py) - oy))
+        """Animated anemone (rendering/obstacles.py), centred on (px, py)."""
+        draw_obstacle(screen, o, px, py, k)
 
     def _draw_trail(self, screen, trail, world):
         """Trajectory of the selected creature, fading with age. Segments that wrap the torus are skipped."""
