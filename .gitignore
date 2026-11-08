@@ -10,5 +10,5 @@ build/
 .vscode/
 saves/
 # Experiments: CSV and summaries are kept in git, genome saves are not
-experiments/results/**/*.npz
+experiments/results/
 .pytest_cache/
