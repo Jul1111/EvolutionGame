@@ -16,7 +16,11 @@ BLUE = (110, 180, 235)
 # (0.85x to 1.9x) to use the room left by the network panel and the curves.
 H_CONTENT = 176
 H_CHART = 130     # Curves panel in the side bar
-GRAPH_H = 120     # Network graph, when shown
+GRAPH_H = 120     # Network graph, when shown (natural height)
+GRAPH_MIN = 90    # Smallest graph height before the cards are squeezed to make room
+CHART_MIN = 100   # Smallest curves panel in the side bar (it disappears if even that does not fit)
+KY_MIN = 0.8      # Smallest vertical stretch of the Génération and Créature cards
+KY_GOOD = 0.92    # Stretch the cards keep as long as the graph or the curves panel can still fit
 
 
 # How each network input is displayed, by label: value → (text, signed bar?).
@@ -27,6 +31,8 @@ INPUT_FORMAT = {
     "Peut manger": lambda v: ("oui" if v >= 0.5 else "non", False),
     "Dist. poison": lambda v: ("rien en vue" if v >= 1.0 else f"{v:.2f}", False),
     "Angle poison": lambda v: (f"{v:+.2f}", True),
+    "Dist. obstacle": lambda v: ("rien en vue" if v >= 1.0 else f"{v:.2f}", False),
+    "Angle obstacle": lambda v: (f"{v:+.2f}", True),
 }
 
 
@@ -197,6 +203,9 @@ SERIES = [
      lambda v: f"{v:.2f}"),
 ]
 SERIES_BY_KEY = {s[0]: s for s in SERIES}
+SERIES.append(("obstacle_frac", "Temps contre un obstacle (parents)", (150, 164, 178), _col("obstacle_frac"), None,
+               lambda v: f"{v:.1%}"))
+SERIES_BY_KEY = {s[0]: s for s in SERIES}
 DEFAULT_SERIES = ("best_age", "mean_food", "mean_speed", "mean_poison")
 
 
@@ -311,16 +320,40 @@ class Hud:
         small = self.fonts["small"]
         hint_color = (110, 122, 128)
         self.hints = [
-            small.render("Clic : sélectionner   Espace : pause   → : 1 tick", True, hint_color),
-            small.render("D : debug  C : couleur  F : plein écran", True, hint_color),
-            small.render("G : courbes   N : graphe du réseau", True, hint_color),
+            small.render("H : aide et raccourcis", True, hint_color),
+            small.render("Survole un libellé pour l'expliquer.", True, hint_color),
         ]
         self._compute_slots()
 
     def _net_height(self):
-        """Natural height (logical) of the network panel."""
+        """Natural height (logical) of the network panel without the graph."""
         rows_h = 15 * (len(config.INPUT_LABELS) + len(config.OUTPUT_LABELS)) + 4
-        return 36 + (GRAPH_H + 12 if self.show_graph else 0) + rows_h + 12
+        return 36 + rows_h + 12
+
+    def _fit(self, hints_h, chart):
+        """Heights for one choice of hints and curves panel: (space, net_h, graph_h, chart_h), pixels except graph_h
+        (logical). The Génération and Créature cards keep a comfortable stretch (KY_GOOD); the graph or the curves panel
+        take what is left, up to their natural height. If that is too little, the cards shrink down to KY_MIN."""
+        layout, u = self.layout, self.u
+        m, gap = round(12 * u), round(8 * u)
+        space = layout.sidebar.h - 2 * m - hints_h - gap * (3 + chart)
+        net_h = self._net_height() * u
+        cards_good = 2 * H_CONTENT * u * KY_GOOD
+        cards_min = 2 * H_CONTENT * u * KY_MIN
+        graph_h = chart_h = 0.0
+        if self.show_graph:
+            left = lambda cards: (space - cards - net_h) / u - 12
+            graph_h = left(cards_good)
+            if graph_h < GRAPH_MIN:
+                graph_h = min(GRAPH_MIN, left(cards_min))   # Shrink the cards rather than the graph
+            graph_h = max(20.0, min(GRAPH_H, graph_h))
+            net_h += (graph_h + 12) * u
+        elif chart:
+            chart_h = space - cards_good - net_h
+            if chart_h < CHART_MIN * u:
+                chart_h = min(CHART_MIN * u, space - cards_min - net_h)
+            chart_h = min(H_CHART * u, chart_h)
+        return space, net_h, graph_h, chart_h
 
     def _compute_slots(self):
         """Stack the panels in the side bar. The Génération and Créature cards stretch vertically (ky) to use the
@@ -329,18 +362,27 @@ class Hud:
         sb = layout.sidebar
         m, gap = round(12 * u), round(8 * u)
         pw = min(sb.w - 2 * m, round(MAX_PANEL_W * u))
-        hints_h = sum(h.get_height() for h in self.hints) + 2 * len(self.hints)
+        full_hints_h = sum(h.get_height() for h in self.hints) + 2 * len(self.hints)
         # The curves go under the world when there is a strip; else in the side bar, unless the graph needs the room
-        chart_in_sidebar = layout.strip is None and self.show_chart and not self.show_graph
-        net_h = round(self._net_height() * u)
-        chart_h = round(H_CHART * u) if chart_in_sidebar else 0
-        n_panels = 3 + (1 if chart_in_sidebar else 0)
-        avail = sb.h - 2 * m - hints_h - gap * n_panels - net_h - chart_h
-        self.ky = max(0.85, min(avail / (2 * H_CONTENT * u), 1.9))
+        chart = layout.strip is None and self.show_chart and not self.show_graph
+        space, net_h, graph_h, chart_h = self._fit(0, chart)
+        if chart and chart_h < CHART_MIN * u:
+            chart = False   # Not enough room even with small cards: no curves panel in the side bar
+            space, net_h, graph_h, chart_h = self._fit(0, False)
+        # Key hints (the menu already lists every shortcut): only when the cards would still be comfortable
+        self.show_hints = False
+        hints_h = 0
+        if not self.show_graph and not chart:
+            with_hints = self._fit(full_hints_h, False)
+            if (with_hints[0] - with_hints[1]) / (2 * H_CONTENT * u) >= KY_GOOD:
+                self.show_hints, hints_h = True, full_hints_h
+                space, net_h, graph_h, chart_h = with_hints
+        self.graph_h = graph_h
+        self.ky = max(KY_MIN, min((space - net_h - chart_h) / (2 * H_CONTENT * u), 1.9))
         card_h = round(H_CONTENT * u * self.ky)
 
         self.slots, y = {}, m
-        for name, h in (("gen", card_h), ("creature", card_h), ("net", net_h), ("chart", chart_h)):
+        for name, h in (("gen", card_h), ("creature", card_h), ("net", round(net_h)), ("chart", round(chart_h))):
             if h:
                 self.slots[name] = pygame.Rect(m, y, pw, h)
                 y += h + gap
@@ -475,7 +517,7 @@ class Hud:
         n_in = len(config.INPUT_LABELS)
         rows_top = c.x(36)
         if self.show_graph:
-            graph = pygame.Rect(pad, c.x(32), W - 2 * pad, c.x(GRAPH_H))
+            graph = pygame.Rect(pad, c.x(32), W - 2 * pad, round(self.graph_h * self.u))
             self._draw_graph(p, graph, selected.brain, inputs, hidden, outputs)
             rows_top = graph.bottom + c.x(12)
 
@@ -545,7 +587,7 @@ class Hud:
             if panel is not None:
                 sidebar.blit(panel, rect.topleft)
         hy = self.hints_y
-        for img in self.hints:
+        for img in self.hints if self.show_hints else ():
             sidebar.blit(img, (self.slots["gen"].x + 2, hy))
             hy += img.get_height() + 2
 

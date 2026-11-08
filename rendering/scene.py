@@ -5,6 +5,7 @@ import pygame
 
 import config
 from core.physics import torus_delta
+from rendering.obstacles import obstacle_sprite
 
 ENERGY_BUCKETS = 16   # Number of pre-rendered creature sprites (one per energy level)
 FOOD_FRAMES = 12      # Number of pre-rendered food pulsation frames
@@ -196,6 +197,8 @@ class Scene:
         ww, wh = world.width * k, world.height * k   # The world, in pixels
 
         now = pygame.time.get_ticks()  # real time: pulsation does not accelerate with the sim speed
+        self._draw_obstacles(screen, world, ww, wh)
+
         for i, food in enumerate(world.foods):
             if food.cooldown > 0:
                 continue  # Eaten, not back yet
@@ -255,6 +258,25 @@ class Scene:
         if debug_mode:
             self._draw_debug(screen, world, debug_mode, selected)
 
+    def _draw_obstacles(self, screen, world, ww, wh):
+        """Solid discs, drawn again on the other side of the torus when they cross an edge."""
+        k = self.scale
+        fill = config.OBSTACLE_COLOR
+        edge = _lerp(config.OBSTACLE_COLOR, (255, 255, 255), 0.3)
+        width = max(1, round(1.5 * k))
+        for o in world.obstacles:
+            r = o.radius * k
+            xs = [o.x * k] + ([o.x * k + ww] if o.x * k < r else []) + ([o.x * k - ww] if o.x * k > ww - r else [])
+            ys = [o.y * k] + ([o.y * k + wh] if o.y * k < r else []) + ([o.y * k - wh] if o.y * k > wh - r else [])
+            for px in xs:
+                for py in ys:
+                    self._draw_obstacle_shape(screen, o, px, py, k, fill, edge, width)
+
+    def _draw_obstacle_shape(self, screen, o, px, py, k, fill, edge, width):
+        """Stone sprite with its shadow (rendering/obstacles.py), centred on (px, py)."""
+        sprite, (ox, oy) = obstacle_sprite(o, k)
+        screen.blit(sprite, (round(px) - ox, round(py) - oy))
+
     def _draw_trail(self, screen, trail, world):
         """Trajectory of the selected creature, fading with age. Segments that wrap the torus are skipped."""
         n = len(trail)
@@ -297,7 +319,8 @@ class Scene:
                 pygame.draw.lines(screen, vision_color, False, [arc[0], center, arc[-1]], 1)
                 pygame.draw.lines(screen, vision_color, False, arc, 1)
             # Same rule as World.sense (the world's own method): nearest available item in view
-            for items, color in ((world.foods, config.DEBUG_LINK_COLOR), (world.poisons, config.POISON_COLOR)):
+            for items, color in ((world.foods, config.DEBUG_LINK_COLOR), (world.poisons, config.POISON_COLOR),
+                              (world.obstacles, config.OBSTACLE_COLOR)):
                 best, _ = world.nearest(c, items)
                 if best is not None:
                     _, dx, dy = best

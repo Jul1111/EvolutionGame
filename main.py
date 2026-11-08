@@ -4,9 +4,10 @@ import random
 from collections import deque
 
 from core.world import World
-from evolution.population import brains_from_genomes, select_parents
+from evolution.population import brains_from_genomes, select_parents, rank_key
 from rendering.hud import Hud, format_time, SERIES_BY_KEY
 from rendering.menu import MenuBar
+from rendering.overlay import Overlay, PARAM_INFO
 from rendering.scene import Scene, pick_creature
 from rendering.display import Display
 from rendering.layout import compute_layout
@@ -32,6 +33,8 @@ def main():
     scene = Scene()
     hud = Hud()
     menu = MenuBar()
+    overlay = Overlay(hud, scene)   # Tool bar, legend, help, hover tips, settings panel, large network
+    follow = False                  # True: the lineage of the best creature stays selected from one generation to the next
     debug_mode = 0  # 0 = off, 1 = selected (else oldest living) creature, 2 = all living creatures
     paused = False
     selected = None                            # Creature picked with a click (cleared at each new generation)
@@ -68,6 +71,7 @@ def main():
         total_food = sum(c.food_eaten for c in world.creatures)
         mean_poison = sum(c.poison_hits for c in parents) / len(parents)
         total_poison = sum(c.poison_hits for c in world.creatures)
+        obstacle_frac = sum(c.obstacle_ticks for c in parents) / total_age if total_age else 0.0
         print(f"Gen {generation:>4} | fin {format_time(world.tick)} | "
               f"vivantes {alive_count}/{len(world.creatures)} | "
               f"meilleur âge {format_time(parents[0].age)} | "
@@ -75,7 +79,8 @@ def main():
               f"vitesse moy parents {mean_speed:.2f} | "
               f"mangé total {total_food} | aveugles {blind_frac:.0%} | "
               f"énergie moy parents {mean_energy:.0f} | "
-              f"poison parents moy {mean_poison:.1f} total {total_poison}")
+              f"poison parents moy {mean_poison:.1f} total {total_poison} | "
+              f"obstacle {obstacle_frac:.1%}")
         log_generation({
             "generation": generation, "ticks": world.tick, "alive": alive_count,
             "best_age": parents[0].age, "mean_food": mean_food, "max_food": max_food,
@@ -83,7 +88,7 @@ def main():
             "total_food": total_food, "blind_frac": blind_frac,
             "blind_speed": blind_speed, "blind_turn": blind_turn,
             "mean_energy": mean_energy,
-            "mean_poison": mean_poison, "total_poison": total_poison,
+            "mean_poison": mean_poison, "total_poison": total_poison, "obstacle_frac": obstacle_frac,
         })  # The settings of config.py are added by log_generation, before apply_pending() changes them
         hud.reload_stats()
         genomes = [p.brain.get_genome() for p in parents]
@@ -96,6 +101,8 @@ def main():
         generation += 1
         selected = None  # The creatures of the old world no longer exist
         trail.clear()
+        if follow and world.creatures:
+            selected = world.creatures[0]   # Lineage of the best: the first creature is the best parent, unchanged
 
     def reset_all():
         """Start again from zero: the save and the CSV are set aside (timestamped), not deleted."""
@@ -123,6 +130,7 @@ def main():
         "fixed": ("FOOD_FIXED_POSITIONS", [False, True], lambda v: "fixes" if v else "aléatoires"),
         "poison_count": ("POISON_COUNT", [0, 3, 5, 8, 12], str),
         "poison_energy": ("POISON_ENERGY", [20.0, 40.0, 60.0, 80.0], lambda v: f"{v:g}"),
+        "obstacle_count": ("OBSTACLE_COUNT", [0, 3, 6, 10, 15], str),
     }
     pending = {}   # action → value waiting for the next generation
 
@@ -137,9 +145,15 @@ def main():
             return not current
         return next((v for v in steps if v > current + 1e-9), steps[0])
 
+    def prev_step(steps, current):
+        """Previous value of the list before `current`, wrapping around."""
+        if isinstance(current, bool):
+            return not current
+        return next((v for v in reversed(steps) if v < current - 1e-9), steps[-1])
+
     # Every command, from the keyboard or from the menu, goes through do(). Returns True to keep the menu open.
     def do(action):
-        nonlocal speed_index, debug_mode, paused, step_request, reset_pending
+        nonlocal speed_index, debug_mode, paused, step_request, reset_pending, selected, follow
         if action == "speed_up":
             speed_index = min(speed_index + 1, len(config.SPEED_STEPS) - 1)
         elif action == "speed_down":
@@ -155,7 +169,44 @@ def main():
         elif action == "chart":
             hud.toggle_chart()
         elif action == "graph":
-            hud.toggle_graph()
+            # Network view: hidden → small (side bar) → large (over the world) → hidden
+            if overlay.net_big:
+                overlay.net_big = False
+            elif hud.show_graph:
+                hud.toggle_graph()
+                overlay.net_big = True
+            else:
+                hud.toggle_graph()
+        elif action == "legend":
+            overlay.legend_open = not overlay.legend_open
+        elif action == "help":
+            overlay.help_open = not overlay.help_open
+        elif action == "params_panel":
+            overlay.params_open = not overlay.params_open
+        elif action == "params_close":
+            overlay.params_open = False
+        elif action == "params_cancel":
+            pending.clear()
+        elif action.startswith("param:"):
+            # Arrows of the settings panel: previous / next preset. Back to the value in force = nothing pending.
+            _, direction, key = action.split(":")
+            name, steps, _ = PARAMS[key]
+            current = pending.get(key, getattr(config, name))
+            value = prev_step(steps, current) if direction == "dec" else next_step(steps, current)
+            if value == getattr(config, name):
+                pending.pop(key, None)
+            else:
+                pending[key] = value
+            return True
+        elif action == "best":
+            if world.creatures:
+                selected = max(world.creatures, key=rank_key)
+                trail.clear()
+        elif action == "follow":
+            follow = not follow
+            if follow and selected is None and world.creatures:
+                selected = max(world.creatures, key=rank_key)
+                trail.clear()
         elif action == "fullscreen":
             display.toggle_fullscreen()
         elif action == "end_gen":
@@ -182,7 +233,8 @@ def main():
 
     KEYS = {pygame.K_UP: "speed_up", pygame.K_DOWN: "speed_down", pygame.K_d: "debug", pygame.K_c: "color",
             pygame.K_SPACE: "pause", pygame.K_RIGHT: "step", pygame.K_g: "chart", pygame.K_n: "graph",
-            pygame.K_f: "fullscreen", pygame.K_F11: "fullscreen"}
+            pygame.K_f: "fullscreen", pygame.K_F11: "fullscreen", pygame.K_l: "legend", pygame.K_h: "help",
+            pygame.K_p: "params_panel", pygame.K_b: "best", pygame.K_t: "follow"}
     reset_pending = False
 
     speed_index = 0
@@ -195,6 +247,7 @@ def main():
             scene.resize(layout.scale, layout.world.size)
             hud.relayout(layout)
             menu.relayout(layout)
+            overlay.relayout(layout)
             world_view = window.subsurface(layout.world)
             sidebar = window.subsurface(layout.sidebar)
             strip_view = window.subsurface(layout.strip) if layout.strip is not None else None
@@ -207,6 +260,8 @@ def main():
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                 if menu.open_index is not None:
                     menu.close()               # First Escape closes the open menu
+                elif overlay.any_modal():
+                    overlay.close_modals()     # Then the help or the settings panel
                 elif display.fullscreen:
                     display.toggle_fullscreen()  # Then leaves fullscreen
                 else:
@@ -214,13 +269,20 @@ def main():
             elif event.type == pygame.KEYDOWN:
                 if event.key in KEYS:
                     do(KEYS[event.key])
+                elif event.unicode == "?":
+                    do("help")
             elif event.type == pygame.MOUSEMOTION:
                 menu.hover(*display.to_pixels(event.pos))
+                overlay.hover(*display.to_pixels(event.pos))
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 mx, my = display.to_pixels(event.pos)  # Window points → surface pixels (2x on Retina)
                 consumed, action = menu.click(mx, my)
                 if action is not None and not do(action):
                     menu.close()
+                if not consumed:
+                    consumed, action = overlay.click(mx, my)   # Tool bar, legend, large network, modal panels
+                    if action is not None:
+                        do(action)
                 if not consumed and layout.world.collidepoint(mx, my):  # Click in the world (not in the panels)
                     wx = (mx - layout.world.x) / layout.scale  # Pixels → world units
                     wy = (my - layout.world.y) / layout.scale
@@ -246,17 +308,25 @@ def main():
         scene.draw(world_view, world, debug_mode, selected, trail)
         hud.draw(sidebar, strip_view, world, clock.get_fps(), speed, generation, debug_mode, paused, selected,
                  scene.color_label())
+        net_state = 2 if overlay.net_big else (1 if hud.show_graph else 0)
+        params_info = [(a, *PARAM_INFO.get(a, (a, "")), fmt(getattr(config, name)),
+                        fmt(pending[a]) if a in pending else None)
+                       for a, (name, _, fmt) in PARAMS.items()] if overlay.params_open else []
+        overlay.draw(window, {"paused": paused, "speed": speed, "debug": debug_mode, "follow": follow,
+                              "graph": net_state}, world, selected, params_info)
         if menu.open_index is None:
             reset_pending = False
         menu.draw(window, {
             "speed": speed, "paused": paused, "debug": ("off", "sélection", "toutes")[debug_mode],
-            "color": scene.color_label(), "chart": hud.show_chart, "graph": hud.show_graph,
+            "color": scene.color_label(), "chart": hud.show_chart, "graph": ("non", "petit", "grand")[net_state],
+            "legend": overlay.legend_open, "follow": follow,
             "fullscreen": display.fullscreen,
             **{"s_" + key: key in hud.chart_keys for key in SERIES_BY_KEY},
             **{a: fmt(pending.get(a, getattr(config, name))) + ("  *" if a in pending else "")
                for a, (name, _, fmt) in PARAMS.items()},
             "reset": "Confirmer : tout effacer ?" if reset_pending else "Repartir de zéro",
         })
+        overlay.draw_tips(window, world, selected, menu.open_index is not None)
 
         display.flip()
         clock.tick(config.FPS)

@@ -14,6 +14,7 @@ class Creature:
         self.alive = True
         self.food_eaten = 0 
         self.poison_hits = 0
+        self.obstacle_ticks = 0   # Ticks spent pressed against an obstacle
         self.age = 0
         # Exploration metrics: what the creature does when it sees no food
         self.food_nearby = True  # Set by World.sense each tick

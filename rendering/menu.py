@@ -25,7 +25,12 @@ MENUS = [
         ("color", "Couleur : {color}", "action", None, "C"),
         None,
         ("chart", "Courbes", "toggle", "chart", "G"),
-        ("graph", "Graphe du réseau", "toggle", "graph", "N"),
+        ("graph", "Graphe du réseau : {graph}", "action", None, "N"),
+        ("legend", "Légende", "toggle", "legend", "L"),
+        None,
+        ("best", "Sélectionner la meilleure créature", "action", None, "B"),
+        ("follow", "Suivre la lignée du meilleur", "toggle", "follow", "T"),
+        None,
         ("fullscreen", "Plein écran", "toggle", "fullscreen", "F"),
     ]),
     # One check box per curve of the chart, in the colour of the curve. The menu stays open to pick several.
@@ -33,6 +38,8 @@ MENUS = [
      + [None, ("series_default", "Courbes par défaut", "action", None, "")]),
     # Settings cycle through preset values at each click. A "*" marks a value waiting for the next generation.
     ("Paramètres", [
+        ("params_panel", "Ouvrir le panneau Paramètres...", "action", None, "P"),
+        None,
         ("mutation", "Mutation : {mutation}", "action", None, ""),
         ("parents", "Parents conservés : {parents}", "action", None, ""),
         None,
@@ -46,11 +53,17 @@ MENUS = [
         None,
         ("poison_count", "Nombre de poisons : {poison_count}", "action", None, ""),
         ("poison_energy", "Dégâts d'un poison : {poison_energy}", "action", None, ""),
+        None,
+        ("obstacle_count", "Nombre d'obstacles : {obstacle_count}", "action", None, ""),
     ]),
     ("Sauvegarde", [
         ("end_gen", "Terminer la génération maintenant", "action", None, ""),
         None,
         ("reset", "{reset}", "action", None, ""),
+    ]),
+    ("Aide", [
+        ("help", "Aide et raccourcis", "action", None, "H"),
+        ("legend", "Légende", "toggle", "legend", "L"),
     ]),
 ]
 

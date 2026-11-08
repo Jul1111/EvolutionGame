@@ -1,4 +1,5 @@
 class Food:
+    radius = 0.0   # Points, not discs: World.nearest measures distance to the edge only for items that have a radius
     def __init__(self, x, y, energy):
         self.x = x
         self.y = y

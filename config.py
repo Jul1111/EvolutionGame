@@ -51,11 +51,12 @@ ENERGY_MOVE_COST = 0.03     # Extra energy lost per tick, per unit of speed
                             # (at speed 2: 0.04 + 0.03 x 2 = 0.10)
 
 # Configuration for the neural network
-NN_INPUTS = 7               # distance, relative angle, energy, current speed, can eat, poison distance, poison angle
+NN_INPUTS = 9               # distance, relative angle, energy, current speed, can eat, poison distance, poison angle, obstacle distance, obstacle angle
 NN_HIDDEN = 6
 NN_OUTPUTS = 2              # turn, speed
 # Labels shown in the interface, in the SAME ORDER as the vectors built by World.sense (inputs) and Creature.update (outputs)
-INPUT_LABELS = ["Distance", "Angle", "Énergie", "Vitesse", "Peut manger", "Dist. poison", "Angle poison"]
+INPUT_LABELS = ["Distance", "Angle", "Énergie", "Vitesse", "Peut manger", "Dist. poison", "Angle poison",
+                "Dist. obstacle", "Angle obstacle"]
 OUTPUT_LABELS = ["Virage", "Vit. cible"]
 assert len(INPUT_LABELS) == NN_INPUTS, "INPUT_LABELS needs exactly one label per network input (NN_INPUTS)"
 assert len(OUTPUT_LABELS) == NN_OUTPUTS, "OUTPUT_LABELS needs exactly one label per network output (NN_OUTPUTS)"
@@ -95,4 +96,12 @@ FOOD_FIXED_POSITIONS = True  # True: food comes back at the same place; False: a
 POISON_COUNT = 5            # Poison sources in the world (0 = no poison). The network sees the nearest one
 POISON_ENERGY = 40.0        # Energy lost by the creature that touches a poison (starting value, to tune)
 POISON_COLOR = (176, 96, 214)
+
+# Configuration for obstacles
+OBSTACLE_COUNT = 6          # Solid obstacles, drawn at random at the start of each generation (0 = none)
+OBSTACLE_SHAPES = ("circle", "square", "triangle")   # Shapes drawn at random (one entry = only that shape)
+OBSTACLE_RADIUS_MIN = 20    # Radius range of the circle around the shape (world units)
+OBSTACLE_RADIUS_MAX = 45
+OBSTACLE_MIN_GAP = 30       # Minimum free space between two obstacles (a creature is 16 wide: it can always pass)
+OBSTACLE_COLOR = (92, 102, 112)
 FOOD_MAX_EATS = 3           # Times a source can be eaten before it moves elsewhere (starting value, to tune)

@@ -1,0 +1,622 @@
+"""Interface layer drawn on top of the world: tool bar, pause banner, legend, help, hover tips, settings panel and the
+large network view. Everything is drawn at the real resolution (sizes multiplied by the scale u), like the rest of the UI.
+This module never touches the simulation: it only reads the world and returns action names, main.py runs them."""
+import math
+import time
+
+import pygame
+
+import config
+from evolution.population import rank_key
+from rendering.hud import (VALUE, LABEL, MINT, AMBER, CORAL, create_fonts, network_rows,
+                           _node, _edge, _clip)
+from rendering.obstacles import PALETTES
+from rendering.scene import energy_color, pick_creature
+
+PANEL = (25, 31, 37)
+BORDER = (62, 72, 82)
+HOVER = (48, 58, 68)
+DIM = (110, 122, 128)
+ACTIVE_BG = (40, 84, 74)
+
+# Tool bar: (action, icon, title, shortcut). None = separator, "speed" = speed read-out.
+TOOLBAR = [
+    ("pause", "pause", "Pause / Reprendre", "Espace"),
+    ("step", "step", "Avancer d'un tick (en pause)", "→"),
+    ("speed_down", "minus", "Ralentir la simulation", "↓"),
+    "speed",
+    ("speed_up", "plus", "Accélérer la simulation", "↑"),
+    None,
+    ("debug", "cone", "Debug : cône de vision et cibles (off, sélection, toutes)", "D"),
+    ("color", "dots", "Couleur des créatures (énergie, vitesse, nourriture)", "C"),
+    ("legend", "info", "Légende des couleurs et des symboles", "L"),
+    None,
+    ("best", "star", "Sélectionner la meilleure créature", "B"),
+    ("follow", "target", "Suivre la lignée du meilleur d'une génération à l'autre", "T"),
+    ("graph", "net", "Graphe du réseau : masqué, petit (barre latérale), grand", "N"),
+    None,
+    ("params_panel", "sliders", "Paramètres de simulation", "P"),
+    ("help", "help", "Aide et raccourcis", "H"),
+]
+
+# Label, explanation of every setting of the panel (keys = main.PARAMS)
+PARAM_INFO = {
+    "mutation": ("Mutation", "Amplitude du bruit ajouté à chaque poids d'un enfant."),
+    "parents": ("Parents conservés", "Créatures gardées à chaque génération. La génération s'arrête à ce nombre de survivantes."),
+    "fov": ("Champ de vision", "Ouverture du cône de vision. Tout autour = 360°."),
+    "food": ("Nombre de nourritures", "Sources de nourriture dans le monde."),
+    "food_energy": ("Énergie d'une nourriture", "Énergie gagnée à chaque repas."),
+    "respawn": ("Délai de réapparition", "Temps avant qu'une nourriture mangée soit de nouveau disponible."),
+    "max_eats": ("Repas avant épuisement", "Repas possibles avant que la source change de place."),
+    "fixed": ("Positions de la nourriture", "Fixes : elle revient au même endroit. Aléatoires : nouvel endroit à chaque fois."),
+    "poison_count": ("Nombre de poisons", "Sources de poison dans le monde. 0 = aucun."),
+    "poison_energy": ("Dégâts d'un poison", "Énergie perdue au contact d'un poison."),
+    "obstacle_count": ("Nombre d'obstacles", "Obstacles (formes et places tirées au hasard) au début de chaque génération. 0 = aucun."),
+}
+
+# Explanations shown when the mouse rests on a label of the side bar: (logical y of the row, text)
+GEN_TIPS = [
+    (38, "Vivantes : créatures encore en vie. La génération s'arrête quand il en reste {parents} ou moins."),
+    (68, "Temps : temps simulé écoulé, sur le plafond de la génération."),
+    (98, "Meilleur âge : durée de vie de la créature qui a tenu le plus longtemps. Premier critère de classement."),
+    (116, "Sans nourriture : créatures qui n'ont encore rien mangé dans cette génération."),
+]
+CREATURE_TIPS = [
+    (36, "Énergie restante. À 0, la créature meurt. Plafond : {energy_max:g}."),
+    (66, "Vitesse actuelle, de 0 à {speed_max:g}. Elle change progressivement vers la vitesse demandée par le réseau."),
+    (96, "Âge : durée de vie de cette créature (temps simulé)."),
+    (114, "Nourritures mangées / poisons touchés depuis le début de la génération."),
+    (132, "Temps aveugle : part de sa vie passée sans aucune nourriture dans son champ de vision (cône)."),
+    (150, "Rang : classement par âge, puis nourriture mangée, puis énergie restante. 1 = la meilleure."),
+]
+NET_TIPS = {
+    "Distance": "Distance à la nourriture visible la plus proche, divisée par la portée. 1 = rien en vue.",
+    "Angle": "Direction de cette nourriture par rapport au cap. 0 = droit devant, + = à droite, - = à gauche.",
+    "Énergie": "Énergie de la créature, divisée par le maximum.",
+    "Vitesse": "Vitesse actuelle, divisée par la vitesse maximale.",
+    "Peut manger": "oui = le repas rentrerait en entier dans l'énergie restante. non = la créature est trop pleine.",
+    "Dist. poison": "Distance au poison visible le plus proche. 1 = rien en vue.",
+    "Angle poison": "Direction de ce poison par rapport au cap (+ = à droite).",
+    "Dist. obstacle": "Distance au bord de l'obstacle visible le plus proche. 1 = rien en vue.",
+    "Angle obstacle": "Direction de cet obstacle par rapport au cap (+ = à droite).",
+    "Virage": "Sortie du réseau : -1 = tourne à gauche à fond, +1 = tourne à droite à fond.",
+    "Vit. cible": "Sortie du réseau : vitesse demandée. -1 = à l'arrêt, +1 = vitesse maximale.",
+}
+
+HELP_KEYS = [
+    ("Espace", "Pause / reprendre"), ("→", "Avancer d'un tick (en pause)"), ("↑  ↓", "Vitesse de simulation"),
+    ("D", "Debug : off / sélection / toutes"), ("C", "Couleur : énergie / vitesse / nourriture"),
+    ("L", "Légende"), ("G", "Courbes"), ("N", "Réseau : masqué / petit / grand"),
+    ("B", "Sélectionner la meilleure créature"), ("T", "Suivre la lignée du meilleur"),
+    ("P", "Paramètres"), ("F", "Plein écran"), ("H  ?", "Cette aide"), ("Échap", "Fermer, puis quitter"),
+]
+HELP_MOUSE = [
+    "Clic sur une créature : fiche, réseau et trajectoire.",
+    "Clic dans le vide : désélectionner.",
+    "Survol d'une créature : résumé rapide.",
+    "Survol d'un bouton ou d'un libellé : explication.",
+]
+
+
+def wrap(font, text, max_w):
+    lines, cur = [], ""
+    for word in text.split():
+        trial = (cur + " " + word).strip()
+        if font.size(trial)[0] <= max_w or not cur:
+            cur = trial
+        else:
+            lines.append(cur)
+            cur = word
+    if cur:
+        lines.append(cur)
+    return lines
+
+
+# ---------- icons (drawn with shapes, so no font has to provide the glyphs) ----------
+
+def _icon(surf, name, rect, color, fonts, u):
+    cx, cy = rect.center
+    s = rect.w * 0.30                      # Half size of the icon
+    w = max(2, round(2 * u))
+    if name == "play":
+        pygame.draw.polygon(surf, color, [(cx - s * 0.7, cy - s), (cx - s * 0.7, cy + s), (cx + s, cy)])
+    elif name == "pause":
+        for dx in (-s * 0.55, s * 0.55):
+            pygame.draw.rect(surf, color, (cx + dx - s * 0.3, cy - s, s * 0.6, 2 * s))
+    elif name == "step":
+        pygame.draw.polygon(surf, color, [(cx - s, cy - s), (cx - s, cy + s), (cx + s * 0.5, cy)])
+        pygame.draw.rect(surf, color, (cx + s * 0.6, cy - s, s * 0.45, 2 * s))
+    elif name in ("minus", "plus"):
+        pygame.draw.line(surf, color, (cx - s, cy), (cx + s, cy), w)
+        if name == "plus":
+            pygame.draw.line(surf, color, (cx, cy - s), (cx, cy + s), w)
+    elif name == "cone":
+        a0, a1 = math.radians(-60), math.radians(60)
+        pts = [(cx - s * 0.9 + s * 2.1 * math.cos(a0 + (a1 - a0) * i / 8) * 0.9 + s * 0.9,
+                cy + s * 2.0 * math.sin(a0 + (a1 - a0) * i / 8) * 0.9) for i in range(9)]
+        origin = (cx - s * 0.9, cy)
+        pygame.draw.lines(surf, color, False, [pts[0], origin, pts[-1]], w)
+        pygame.draw.lines(surf, color, False, pts, w)
+    elif name == "dots":
+        for i, t in enumerate((0.1, 0.5, 0.9)):
+            pygame.draw.circle(surf, energy_color(t), (cx + (i - 1) * s * 0.95, cy), max(3, round(s * 0.42)))
+    elif name == "info":
+        pygame.draw.circle(surf, color, (cx, cy), round(s * 1.15), w)
+        img = fonts["small"].render("i", True, color)
+        surf.blit(img, (cx - img.get_width() // 2, cy - img.get_height() // 2))
+    elif name == "star":
+        pts = []
+        for i in range(10):
+            r = s * 1.25 if i % 2 == 0 else s * 0.55
+            a = -math.pi / 2 + i * math.pi / 5
+            pts.append((cx + r * math.cos(a), cy + r * math.sin(a)))
+        pygame.draw.polygon(surf, color, pts)
+    elif name == "target":
+        pygame.draw.circle(surf, color, (cx, cy), round(s * 0.8), w)
+        for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+            pygame.draw.line(surf, color, (cx + dx * s * 0.8, cy + dy * s * 0.8), (cx + dx * s * 1.35, cy + dy * s * 1.35), w)
+    elif name == "net":
+        a = [(cx - s, cy - s * 0.8), (cx - s, cy + s * 0.8)]
+        b = [(cx, cy - s * 0.9), (cx, cy), (cx, cy + s * 0.9)]
+        c = [(cx + s, cy)]
+        for p in a:
+            for q in b:
+                pygame.draw.line(surf, color, p, q, 1)
+        for q in b:
+            pygame.draw.line(surf, color, q, c[0], 1)
+        for p in a + b + c:
+            pygame.draw.circle(surf, color, p, max(2, round(s * 0.28)))
+    elif name == "sliders":
+        for i, k in enumerate((0.3, 0.7, 0.45)):
+            y = cy + (i - 1) * s * 0.85
+            pygame.draw.line(surf, color, (cx - s, y), (cx + s, y), 1)
+            pygame.draw.circle(surf, color, (cx - s + 2 * s * k, y), max(2, round(s * 0.3)))
+    elif name == "help":
+        img = fonts["base"].render("?", True, color)
+        surf.blit(img, (cx - img.get_width() // 2, cy - img.get_height() // 2))
+
+
+def _button(surf, rect, text, fonts, u, enabled=True, hovered=False, accent=False):
+    bg = HOVER if (hovered and enabled) else (ACTIVE_BG if accent and enabled else (34, 41, 48))
+    pygame.draw.rect(surf, bg, rect, border_radius=max(3, round(6 * u)))
+    pygame.draw.rect(surf, BORDER, rect, width=1, border_radius=max(3, round(6 * u)))
+    img = fonts["small"].render(text, True, VALUE if enabled else DIM)
+    surf.blit(img, (rect.centerx - img.get_width() // 2, rect.centery - img.get_height() // 2))
+
+
+class Overlay:
+    def __init__(self, hud, scene):
+        self.hud, self.scene = hud, scene
+        self.layout = None
+        self.help_open = False
+        self.legend_open = False
+        self.params_open = False
+        self.net_big = False
+        self.mouse = None
+        self.mouse_since = 0.0
+        self.state = {}
+        self._hits = []           # (rect, action) of the settings panel, rebuilt at each draw
+        self._rects = {}          # name → rect of the panels drawn last (for clicks)
+        self._cache = {}
+
+    # ---------- state ----------
+
+    def any_modal(self):
+        return self.help_open or self.params_open
+
+    def close_modals(self):
+        self.help_open = self.params_open = False
+
+    def relayout(self, layout):
+        self.layout = layout
+        u = self.u = layout.scale
+        self.fonts = create_fonts(u)
+        self._cache.clear()
+        w = layout.world
+        m, pad, bs, gap = round(10 * u), round(6 * u), round(30 * u), round(4 * u)
+        x, y = w.x + m + pad, w.y + m + pad
+        self.buttons, self.seps, self.speed_rect = [], [], None
+        for item in TOOLBAR:
+            if item is None:
+                self.seps.append(x + round(3 * u))
+                x += round(10 * u)
+            elif item == "speed":
+                self.speed_rect = pygame.Rect(x, y, round(46 * u), bs)
+                x += self.speed_rect.w + gap
+            else:
+                self.buttons.append((pygame.Rect(x, y, bs, bs), *item))
+                x += bs + gap
+        self.bar_rect = pygame.Rect(w.x + m, w.y + m, x - gap + pad - (w.x + m), bs + 2 * pad)
+        bg = pygame.Surface(self.bar_rect.size, pygame.SRCALPHA)
+        pygame.draw.rect(bg, (*PANEL, 215), bg.get_rect(), border_radius=round(10 * u))
+        pygame.draw.rect(bg, (255, 255, 255, 36), bg.get_rect(), width=1, border_radius=round(10 * u))
+        self.bar_bg = bg
+        # Pause banner, pre-rendered
+        f = self.fonts
+        title = f["title"].render("PAUSE", True, AMBER)
+        hint = f["small"].render("Espace : reprendre    →  : avancer d'un tick", True, LABEL)
+        bw, bh = max(title.get_width(), hint.get_width()) + round(36 * u), title.get_height() + hint.get_height() + round(18 * u)
+        banner = pygame.Surface((bw, bh), pygame.SRCALPHA)
+        pygame.draw.rect(banner, (*PANEL, 225), banner.get_rect(), border_radius=round(10 * u))
+        pygame.draw.rect(banner, (240, 196, 92, 110), banner.get_rect(), width=1, border_radius=round(10 * u))
+        banner.blit(title, ((bw - title.get_width()) // 2, round(7 * u)))
+        banner.blit(hint, ((bw - hint.get_width()) // 2, round(10 * u) + title.get_height()))
+        self.banner = banner
+        veil = pygame.Surface(w.size, pygame.SRCALPHA)
+        veil.fill((6, 8, 12, 150))
+        self.veil = veil
+
+    # ---------- mouse ----------
+
+    def hover(self, x, y):
+        if self.mouse is None or abs(x - self.mouse[0]) + abs(y - self.mouse[1]) > 2:
+            self.mouse_since = time.monotonic()
+        self.mouse = (x, y)
+
+    def click(self, x, y):
+        """Left click. Returns (consumed, action). The settings panel and the help are modal; the legend and the
+        large network only take the clicks that land on them, so another creature can still be picked."""
+        if self.help_open:
+            self.help_open = False
+            return True, None
+        if self.params_open:
+            for rect, action in self._hits:
+                if rect.collidepoint(x, y):
+                    return True, action
+            panel = self._rects.get("params")
+            if not (panel and panel.collidepoint(x, y)):
+                self.params_open = False
+            return True, None
+        for rect, action, *_ in self.buttons:
+            if rect.collidepoint(x, y):
+                return True, action
+        if self.bar_rect.collidepoint(x, y):
+            return True, None
+        for name, on in (("legend", self.legend_open), ("net", self.net_big)):
+            r = self._rects.get(name)
+            if on and r and r.collidepoint(x, y):
+                return True, None
+        return False, None
+
+    # ---------- drawing ----------
+
+    def draw(self, window, state, world, selected, params):
+        """state: paused, speed, debug (0-2), color, follow, graph (0-2). params: rows of the settings panel."""
+        self.state = state
+        u, f = self.u, self.fonts
+        w = self.layout.world
+        self._rects = {}
+
+        # Tool bar
+        window.blit(self.bar_bg, self.bar_rect.topleft)
+        active = {"pause": state["paused"], "debug": state["debug"] > 0, "legend": self.legend_open,
+                  "follow": state["follow"], "graph": state["graph"] > 0, "params_panel": self.params_open,
+                  "help": self.help_open}
+        for rect, action, icon, _, _ in self.buttons:
+            on = active.get(action, False)
+            hov = self.mouse is not None and rect.collidepoint(self.mouse) and not self.any_modal()
+            if on or hov:
+                pygame.draw.rect(window, ACTIVE_BG if on else HOVER, rect, border_radius=max(3, round(6 * u)))
+            enabled = action != "step" or state["paused"]
+            name = "play" if (action == "pause" and state["paused"]) else icon
+            _icon(window, name, rect, (MINT if on else (VALUE if enabled else DIM)), f, u)
+        for sx in self.seps:
+            pygame.draw.line(window, BORDER, (sx, self.bar_rect.y + round(8 * u)), (sx, self.bar_rect.bottom - round(8 * u)))
+        sp = f["base"].render(f"x{state['speed']}", True, VALUE)
+        window.blit(sp, (self.speed_rect.centerx - sp.get_width() // 2, self.speed_rect.centery - sp.get_height() // 2))
+
+        if state["paused"]:
+            window.blit(self.banner, (w.centerx - self.banner.get_width() // 2, w.y + round(60 * u)))
+        if self.legend_open:
+            self._draw_legend(window)
+        if self.net_big:
+            self._draw_net_big(window, world, selected)
+        if self.params_open:
+            self._draw_params(window, params)
+        if self.help_open:
+            self._draw_help(window)
+
+    def _draw_legend(self, window):
+        u, f, w = self.u, self.fonts, self.layout.world
+        label = self.scene.color_label()
+        key = ("legend", label)
+        if key not in self._cache:
+            row_h, pad, icon_w = round(24 * u), round(12 * u), round(40 * u)
+            entries = [("dot", config.FOOD_COLOR, "Nourriture : redonne de l'énergie"),
+                       ("diamond", config.POISON_COLOR, "Poison : retire de l'énergie")]
+            if hasattr(config, "OBSTACLE_COLOR"):
+                entries.append(("anemone", None, "Anémone : obstacle infranchissable"))
+            low, high = {"énergie": ("vide", "pleine"), "vitesse": ("à l'arrêt", "vitesse max"),
+                         "nourriture": ("rien mangé", "le plus mangé")}.get(label, ("bas", "haut"))
+            entries += [("gradient", None, f"Couleur d'une créature = {label}  ({low} → {high})"),
+                        ("cone", config.DEBUG_VISION_COLOR, "Cône de vision (touche D)"),
+                        ("ring", (255, 255, 255), "Créature sélectionnée")]
+            text_w = max(f["small"].size(t)[0] for _, _, t in entries)
+            surf = pygame.Surface((pad * 2 + icon_w + text_w, pad * 2 + row_h * len(entries) - round(4 * u)), pygame.SRCALPHA)
+            pygame.draw.rect(surf, (*PANEL, 232), surf.get_rect(), border_radius=round(10 * u))
+            pygame.draw.rect(surf, (255, 255, 255, 36), surf.get_rect(), width=1, border_radius=round(10 * u))
+            for i, (kind, color, text) in enumerate(entries):
+                cy = pad + i * row_h + row_h // 2 - round(2 * u)
+                cx = pad + icon_w // 2
+                if kind == "dot":
+                    pygame.draw.circle(surf, color, (cx, cy), round(5 * u))
+                elif kind == "diamond":
+                    r = round(6 * u)
+                    pygame.draw.polygon(surf, color, [(cx, cy - r), (cx + r, cy), (cx, cy + r), (cx - r, cy)])
+                elif kind == "anemone":
+                    mat, tent, tip = PALETTES[0]
+                    rad = round(9 * u)
+                    pygame.draw.circle(surf, mat, (cx, cy), rad)
+                    pygame.draw.circle(surf, tent, (cx, cy), rad, 1)
+                    for a in range(8):
+                        ang = a * math.pi / 4
+                        pygame.draw.line(surf, tip, (cx + math.cos(ang) * rad * 0.25, cy + math.sin(ang) * rad * 0.25),
+                                         (cx + math.cos(ang) * rad * 0.8, cy + math.sin(ang) * rad * 0.8), max(1, round(1.5 * u)))
+                elif kind == "gradient":
+                    gw = icon_w - round(4 * u)
+                    for k in range(gw):
+                        pygame.draw.line(surf, energy_color(k / max(gw - 1, 1)), (cx - gw // 2 + k, cy - round(4 * u)),
+                                         (cx - gw // 2 + k, cy + round(4 * u)))
+                elif kind == "cone":
+                    r = round(11 * u)
+                    a = math.radians(40)
+                    o = (cx - r // 2, cy)
+                    pts = [(o[0] + r * math.cos(-a + 2 * a * j / 6), o[1] + r * math.sin(-a + 2 * a * j / 6)) for j in range(7)]
+                    pygame.draw.lines(surf, color, False, [pts[0], o, pts[-1]], 1)
+                    pygame.draw.lines(surf, color, False, pts, 1)
+                elif kind == "ring":
+                    pygame.draw.circle(surf, color, (cx, cy), round(7 * u), max(1, round(1.5 * u)))
+                    pygame.draw.circle(surf, (240, 200, 80), (cx, cy), round(3.5 * u))
+                img = f["small"].render(text, True, VALUE)
+                surf.blit(img, (pad + icon_w, cy - img.get_height() // 2))
+            self._cache[key] = surf
+        surf = self._cache[key]
+        rect = surf.get_rect(bottomleft=(w.x + round(10 * u), w.bottom - round(10 * u)))
+        window.blit(surf, rect.topleft)
+        self._rects["legend"] = rect
+
+    def _draw_help(self, window):
+        u, f, w = self.u, self.fonts, self.layout.world
+        if "help" not in self._cache:
+            pad, row_h = round(22 * u), round(23 * u)
+            key_w = max(f["base"].size(k)[0] for k, _ in HELP_KEYS) + round(16 * u)
+            desc_w = max(f["base"].size(d)[0] for _, d in HELP_KEYS)
+            mouse_w = max(f["small"].size(t)[0] for t in HELP_MOUSE)
+            width = max(pad * 2 + key_w + desc_w, pad * 2 + mouse_w)
+            height = pad * 2 + f["title"].get_height() + round(10 * u) + row_h * len(HELP_KEYS) \
+                + round(16 * u) + f["base"].get_height() + round(6 * u) + row_h * len(HELP_MOUSE) * 0.85
+            surf = pygame.Surface((width, round(height)))
+            surf.fill(PANEL)
+            pygame.draw.rect(surf, BORDER, surf.get_rect(), width=1, border_radius=round(10 * u))
+            y = pad
+            surf.blit(f["title"].render("Aide et raccourcis", True, VALUE), (pad, y))
+            y += f["title"].get_height() + round(10 * u)
+            for k, d in HELP_KEYS:
+                kimg = f["base"].render(k, True, MINT)
+                surf.blit(kimg, (pad, y))
+                surf.blit(f["base"].render(d, True, VALUE), (pad + key_w, y))
+                y += row_h
+            y += round(16 * u)
+            surf.blit(f["base"].render("Souris", True, AMBER), (pad, y))
+            y += f["base"].get_height() + round(6 * u)
+            for t in HELP_MOUSE:
+                surf.blit(f["small"].render(t, True, LABEL), (pad, y))
+                y += round(row_h * 0.85)
+            self._cache["help"] = surf
+        surf = self._cache["help"]
+        window.blit(self.veil, w.topleft)
+        rect = surf.get_rect(center=w.center)
+        window.blit(surf, rect.topleft)
+        self._rects["help"] = rect
+
+    def _draw_params(self, window, params):
+        u, f, w = self.u, self.fonts, self.layout.world
+        self._hits = []
+        pad = round(18 * u)
+        head_h, foot_h = round(86 * u), round(54 * u)
+        n = max(len(params), 1)
+        row_h = min(round(46 * u), (w.h - round(30 * u) - head_h - foot_h) // n)
+        show_desc = row_h >= round(38 * u)
+        pw = min(round(640 * u), w.w - round(24 * u))
+        rect = pygame.Rect(0, 0, pw, head_h + n * row_h + foot_h)
+        rect.center = w.center
+        window.blit(self.veil, w.topleft)
+        pygame.draw.rect(window, PANEL, rect, border_radius=round(12 * u))
+        pygame.draw.rect(window, BORDER, rect, width=1, border_radius=round(12 * u))
+        self._rects["params"] = rect
+        window.blit(f["title"].render("Paramètres de simulation", True, VALUE), (rect.x + pad, rect.y + round(12 * u)))
+        for k, line in enumerate(("Les changements s'appliquent au début de la génération suivante (orange = en attente).",
+                                  "« Appliquer maintenant » termine la génération en cours et applique tout de suite.")):
+            window.blit(f["small"].render(_clip(f["small"], line, pw - 2 * pad), True, LABEL),
+                        (rect.x + pad, rect.y + round((42 + 17 * k) * u)))
+        mouse = self.mouse
+        ab, vw = round(26 * u), round(176 * u)
+        any_pending = False
+        for i, (key, label, desc, cur, pend) in enumerate(params):
+            row = pygame.Rect(rect.x + round(6 * u), rect.y + head_h + i * row_h, rect.w - round(12 * u), row_h)
+            if mouse and row.collidepoint(mouse):
+                pygame.draw.rect(window, (31, 38, 45), row, border_radius=round(6 * u))
+            right = rect.right - pad
+            r_inc = pygame.Rect(right - ab, row.centery - ab // 2, ab, ab)
+            val = pygame.Rect(r_inc.x - vw - round(4 * u), row.centery - ab // 2, vw, ab)
+            r_dec = pygame.Rect(val.x - ab - round(4 * u), row.centery - ab // 2, ab, ab)
+            for r, sign in ((r_dec, -1), (r_inc, 1)):
+                hov = mouse is not None and r.collidepoint(mouse)
+                pygame.draw.rect(window, HOVER if hov else (34, 41, 48), r, border_radius=max(3, round(6 * u)))
+                cx, cy, s = r.centerx, r.centery, round(5 * u)
+                pygame.draw.polygon(window, VALUE, [(cx - sign * s * 0.6, cy - s), (cx - sign * s * 0.6, cy + s),
+                                                    (cx + sign * s * 0.9, cy)])
+            self._hits.append((r_dec, f"param:dec:{key}"))
+            self._hits.append((r_inc, f"param:inc:{key}"))
+            pygame.draw.rect(window, (19, 23, 28), val, border_radius=max(3, round(6 * u)))
+            text, color = (f"{cur}  →  {pend}", AMBER) if pend is not None else (cur, VALUE)
+            any_pending = any_pending or pend is not None
+            img = f["base"].render(text, True, color)
+            window.blit(img, (val.centerx - img.get_width() // 2, val.centery - img.get_height() // 2))
+            text_w = r_dec.x - rect.x - pad - round(10 * u)
+            ly = row.y + (round(7 * u) if show_desc else (row_h - f["base"].get_height()) // 2)
+            window.blit(f["base"].render(label, True, VALUE), (rect.x + pad, ly))
+            if show_desc:
+                window.blit(f["small"].render(_clip(f["small"], desc, text_w), True, DIM),
+                            (rect.x + pad, ly + f["base"].get_height() + round(1 * u)))
+        # Footer buttons, right to left
+        by, bh = rect.bottom - foot_h + round(12 * u), round(30 * u)
+        x = rect.right - pad
+        buttons = (("params_close", "Fermer", True, False), ("end_gen", "Appliquer maintenant", True, any_pending),
+                   ("params_cancel", "Annuler les changements", any_pending, False))
+        for action, text, enabled, accent in buttons:
+            bw = f["small"].size(text)[0] + round(24 * u)
+            r = pygame.Rect(x - bw, by, bw, bh)
+            _button(window, r, text, f, u, enabled, mouse is not None and r.collidepoint(mouse), accent)
+            if enabled:
+                self._hits.append((r, action))
+            x = r.x - round(8 * u)
+
+    def _draw_net_big(self, window, world, selected):
+        u, f, w = self.u, self.fonts, self.layout.world
+        pw, ph = round(w.w * 0.56), round(w.h * 0.66)
+        rect = pygame.Rect(0, 0, pw, ph)
+        rect.bottomright = (w.right - round(10 * u), w.bottom - round(10 * u))
+        surf = pygame.Surface(rect.size, pygame.SRCALPHA)
+        pygame.draw.rect(surf, (*PANEL, 238), surf.get_rect(), border_radius=round(12 * u))
+        pygame.draw.rect(surf, (255, 255, 255, 40), surf.get_rect(), width=1, border_radius=round(12 * u))
+        pad = round(16 * u)
+        surf.blit(f["title"].render("Réseau de la créature sélectionnée", True, VALUE), (pad, round(10 * u)))
+        self._rects["net"] = rect
+        if selected is None or not selected.alive:
+            note = "Clique sur une créature vivante." if selected is None else "Créature morte."
+            surf.blit(f["base"].render(note, True, LABEL), (pad, round(48 * u)))
+            window.blit(surf, rect.topleft)
+            return
+        flag = selected.food_nearby
+        inputs = world.sense(selected)
+        selected.food_nearby = flag
+        hidden, outputs = selected.brain.activations(inputs)
+        rows = network_rows(inputs, outputs)
+        n_in, n_h, n_out = len(inputs), len(hidden), len(outputs)
+        top, bottom = round(52 * u), round(34 * u)
+        left_w, right_w = round(190 * u), round(140 * u)
+        area = pygame.Rect(left_w, top, pw - left_w - right_w, ph - top - bottom)
+        xs = (area.x, area.centerx, area.right)
+
+        def column(x, n):
+            step = area.h / n
+            return [(x, int(area.y + step * (k + 0.5))) for k in range(n)]
+
+        pin, ph_, pout = column(xs[0], n_in), column(xs[1], n_h), column(xs[2], n_out)
+        r = max(5, min(round(13 * u), int(area.h / max(n_in, n_h, n_out) / 2.3)))
+        wmax = max(float(abs(selected.brain.w1).max()), float(abs(selected.brain.w2).max()), 1e-9)
+        for h in range(n_h):
+            for i in range(n_in):
+                _edge(surf, pin[i], ph_[h], float(selected.brain.w1[h, i]), float(inputs[i]), wmax)
+        for o in range(n_out):
+            for h in range(n_h):
+                _edge(surf, ph_[h], pout[o], float(selected.brain.w2[o, h]), float(hidden[h]), wmax)
+        for pos, v in zip(pin, inputs):
+            _node(surf, *pos, r, float(v))
+        for pos, v in zip(ph_, hidden):
+            _node(surf, *pos, r, float(v))
+        for pos, v in zip(pout, outputs):
+            _node(surf, *pos, r, float(v))
+        sm = f["small"]
+        for (label, txt, _, _, _), (x, y) in zip(rows[:n_in], pin):
+            lab = sm.render(label, True, LABEL)
+            surf.blit(lab, (x - r - round(8 * u) - lab.get_width(), y - lab.get_height() // 2))
+            val = sm.render(txt, True, MINT)
+            surf.blit(val, (x - r - round(16 * u) - lab.get_width() - val.get_width(), y - val.get_height() // 2))
+        for (label, txt, _, _, _), (x, y) in zip(rows[n_in:], pout):
+            lab = sm.render(label, True, LABEL)
+            surf.blit(lab, (x + r + round(8 * u), y - lab.get_height() // 2))
+            val = sm.render(txt, True, AMBER)
+            surf.blit(val, (x + r + round(8 * u), y + lab.get_height() // 2 - round(1 * u)))
+        cap = sm.render("Neurone : vert = activation positive, rouge = négative.  Lien : couleur = signe du signal, "
+                        "épaisseur = force.  N : changer la taille.", True, DIM)
+        surf.blit(pygame.transform.smoothscale(cap, (min(cap.get_width(), pw - 2 * pad),
+                                                     round(cap.get_height() * min(1.0, (pw - 2 * pad) / cap.get_width()))))
+                  if cap.get_width() > pw - 2 * pad else cap, (pad, ph - bottom + round(10 * u)))
+        window.blit(surf, rect.topleft)
+
+    # ---------- tips ----------
+
+    def _hud_tip(self, x, y, selected):
+        hud = self.hud
+        if hud.layout is None:
+            return None
+        sb = hud.layout.sidebar
+        if not sb.collidepoint(x, y):
+            return None
+        lx, ly = x - sb.x, y - sb.y
+        u, ky = hud.u, hud.ky
+        fmt = dict(parents=config.PARENTS_COUNT, energy_max=config.ENERGY_MAX, speed_max=config.CREATURE_MAX_SPEED)
+        for name, rows in (("gen", GEN_TIPS), ("creature", CREATURE_TIPS)):
+            slot = hud.slots.get(name)
+            if slot and slot.collidepoint(lx, ly):
+                if name == "creature" and selected is None:
+                    return None
+                for y_log, text in rows:
+                    top = slot.y + round(y_log * u * ky)
+                    if top - round(2 * u) <= ly < top + round(18 * u * ky):
+                        return text.format(**fmt)
+                return None
+        slot = hud.slots.get("net")
+        if slot and slot.collidepoint(lx, ly) and selected is not None and selected.alive:
+            labels = list(config.INPUT_LABELS) + list(config.OUTPUT_LABELS)
+            n_in = len(config.INPUT_LABELS)
+            base = slot.y + (round(36 * u) if not hud.show_graph else round(32 * u) + round(hud.graph_h * u) + round(12 * u))
+            for i, label in enumerate(labels):
+                top = base + round((i * 15 + (4 if i >= n_in else 0)) * u)
+                if top <= ly < top + round(15 * u):
+                    return NET_TIPS.get(label)
+        return None
+
+    def draw_tips(self, window, world, selected, menu_open):
+        """Hover tips, drawn last. Buttons and labels explain themselves after a short rest; a creature gets a summary."""
+        if self.mouse is None or menu_open or self.params_open or self.help_open or self.layout is None:
+            return
+        x, y = self.mouse
+        dwell = time.monotonic() - self.mouse_since
+        lines = None
+        for rect, action, icon, title, shortcut in self.buttons:
+            if rect.collidepoint(x, y) and dwell > 0.3:
+                lines = [(title, "base", VALUE)] + ([(f"Raccourci : {shortcut}", "small", DIM)] if shortcut else [])
+        if lines is None and self.speed_rect.collidepoint(x, y) and dwell > 0.3:
+            lines = [(f"Vitesse de simulation : {self.state.get('speed', 1)} ticks par image", "base", VALUE),
+                     ("Flèches haut / bas", "small", DIM)]
+        if lines is None and dwell > 0.45:
+            text = self._hud_tip(x, y, selected)
+            if text:
+                lines = [(t, "small", VALUE) for t in wrap(self.fonts["small"], text, round(300 * self.u))]
+        over_ui = self.bar_rect.collidepoint(x, y) or any(
+            self._rects.get(k) and self._rects[k].collidepoint(x, y) for k in ("legend", "net"))
+        if lines is None and self.layout.world.collidepoint(x, y) and not over_ui and dwell > 0.08:
+            wx = (x - self.layout.world.x) / self.layout.scale
+            wy = (y - self.layout.world.y) / self.layout.scale
+            c = pick_creature(world, wx, wy)
+            if c is not None:
+                better = sum(1 for o in world.creatures if rank_key(o) > rank_key(c))
+                t = int(c.age / config.TICKS_PER_SECOND)
+                lines = [(f"Rang {better + 1}/{len(world.creatures)}" + ("" if c.alive else "  ·  morte"), "base", VALUE),
+                         (f"Énergie {max(c.energy, 0):.0f}   Vitesse {c.speed:.1f}", "small", LABEL),
+                         (f"Âge {t // 60:02d}:{t % 60:02d}   Nourriture {c.food_eaten}   Poison {c.poison_hits}", "small", LABEL),
+                         ("Clic : fiche complète", "small", DIM)]
+        if lines is not None:
+            self._draw_box(window, lines, x, y)
+
+    def _draw_box(self, window, lines, mx, my):
+        u = self.u
+        imgs = [self.fonts[k].render(t, True, c) for t, k, c in lines]
+        pad = round(8 * u)
+        w = max(i.get_width() for i in imgs) + 2 * pad
+        h = sum(i.get_height() for i in imgs) + 2 * pad + round(2 * u) * (len(imgs) - 1)
+        ww, wh = window.get_size()
+        bx = min(mx + round(16 * u), ww - w - 4)
+        by = my + round(20 * u)
+        if by + h > wh - 4:
+            by = my - h - round(10 * u)
+        box = pygame.Rect(max(4, bx), max(4, by), w, h)
+        pygame.draw.rect(window, (19, 23, 28), box, border_radius=round(6 * u))
+        pygame.draw.rect(window, BORDER, box, width=1, border_radius=round(6 * u))
+        y = box.y + pad
+        for img in imgs:
+            window.blit(img, (box.x + pad, y))
+            y += img.get_height() + round(2 * u)
