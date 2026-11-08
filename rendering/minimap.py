@@ -39,15 +39,12 @@ class MiniMap:
         for c in world.creatures:
             if c.alive:
                 pygame.draw.circle(window, DOT, (r.x + c.x * kx, r.y + c.y * ky), dot)
-        # Part of the world on screen, repeated on the other side of the torus edges
+        # Part of the world on screen: one frame, cut at the edges of the map (the torus repetition is not shown)
         if scene.size is not None and scene.scale:
             vw, vh = scene.size[0] / scene.scale, scene.size[1] / scene.scale
             if vw < config.WORLD_WIDTH or vh < config.WORLD_HEIGHT:
-                left, top = scene.cam_x - vw / 2, scene.cam_y - vh / 2
-                for dx in (-config.WORLD_WIDTH, 0, config.WORLD_WIDTH):
-                    for dy in (-config.WORLD_HEIGHT, 0, config.WORLD_HEIGHT):
-                        frame = pygame.Rect(round(r.x + (left + dx) * kx), round(r.y + (top + dy) * ky),
-                                            max(4, round(vw * kx)), max(4, round(vh * ky)))
-                        if frame.colliderect(r):
-                            pygame.draw.rect(window, FRAME, frame, max(1, round(1.2 * u)))
+                frame = pygame.Rect(round(r.x + (scene.cam_x - vw / 2) * kx), round(r.y + (scene.cam_y - vh / 2) * ky),
+                                    max(4, round(vw * kx)), max(4, round(vh * ky))).clip(r)
+                if frame.w > 1 and frame.h > 1:
+                    pygame.draw.rect(window, FRAME, frame, max(1, round(1.2 * u)))
         window.set_clip(clip)

@@ -306,11 +306,13 @@ def main():
             if world.creatures:
                 selected = max(world.creatures, key=success_key)
                 trail.clear()
+                cam_follow = True
         elif action == "follow":
             follow = not follow
             if follow and selected is None and world.creatures:
                 selected = max(world.creatures, key=success_key)
                 trail.clear()
+                cam_follow = True
         elif action == "fullscreen":
             display.toggle_fullscreen()
         elif action == "restart_now":
@@ -414,6 +416,7 @@ def main():
                     mx, my = display.to_pixels(event.pos)
                     if dragging or abs(mx - drag_start[0]) + abs(my - drag_start[1]) > 6:
                         dragging = True   # Dragging the world moves the view
+                        cam_follow = False  # Moving the view by hand stops following (V or a new selection: again)
                         ratio = display.pixel_ratio()
                         scene.pan_pixels(event.rel[0] * ratio, event.rel[1] * ratio)
             elif event.type == pygame.MOUSEWHEEL:
@@ -426,6 +429,7 @@ def main():
                     wx, wy = scene.screen_to_world(drag_start[0] - layout.world.x, drag_start[1] - layout.world.y)
                     selected = pick_creature(world, wx, wy, scene.pick_radius())
                     trail.clear()
+                    cam_follow = selected is not None   # The camera follows the creature just selected
                 drag_start, dragging = None, False
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 mx, my = display.to_pixels(event.pos)  # Window points → surface pixels (2x on Retina)
