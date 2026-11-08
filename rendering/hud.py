@@ -2,9 +2,9 @@ import csv
 
 import pygame
 import config
-from brain.profiles import PROFILES, input_labels, output_labels, paths
+from brain.profiles import PROFILES, input_labels, output_labels
 from rendering.scene import energy_color
-from evolution.population import rank_key
+from utils.timefmt import format_time  # noqa: F401  (main.py imports it from here)
 
 VALUE = config.HUD_VALUE_COLOR
 LABEL = config.HUD_LABEL_COLOR
@@ -55,11 +55,6 @@ def network_rows(inputs, outputs, profile):
 MAX_PANEL_W = 560    # Logical width cap, for very wide windows
 
 
-def format_time(ticks):
-    """Convert a number of ticks to a mm:ss string (simulated time)."""
-    seconds = ticks / config.TICKS_PER_SECOND
-    minutes, seconds = divmod(int(seconds), 60)
-    return f"{minutes:02d}:{seconds:02d}"
 
 
 def _to_float(value):
@@ -69,11 +64,11 @@ def _to_float(value):
         return None  # Empty cell (e.g. blind_speed when no tick was blind) or missing column
 
 
-def load_stats(profile):
-    """Read the CSV of a profile. List of dicts, values are floats or None. Empty list if the file is missing."""
+def load_timeline(path):
+    """Read timeline.csv (evolution/continuous.py). List of dicts, values are floats or None. Empty if missing."""
     rows = []
     try:
-        with open(paths(profile)[1], newline="", encoding="utf-8") as f:
+        with open(path, newline="", encoding="utf-8") as f:
             for row in csv.DictReader(f):
                 rows.append({k: _to_float(v) for k, v in row.items()})
     except OSError:
@@ -170,48 +165,26 @@ def _col(name):
     return lambda row: row.get(name)
 
 
-def _ratio(num, den):
-    def value(row):
-        a, b = row.get(num), row.get(den)
-        return a / b if a is not None and b else None
-    return value
-
-
-def _per_minute(row):
-    """Meals eaten per minute of simulated time, whole population."""
-    food, ticks = row.get("total_food"), row.get("ticks")
-    return food / (ticks / (config.TICKS_PER_SECOND * 60)) if food is not None and ticks else None
-
-
 # Curves that can be shown: (key, label, colour, value(row), fixed maximum or None = largest value seen, text format).
-# Each curve is scaled to its own range. A column missing from an old CSV row simply leaves a gap.
+# One point per line of timeline.csv. Each curve is scaled to its own range.
 SERIES = [
-    ("best_age", "Meilleur âge", AMBER, _col("best_age"), lambda: config.GEN_MAX_TICKS, format_time),
-    ("mean_food", "Nourriture moy. (parents)", (90, 200, 110), _col("mean_food"), None, lambda v: f"{v:.0f}"),
-    ("max_food", "Nourriture max", (178, 224, 120), _col("max_food"), None, lambda v: f"{v:.0f}"),
-    ("total_food", "Nourriture totale", (64, 176, 156), _col("total_food"), None, lambda v: f"{v:.0f}"),
-    ("food_rate", "Repas par minute", (232, 214, 130), _per_minute, None, lambda v: f"{v:.1f}"),
+    ("population", "Population", (204, 172, 132), _col("population"), lambda: config.POP_MAX, lambda v: f"{v:.0f}"),
+    ("births", "Naissances (par relevé)", MINT, _col("births"), None, lambda v: f"{v:.0f}"),
+    ("deaths_hunger", "Morts de faim (par relevé)", CORAL, _col("deaths_hunger"), None, lambda v: f"{v:.0f}"),
+    ("deaths_age", "Morts de vieillesse (par relevé)", (150, 164, 178), _col("deaths_age"), None, lambda v: f"{v:.0f}"),
+    ("food_rate", "Repas / 1000 ticks de vie", (90, 200, 110), _col("food_rate"), None, lambda v: f"{v:.2f}"),
+    ("poison_rate", "Poisons / 1000 ticks de vie", (176, 96, 214), _col("poison_rate"), None, lambda v: f"{v:.2f}"),
     ("mean_speed", "Vitesse moy.", BLUE, _col("mean_speed"), lambda: config.CREATURE_MAX_SPEED, lambda v: f"{v:.2f}"),
-    ("blind_speed", "Vitesse sans nourriture en vue", (132, 132, 236), _col("blind_speed"),
-     lambda: config.CREATURE_MAX_SPEED, lambda v: f"{v:.2f}"),
-    ("search_ratio", "Vitesse aveugle / moyenne", (160, 190, 255), _ratio("blind_speed", "mean_speed"), None,
-     lambda v: f"{v:.2f}"),
-    ("blind_frac", "Part aveugle", CORAL, _col("blind_frac"), None, lambda v: f"{v:.0%}"),
-    ("blind_turn", "Virage sans nourriture en vue", (236, 142, 72), _col("blind_turn"), lambda: 1.0,
-     lambda v: f"{v:.2f}"),
-    ("mean_energy", "Énergie moy. (parents)", MINT, _col("mean_energy"), lambda: config.ENERGY_MAX, lambda v: f"{v:.0f}"),
-    ("alive", "Vivantes en fin de génération", (204, 172, 132), _col("alive"), lambda: max(1, config.POPULATION_SIZE // max(1, len(config.ACTIVE_PROFILES))),
-     lambda v: f"{v:.0f}"),
-    ("mean_poison", "Poison touché (parents)", (176, 96, 214), _col("mean_poison"), None, lambda v: f"{v:.1f}"),
-    ("total_poison", "Poison touché (total)", (230, 122, 182), _col("total_poison"), None, lambda v: f"{v:.0f}"),
-    ("poison_ratio", "Poison / nourriture (total)", (200, 160, 220), _ratio("total_poison", "total_food"), None,
-     lambda v: f"{v:.2f}"),
+    ("mean_energy", "Énergie moy.", AMBER, _col("mean_energy"), lambda: config.ENERGY_MAX, lambda v: f"{v:.0f}"),
+    ("mean_lineage_gen", "Génération de lignée moy.", (160, 190, 255), _col("mean_lineage_gen"), None,
+     lambda v: f"{v:.1f}"),
+    ("mean_age_at_death", "Âge moyen à la mort", (236, 142, 72), _col("mean_age_at_death"), lambda: config.AGE_MAX or None,
+     format_time),
+    ("food_available", "Nourritures disponibles", (178, 224, 120), _col("food_available"), None, lambda v: f"{v:.0f}"),
+    ("cap_blocked", "Naissances bloquées (plafond)", (230, 122, 182), _col("cap_blocked"), None, lambda v: f"{v:.0f}"),
 ]
 SERIES_BY_KEY = {s[0]: s for s in SERIES}
-SERIES.append(("obstacle_frac", "Temps contre un obstacle (parents)", (150, 164, 178), _col("obstacle_frac"), None,
-               lambda v: f"{v:.1%}"))
-SERIES_BY_KEY = {s[0]: s for s in SERIES}
-DEFAULT_SERIES = ("best_age", "mean_food", "mean_speed", "mean_poison")
+DEFAULT_SERIES = ("population", "food_rate", "mean_speed", "mean_lineage_gen")
 
 
 def _clip(font, text, max_w):
@@ -259,7 +232,7 @@ def build_chart(fonts, stats, width, height, u, wide, keys, species=None):
     c = Ctx(u)
     surf = _panel(width, height, u)
     pad = c.x(14)
-    _text(surf, fonts["base"], "Courbes par génération", pad, c.x(7), VALUE)
+    _text(surf, fonts["base"], "Courbes dans le temps", pad, c.x(7), VALUE)
     _text(surf, fonts["small"], (species + "  ·  " if species else "") + "échelles propres", width - pad, c.x(9), LABEL,
           right=True)
     selected = [SERIES_BY_KEY[k] for k in (s[0] for s in SERIES) if k in keys]
@@ -286,7 +259,7 @@ def build_chart(fonts, stats, width, height, u, wide, keys, species=None):
     for key, label, color, value, fixed_max, fmt in selected:
         values = [value(r) for r in stats]
         seen = [v for v in values if v is not None]
-        vmax = fixed_max() if fixed_max else (max(seen) * 1.05 if seen else 1.0)
+        vmax = (fixed_max() if fixed_max else None) or (max(seen) * 1.05 if seen else 1.0)
         vmax = vmax if vmax > 1e-9 else 1.0
         pts = []
         for j, v in enumerate(values):
@@ -305,61 +278,6 @@ def build_chart(fonts, stats, width, height, u, wide, keys, species=None):
     return surf
 
 
-def build_compare_chart(fonts, stats_by, profiles, width, height, u, wide, keys):
-    """One curve per species for the first checked series (same scale for all of them, so they can be compared)."""
-    c = Ctx(u)
-    surf = _panel(width, height, u)
-    pad = c.x(14)
-    selected = [SERIES_BY_KEY[k] for k in (s[0] for s in SERIES) if k in keys]
-    _text(surf, fonts["base"], "Comparaison des profils", pad, c.x(7), VALUE)
-    if not selected:
-        msg = fonts["small"].render("Aucune courbe choisie (menu Courbes)", True, LABEL)
-        surf.blit(msg, ((width - msg.get_width()) // 2, height // 2))
-        return surf
-    key, label, _, value, fixed_max, fmt = selected[0]
-    _text(surf, fonts["small"], _clip(fonts["small"], label + " (échelle commune)", width // 2), width - pad, c.x(9),
-          LABEL, right=True)
-    line_h = fonts["small"].get_height() + c.x(2)
-    if wide:
-        plot = pygame.Rect(pad, c.x(30), int(width * 0.60), height - c.x(30) - pad)
-        legend_area = pygame.Rect(plot.right + c.x(20), plot.top, width - plot.right - c.x(20) - pad, plot.height)
-    else:
-        legend_h = min(len(profiles), 4) * line_h
-        plot_h = max(c.x(30), height - c.x(28) - legend_h - c.x(16))
-        plot = pygame.Rect(pad, c.x(28), width - 2 * pad, plot_h)
-        legend_area = pygame.Rect(pad, plot.bottom + c.x(6), width - 2 * pad, height - plot.bottom - c.x(6) - c.x(6))
-    pygame.draw.rect(surf, (255, 255, 255, 14), plot, border_radius=max(3, c.x(6)))
-    series = {p: [value(r) for r in stats_by.get(p, [])] for p in profiles}
-    seen = [v for vals in series.values() for v in vals if v is not None]
-    if not seen:
-        msg = fonts["small"].render("Pas encore de données", True, LABEL)
-        surf.blit(msg, (plot.centerx - msg.get_width() // 2, plot.centery - msg.get_height() // 2))
-        return surf
-    vmax = fixed_max() if fixed_max else max(seen) * 1.05
-    vmax = vmax if vmax > 1e-9 else 1.0
-    margin = c.x(3)
-    n_max = max(len(v) for v in series.values())   # Species may have lived different numbers of generations
-    entries = []
-    for p in profiles:
-        vals = series[p]
-        color = PROFILES[p]["color"]
-        pts = []
-        for j, v in enumerate(vals):
-            if v is None:
-                continue
-            px = plot.left + (plot.width * j / (n_max - 1) if n_max > 1 else plot.width / 2)
-            py = plot.bottom - margin - max(0.0, min(v / vmax, 1.0)) * (plot.height - 2 * margin)
-            pts.append((px, py))
-        if len(pts) > 1:
-            pygame.draw.aalines(surf, color, False, pts)
-        elif pts:
-            pygame.draw.circle(surf, color, (int(pts[0][0]), int(pts[0][1])), max(2, c.x(3)))
-        last = next((v for v in reversed(vals) if v is not None), None)
-        entries.append((PROFILES[p]["title"], color, fmt(last) if last is not None else "n/a"))
-    _legend(surf, fonts, entries, legend_area, c, True)
-    return surf
-
-
 class Hud:
     """Side bar (generation, selected creature, network, curves, key hints) and, when the window is tall,
     a strip under the world with the curves. Everything is drawn at the real resolution (see relayout)."""
@@ -370,8 +288,8 @@ class Hud:
         self.chart_keys = set(DEFAULT_SERIES)   # Curves shown (menu Courbes)
         self.layout = None
         self.profiles = list(config.ACTIVE_PROFILES)        # Species in the world
-        self.compare = True       # Several species: one curve per species for the first checked series
-        self.stats = {p: load_stats(p) for p in self.profiles}
+        self.timeline_path = None   # timeline.csv of the running simulation (set by main.py)
+        self.rows = []
 
     # ---------- layout ----------
 
@@ -471,15 +389,8 @@ class Hud:
             self.chart_side = self._chart(r, False)
 
     def _chart(self, r, wide):
-        """Curves of the only species, or the comparison of several (one line per species)."""
-        if len(self.profiles) > 1 and self.compare:
-            return build_compare_chart(self.fonts, self.stats, self.profiles, r.w, r.h, self.u, wide, self.chart_keys)
-        return build_chart(self.fonts, self.stats[self.profiles[0]], r.w, r.h, self.u, wide, self.chart_keys,
-                           PROFILES[self.profiles[0]]["title"] if len(self.profiles) > 1 else None)
-
-    def toggle_compare(self):
-        self.compare = not self.compare
-        self._build_charts()
+        """Curves of the whole population, one point per line of timeline.csv."""
+        return build_chart(self.fonts, self.rows, r.w, r.h, self.u, wide, self.chart_keys)
 
     def toggle_chart(self):
         self.show_chart = not self.show_chart
@@ -499,31 +410,29 @@ class Hud:
         self._compute_slots()
 
     def reload_stats(self, profiles=None):
-        """Call after a generation has been logged, or when the species of the world changed."""
+        """Call after a new line of timeline.csv, or when the species of the world changed."""
         if profiles:
             self.profiles = list(profiles)
-        self.stats = {p: load_stats(p) for p in self.profiles}
+        self.rows = load_timeline(self.timeline_path) if self.timeline_path else []
         if self.layout is not None:
             self._compute_slots()   # The network panel height depends on the species (it ends by rebuilding the charts)
 
     # ---------- panels ----------
 
-    def _draw_generation(self, world, fps, speed, generation, debug_mode, paused, color_label):
+    def _draw_generation(self, world, fps, speed, info, debug_mode, paused, color_label):
+        """Population card. info: births, deaths (since the start), extinct (bool)."""
         f, c = self.fonts, Ctx(self.u, self.ky)
         p = self.bg["gen"].copy()
         W, pad = p.get_width(), c.x(14)
         creatures = world.creatures
-        total = len(creatures)
-        alive = sum(1 for cr in creatures if cr.alive)
-        best_age = max((cr.age for cr in creatures), default=0)
-        zero_food = sum(1 for cr in creatures if cr.food_eaten == 0)
-        over = world.is_over()
+        n = len(creatures)
+        gens = [cr.lineage_gen for cr in creatures]
 
-        _text(p, f["title"], f"Génération {generation}", pad, c.y(8), VALUE)
-        if paused:
+        _text(p, f["title"], f"Population {n}", pad, c.y(8), VALUE)
+        if info.get("extinct"):
+            status, status_color = "Extinction", CORAL
+        elif paused:
             status, status_color = "Pause", AMBER
-        elif over:
-            status, status_color = "Terminé", CORAL
         else:
             status, status_color = "En cours", MINT
         img = _text(p, f["small"], status, W - pad, c.y(13), status_color, right=True)
@@ -531,24 +440,22 @@ class Hud:
                            max(3, c.x(4)))
 
         bar_h = max(3, c.x(5))
-        _row(p, f, c, 38, "Vivantes", f"{alive}/{total}")
-        _bar(p, pad, c.y(59), W - 2 * pad, bar_h, alive / total if total else 0, energy_color(0.85))
-        _row(p, f, c, 68, "Temps", f"{format_time(world.tick)} / {format_time(config.GEN_MAX_TICKS)}")
-        _bar(p, pad, c.y(89), W - 2 * pad, bar_h, world.tick / config.GEN_MAX_TICKS, energy_color(0.5))
-        _row(p, f, c, 98, "Meilleur âge", format_time(best_age))
+        _row(p, f, c, 38, "Vivantes / plafond", f"{n}/{config.POP_MAX}")
+        _bar(p, pad, c.y(59), W - 2 * pad, bar_h, n / config.POP_MAX if config.POP_MAX else 0, energy_color(0.85))
+        _row(p, f, c, 68, "Temps simulé", format_time(world.tick))
+        _row(p, f, c, 86, "Naissances / morts", f"{info.get('births', 0)} / {info.get('deaths', 0)}")
+        _row(p, f, c, 104, "Lignée moy. / max",
+             f"{sum(gens) / n:.1f} / {max(gens)}" if n else "-")
         if len(self.profiles) > 1:
             # One dot (the species colour) and the number of living creatures per species
-            x = pad
-            _text(p, f["base"], "Espèces", pad, c.y(116), LABEL)
+            _text(p, f["base"], "Espèces", pad, c.y(122), LABEL)
             x = W - pad
             for name in reversed(self.profiles):
                 n_alive = sum(1 for cr in creatures if cr.alive and cr.profile == name)
-                img = _text(p, f["small"], str(n_alive), x, c.y(118), VALUE, right=True)
+                img = _text(p, f["small"], str(n_alive), x, c.y(124), VALUE, right=True)
                 x -= img.get_width() + c.x(5)
-                pygame.draw.circle(p, PROFILES[name]["color"], (x - c.x(3), c.y(118) + img.get_height() // 2), max(3, c.x(4)))
+                pygame.draw.circle(p, PROFILES[name]["color"], (x - c.x(3), c.y(124) + img.get_height() // 2), max(3, c.x(4)))
                 x -= c.x(14)
-        else:
-            _row(p, f, c, 116, "Sans nourriture", str(zero_food))
 
         debug_label = ("off", "sélection", "toutes")[debug_mode]
         _text(p, f["small"], f"x{speed}  ·  {fps:.0f} FPS", pad, c.y(142), LABEL)
@@ -584,9 +491,7 @@ class Hud:
         _row(p, f, c, 114, "Nourriture / poison", f"{cr.food_eaten} / {cr.poison_hits}")
         blind_share = cr.blind_ticks / cr.age if cr.age else 0.0
         _row(p, f, c, 132, "Temps aveugle", f"{blind_share:.0%}")
-        mates = [o for o in world.creatures if o.profile == cr.profile]   # Rank among its own species
-        better = sum(1 for o in mates if rank_key(o) > rank_key(cr))
-        _row(p, f, c, 150, "Rang (âge, nourriture)", f"{better + 1}/{len(mates)}")
+        _row(p, f, c, 150, "Génération / petits", f"{cr.lineage_gen} / {cr.children}")
         return p
 
     def _draw_network(self, world, selected):
@@ -670,12 +575,12 @@ class Hud:
 
     # ---------- frame ----------
 
-    def draw(self, sidebar, strip, world, fps, speed, generation, debug_mode, paused, selected, color_label):
+    def draw(self, sidebar, strip, world, fps, speed, info, debug_mode, paused, selected, color_label):
         """sidebar: surface of layout.sidebar. strip: surface of layout.strip, or None."""
         sidebar.fill(config.SIDEBAR_BG_COLOR)
         pygame.draw.line(sidebar, (48, 54, 60), (0, 0), (0, sidebar.get_height()))
         panels = {
-            "gen": lambda: self._draw_generation(world, fps, speed, generation, debug_mode, paused, color_label),
+            "gen": lambda: self._draw_generation(world, fps, speed, info, debug_mode, paused, color_label),
             "creature": lambda: self._draw_creature(world, selected),
             "net": lambda: self._draw_network(world, selected),
             "chart": lambda: self.chart_side,

@@ -1,242 +1,171 @@
 # EvolutionGame
 
-Simulation en Python et pygame de l'évolution d'une population de créatures pilotées par un réseau de neurones.
+Simulation en Python et pygame de l'évolution de créatures pilotées par un réseau de neurones.
 
-Les créatures n'apprennent rien pendant leur vie. Ce sont les générations qui évoluent : les 20 dernières survivantes d'une génération donnent la suivante, avec des mutations aléatoires sur les poids de leur réseau.
+But : faire tourner, un par un, les mécanismes qui ont façonné les êtres vivants (et l'humain), et voir ce qu'ils produisent. Une étape = un mécanisme = une question, vérifiée sur plusieurs graines.
+
+Les créatures n'apprennent rien pendant leur vie. Il n'y a pas de générations ni de parents choisis : une créature qui mange assez fait un petit qui hérite de son réseau, avec une mutation. C'est de la sélection naturelle.
 
 ## Lancer le projet
 
-Il faut Python 3, `pygame` et `numpy`. Il n'y a pas encore de fichier `requirements.txt`.
+Il faut Python 3.10 ou plus.
 
 ```bash
 python -m venv .venv
 source .venv/bin/activate        # Windows : .venv\Scripts\activate
-pip install pygame numpy
-python main.py
+pip install -r requirements-dev.txt   # numpy, pygame-ce, pytest
+python main.py                   # le jeu
+python -m pytest                 # les tests (moins de 10 s)
+python -m experiments.run --name essai --seeds 1 2 3 4 --ticks 60000   # une expérience sans affichage
 ```
 
-La simulation reprend automatiquement la dernière sauvegarde si elle existe (voir «Sauvegardes»).
+Au lancement, le terminal liste les réglages du menu qui remplacent `config.py` (`saves/settings.json`) et, s'il y en a une, la population reprise.
 
 ## Commandes
 
 | Touche | Action |
 |---|---|
-| ↑ / ↓ | Vitesse de simulation (×1, 2, 5, 10, 20, 50, 100) |
-| Espace | Pause |
-| → | Avancer d'un tick (en pause) |
-| Clic gauche | Sélectionner une créature dans le monde, ou utiliser la barre de menu |
-| Molette | Zoom sur le curseur (dézoom maximum = tout le monde visible) |
-| Glisser (clic gauche maintenu) | Déplacer la caméra |
-| + / - / 0 | Zoom avant / arrière / tout le monde |
-| V | La caméra suit la créature sélectionnée |
-| D | Mode debug : désactivé → plus ancienne créature vivante → toutes les créatures vivantes |
-| C | Changer le mode de couleur des créatures |
-| G | Afficher ou masquer les courbes |
-| N | Graphe du réseau : masqué → petit (barre latérale) → grand (par-dessus le monde) |
-| L | Légende des couleurs et des symboles |
-| B | Sélectionner la meilleure créature (rang 1) |
-| T | Suivre la lignée du meilleur : la sélection revient sur le meilleur parent à chaque génération |
-| P | Panneau Paramètres |
-| H ou ? | Aide et raccourcis |
-| F ou F11 | Plein écran |
-| Échap | Fermer le menu ouvert, puis quitter le plein écran, puis quitter |
+| ↑ / ↓ | Vitesse de simulation (×1 à ×100) |
+| Espace / → | Pause / avancer d'un tick (en pause) |
+| Clic | Sélectionner une créature, ou utiliser les menus |
+| Molette, glisser, + - 0 | Zoom, déplacer la vue, tout le monde |
+| V | Caméra sur la créature sélectionnée |
+| B | Sélectionner la créature qui a eu le plus de petits |
+| T | Suivre la lignée : à la mort de la sélection, passer à son plus jeune descendant vivant |
+| S | Sauvegarder la population (`saves/populations/<date>_manuelle.npz`) |
+| D, C, L | Debug (cône de vision et cibles), couleur des créatures, légende |
+| G, N | Courbes, graphe du réseau (masqué, petit, grand) |
+| P, H ou ?, F | Paramètres, aide, plein écran |
+| Échap | Fermer, puis quitter le plein écran, puis quitter |
 
 ## Interface
 
-**Barre de contrôle** (en haut à gauche du monde) : pause / reprendre, un tick, vitesse (- et +), debug, couleur, légende, meilleure créature, suivi de la lignée, réseau (masqué / petit / grand), paramètres, aide. Chaque bouton a une infobulle avec son raccourci. En pause, un bandeau « PAUSE » s'affiche.
-
-**Survol.** Une créature survolée affiche son rang, son énergie, sa vitesse, son âge et ses compteurs. Un libellé de la barre latérale (Vivantes, Temps aveugle, Rang, chaque entrée et sortie du réseau...) s'explique après une demi-seconde d'arrêt.
-
-**Panneau Paramètres** (touche P ou menu Paramètres) : une ligne par réglage, avec flèches ◀ ▶, la valeur en vigueur et, en orange, la valeur en attente (`vigueur → attente`). Les changements s'appliquent au début de la génération suivante. « Appliquer maintenant » termine la génération en cours (le classement se fait alors sur une génération inachevée). « Annuler les changements » vide les valeurs en attente.
-
-**Grand réseau** (touche N, deuxième appui) : le graphe du réseau de la créature sélectionnée, agrandi, avec le nom et la valeur de chaque entrée et sortie. On peut cliquer une autre créature pendant qu'il est affiché.
-
-**Barre de menu** (en haut, à droite : vitesse et pause). Chaque commande clavier a son équivalent dans un menu déroulant.
-
-| Menu | Contenu |
-|---|---|
-| Simulation | Pause, avancer d'un tick, accélérer, ralentir |
-| Affichage | Debug (cône de vision, trait vers la nourriture la plus proche et, en violet, vers le poison le plus proche), couleur, courbes, graphe du réseau, plein écran |
-| Courbes | Une case par courbe à afficher, dans la couleur de la courbe : meilleur âge, nourriture (moyenne, max, totale, par minute), vitesse (moyenne, sans nourriture en vue, rapport des deux), part aveugle, virage aveugle, énergie, vivantes, poison (parents, total, rapport poison / nourriture). Défaut : meilleur âge, nourriture moy., vitesse moy., poison touché (parents). Chaque courbe a sa propre échelle. La sélection n'est pas conservée au redémarrage |
-| Paramètres | Ouvrir le panneau Paramètres, mutation, parents conservés, nombre de nourritures, énergie d'une nourriture, délai de réapparition, repas avant épuisement, positions de la nourriture (fixes ou aléatoires), nombre de poisons, dégâts d'un poison, nombre d'obstacles. Un clic passe à la valeur suivante parmi des valeurs prédéfinies. La valeur est appliquée au début de la génération suivante (marquée d'un `*` en attendant), et est conservée au redémarrage dans `saves/settings.json` (elle remplace alors la valeur de `config.py` ; supprimer le fichier ou mettre `LOAD_SETTINGS = False` pour revenir à `config.py`) |
-| Réseau | Choisir le profil de réseau (voir « Les profils de réseau »). Appliqué à la fin de la génération en cours (marqué d'un `*` en attendant), et conservé au redémarrage |
-| Sauvegarde | Terminer la génération maintenant, repartir de zéro (confirmation demandée) |
-| Aide | Aide et raccourcis, légende |
-
-La sauvegarde des génomes et le CSV s'écrivent automatiquement à chaque fin de génération. «Terminer la génération maintenant» force cette fin (sélection, CSV, sauvegarde) : le classement se fait alors sur une génération inachevée. «Repartir de zéro» met de côté `latest.npz` et `stats.csv` (renommés avec la date), rien n'est supprimé.
-
-**Courbes.** Avec beaucoup de courbes choisies, le bandeau sous le monde (fenêtre haute) est le meilleur endroit : la légende y tient sur une ou deux colonnes. Dans la barre latérale, la place est comptée et les noms sont raccourcis.
-
-**Barre latérale** (panneaux empilés) : Génération, Créature sélectionnée, Entrées/sorties du réseau, et les courbes (dans la barre latérale, ou en bande sous le monde si la fenêtre est assez haute). Quand le graphe du réseau est affiché et qu'il n'y a pas de bande, les courbes sont masquées pour lui laisser la place.
-
-**Graphe du réseau.** Entrées à gauche, couche cachée au milieu, sorties à droite. La luminosité d'un neurone suit son activation (vert si positive, rouge si négative). Un lien est vert ou rouge selon le signe du signal qu'il transporte (poids × activation de la source), et plus épais quand ce signal est fort. Un lien sans signal reste faiblement visible selon la taille de son poids. Les biais ne sont pas dessinés.
+- **Panneau Population** : vivantes sur le plafond de calcul, temps simulé, naissances et morts depuis le départ, génération de lignée moyenne et maximale. Statut «Extinction» quand tout le monde est mort.
+- **Panneau Créature** : énergie, vitesse, âge, repas et poisons, temps aveugle, génération de lignée et nombre de petits.
+- **Réseau** : entrées et sorties de la créature sélectionnée, en barres ou en graphe.
+- **Courbes dans le temps** (menu Courbes) : une valeur toutes les 10 s simulées, lue dans `saves/timeline.csv`. Population, naissances, morts (faim, vieillesse), repas et poisons par 1000 ticks de vie, vitesse, énergie, génération de lignée, âge à la mort, nourriture disponible, naissances bloquées par le plafond.
+- **Paramètres** (touche P) : mutation, seuil de reproduction, âge maximal, champ de vision, nourriture (nombre, énergie, délai, épuisement, positions), poison (nombre, dégâts), obstacles. Tout s'applique tout de suite, sauf le nombre d'obstacles (au prochain départ de zéro, marqué en orange). Les choix sont gardés dans `saves/settings.json`, qui ne contient que les écarts avec `config.py`.
+- **Menu Réseau** : espèces des fondateurs, appliquées au prochain départ de zéro.
+- **Menu Sauvegarde** : sauvegarder la population, charger la dernière sauvegardée, repartir de zéro (confirmation demandée).
+- **Extinction** : la simulation se met en pause avec un message. Repartir de zéro ou charger une population.
+- À la fermeture, la population est gardée (`saves/autosave.npz`) et reprise au lancement suivant (`LOAD_ON_START`). Après une extinction, il n'y a rien à garder.
 
 ## Comment ça marche
 
-**Le monde.** Un tore de 1280 × 720 : une créature qui sort d'un côté réapparaît de l'autre. Il contient 10 sources de nourriture, 5 poisons et 6 obstacles.
+**Le monde.** Un tore de 1280 × 720 : ce qui sort d'un côté rentre de l'autre. 40 sources de nourriture, 5 poisons et 6 obstacles (valeurs par écran, `WORLD_SCALE` multiplie la surface).
 
-**La nourriture.**
-- Une nourriture mangée disparaît pendant 60 ticks, puis revient au même endroit.
-- Après 3 repas, une source est épuisée : elle se déplace au hasard. Sans cela, les créatures campent à côté d'une source.
-- Quand plusieurs créatures touchent la même nourriture, la plus proche gagne.
+**La nourriture.** Une nourriture mangée disparaît 60 ticks puis revient au même endroit. Après 3 repas, la source se déplace au hasard. Quand plusieurs créatures la touchent, la plus proche gagne. Une créature ne mange que si le repas rentre en entier sous le maximum d'énergie (200).
 
-**Les obstacles.**
-- Dessinés comme des anémones de mer vues de dessus : quatre couronnes de tentacules en spirale qui ondulent (boucle de 1,5 s, 12 images avec fondu entre deux images, donc fluide) et remplissent toute la forme (pas de contour visible : la silhouette est celle des tentacules), bouche au centre, tapis sombre qui s'efface vers les bords. Les couronnes suivent la forme : un triangle est une anémone triangulaire, un carré une anémone carrée, avec une tentacule sur chaque coin. Palette indigo, teal ou lilas selon l'obstacle (la nourriture est verte, le poison violet, les créatures orange). Rendu seulement : la collision reste celle des formes pleines (disque, carré ou triangle équilatéral, forme et rotation tirées au hasard), inscrites dans un cercle de rayon 20 à 45, tirés au hasard au début de chaque génération puis fixes. Deux obstacles sont toujours séparés d'au moins 30 : une créature (16 de large) peut toujours passer.
-- Une créature ne peut pas y entrer. Elle est repoussée au bord et glisse le long (sa vitesse n'est pas coupée, elle dépense donc de l'énergie en poussant).
-- Nourriture, poison et créatures ne naissent jamais dans un obstacle, et la nourriture ne réapparaît jamais dedans.
-- Le réseau voit l'obstacle le plus proche dans son champ de vision, par deux entrées : distance **au bord** (0 = contact) et angle vers le centre. Il ne voit pas à travers : rien ne cache la nourriture derrière un obstacle (non fait).
-- Réglable depuis le menu Paramètres (nombre). 0 obstacle = monde d'avant, avec deux entrées constantes.
+**Le poison.** La créature la plus proche qui le touche perd 40 d'énergie. Il réapparaît ensuite ailleurs.
 
-**Le poison.**
-- Losange violet dans le monde. La créature la plus proche qui le touche perd 40 d'énergie (elle meurt si elle tombe à 0), puis le poison disparaît 60 ticks et revient à un endroit au hasard.
-- Il n'est pas limité par la satiété : une créature rassasiée est aussi touchée.
-- Le réseau voit le poison le plus proche dans son champ de vision, par deux entrées dédiées. Un poison en attente de retour est invisible.
-- Réglable depuis le menu Paramètres (nombre, dégâts). 0 poison = monde d'avant, avec deux entrées constantes.
+**Les obstacles.** Disques, carrés ou triangles pleins (dessinés en anémones). On ne peut pas y entrer : la créature glisse le long, et dépense de l'énergie en poussant.
 
-**L'énergie.**
-- Chaque créature démarre à 100 d'énergie, avec un maximum de 200. Une nourriture donne 30.
-- Une créature ne mange que si le repas rentre en entier (énergie ≤ 170), sinon elle laisse la nourriture aux autres.
-- Coût par tick : 0,04 + 0,03 × vitesse. À 0 d'énergie, elle meurt.
+**L'énergie et le mouvement.** Coût par tick : 0,04 + 0,03 × vitesse. Vitesse de 0 à 4, qui change progressivement. Plus on va vite, moins on tourne.
 
-**Le mouvement.**
-- La vitesse va de 0 à 4. Elle change progressivement (accélération et freinage limités à 0,25 par tick).
-- Plus la créature va vite, moins elle peut tourner (rayon de virage plus large).
+**Le réseau** (espèce `complet`). 9 entrées → 6 neurones cachés → 2 sorties (virage, vitesse demandée), 74 poids. Entrées : distance et angle de la nourriture visible la plus proche, énergie, vitesse, «peut manger», distance et angle du poison, distance au bord et angle de l'obstacle. La vision est un cône de 120° et de portée 200. Pas de mémoire.
 
-**Le réseau.** Feed-forward en numpy : 9 entrées → 6 neurones cachés (tanh) → 2 sorties (tanh), soit 74 paramètres.
-
-| Entrées | Sorties |
-|---|---|
-| Distance à la nourriture disponible la plus proche (1 = rien en vue) | Virage |
-| Angle relatif à cette nourriture | Vitesse demandée |
-| Énergie | |
-| Vitesse actuelle | |
-| Peut manger (1 si le repas rentre, 0 sinon) | |
-| Distance au poison le plus proche (1 = rien en vue) | |
-| Angle relatif à ce poison | |
-| Distance au bord de l'obstacle le plus proche (1 = rien en vue) | |
-| Angle relatif à cet obstacle | |
-
-La vision est un cône : portée de 200 (`VISION_RANGE`), ouverture de 120° centrée sur le cap (`VISION_FOV_DEGREES`, réglable dans Paramètres, 360 = tout autour). Ce qui est hors du cône est invisible, nourriture comme poison. Une créature ne voit donc pas ce qui est derrière elle : la part de créatures « aveugles » monte (environ 63 % à 10 nourritures contre 24 % en vision circulaire), pense à ajuster `FOOD_COUNT`. Le réseau n'a pas de mémoire.
-
-**L'évolution.**
-1. Une génération compte 100 créatures.
-2. Elle s'arrête quand il reste 20 vivantes, ou au plafond de 36 000 ticks (10 minutes simulées).
-3. Les 20 meilleures sont classées par (âge, nourriture mangée), l'énergie restante ne départageant que les égalités exactes.
-4. Elles passent telles quelles dans la génération suivante (élitisme), avec 80 enfants : copie d'un parent plus un bruit gaussien (écart-type 0,1) sur chaque poids. Pas de croisement.
-5. Chaque génération repart dans un monde neuf, avec des créatures neuves.
-
-La seed est fixée (42) : un lancement de zéro est reproductible. Une reprise de sauvegarde ne l'est pas exactement, car l'état du générateur aléatoire n'est pas sauvegardé.
+**La vie et la mort** (`evolution/continuous.py`).
+1. Départ : 200 créatures aux réseaux tirés au hasard.
+2. Une créature d'au moins 10 s qui a 120 d'énergie fait un petit (au plus un toutes les 5 s) : elle perd 60, le petit naît à côté avec 50 et hérite de son réseau plus un bruit gaussien (écart-type 0,1).
+3. Mort de faim (énergie 0) ou de vieillesse (100 s).
+4. Plafond de calcul : 400 créatures. Les naissances qu'il bloque sont comptées : si ce n'est pas 0, la population n'est plus réglée par la nourriture.
+5. Une extinction arrête tout.
 
 ## Les espèces (profils de réseau)
 
-Plusieurs profils évoluent **dans le même monde, en même temps** : 100 créatures au total, réparties à égalité entre les espèces actives (25 chacune avec 4 profils, `POPULATION_SIZE`), la même nourriture, le même poison, les mêmes obstacles, une seule horloge de génération. Chaque espèce a sa propre sélection : elle garde la même part de parents (`PARENTS_COUNT` = 20 sur 100, soit 5 sur 25) et complète avec des enfants mutés. La génération se termine quand chaque espèce est réduite à ses parents (5 vivantes sur 25), ou au plafond de durée. Changer le nombre d'espèces change leur effectif : une sauvegarde trop grosse est tronquée à ses meilleurs parents.
-
-Un profil dit quels capteurs alimentent le réseau, la taille de sa couche cachée (0 = couche directe, sans neurones cachés), si la vitesse est une sortie ou une valeur fixe, et le nombre de cellules de mémoire.
+Un profil dit quels capteurs alimentent le réseau, la taille de la couche cachée, si la vitesse est une sortie, et le nombre de cellules de mémoire. Plusieurs espèces peuvent partager le monde (menu Réseau).
 
 | Profil | Entrées | Sorties | Poids |
 |---|---|---|---|
-| `chasseur` | nourriture (distance, angle) | virage, vitesse | 6 |
+| `complet` (défaut) | nourriture, énergie, vitesse, peut manger, poison, obstacle ; 6 cachés | virage, vitesse | 74 |
+| `chasseur` | nourriture | virage, vitesse | 6 |
 | `chasseur_rassasie` | nourriture + peut manger | virage, vitesse | 8 |
-| `prudent` | nourriture + poison, 3 neurones cachés | virage, vitesse | 23 |
+| `prudent` | nourriture + poison, 3 cachés | virage, vitesse | 23 |
 | `vitesse_fixe` | nourriture | virage (vitesse fixe) | 3 |
-
-Choix des espèces actives : menu **Réseau** (cases à cocher). Appliqué à la fin de la génération en cours, conservé au redémarrage (`ACTIVE_PROFILES` dans `saves/settings.json`, ou `config.py`).
-
-Sauvegardes : une par espèce dans `saves/profiles/<nom>/` (`latest.npz`, `stats.csv`). « Repartir de zéro » remet toutes les espèces à zéro. Les numéros de génération sont indépendants par espèce. Le graphe « Comparer les profils » (menu Courbes) aligne les espèces par ligne de CSV, pas par numéro de génération : tant que toutes tournent ensemble, c'est la même chose.
-
-Pour ajouter un profil : une entrée dans `PROFILES` de `brain/profiles.py`. Capteurs disponibles dans `SENSORS`. Une créature ne peut que tourner et choisir sa vitesse (ou rouler à vitesse fixe). Les cellules de mémoire sont les seules sorties en plus.
-
-## Taille du monde et caméra
-
-`WORLD_SCALE` dans `config.py` (2 par défaut) : côté du monde en écrans. 2 donne 2560×1440, soit 4 fois la surface de la fenêtre. Les nombres de nourritures, poisons et obstacles sont donnés par écran de 1280×720 et multipliés par la surface. Le monde est toroïdal : ce qui sort d'un côté rentre de l'autre, la caméra dessine les copies près des bords.
-
-## Sauvegardes et statistiques
-
-Tout est dans `saves/`, ignoré par git.
-
-- `profiles/<nom>/latest.npz` : génomes des 20 parents et numéro de génération, écrasé à chaque fin de génération. Au lancement, `LOAD_ON_START = True` reprend cette sauvegarde.
-- `profiles/<nom>/stats.csv` : une ligne par génération et par espèce.
-- Si la taille du réseau a changé, l'ancienne sauvegarde est mise de côté (`latest_incompatible_<date>.npz`) et l'évolution repart de zéro.
-- Si l'évolution repart de zéro, l'ancien `stats.csv` est mis de côté (`stats_ancien_<date>.csv`).
-
-Colonnes de `stats.csv` (âges en ticks, 60 ticks = 1 seconde simulée) :
-
-| Colonne | Sens |
-|---|---|
-| `generation`, `ticks`, `alive`, `best_age` | Numéro, durée, vivantes à la fin, âge du meilleur |
-| `mean_food`, `max_food` | Nourriture mangée par les parents |
-| `mean_speed`, `mean_energy` | Vitesse et énergie des parents au dernier tick |
-| Toutes les autres colonnes | Une colonne par constante de `config.py`, nommée en minuscules (`mutation_std`, `food_respawn_delay`, `vision_range`...), avec la valeur en vigueur pendant la génération. Booléens : 1/0. Listes et couleurs : JSON. Les chemins (`SAVE_DIR`, `GENOMES_FILE`, `STATS_FILE`) sont exclus. Si `config.py` gagne une constante, la colonne est ajoutée au fichier existant (cases vides pour les anciennes lignes) ; si une colonne disparaît, l'ancien fichier est mis de côté |
-| `food_count` | Nombre de nourritures du monde pour cette génération |
-| `total_food` | Nourriture mangée par toute la population |
-| `mean_poison`, `total_poison` | Poisons touchés : moyenne des parents, total de la population |
-| `obstacle_frac` | Part de leur vie que les parents passent collés à un obstacle |
-| `blind_frac`, `blind_speed`, `blind_turn` | Part du temps sans aucune nourriture à portée, vitesse et virage dans ces moments (parents) |
+| `scripte` | règles écrites à la main (`brain/scripted.py`), n'évolue pas : point de référence | virage, vitesse | 0 |
 
 ## Configuration
 
-Tout se règle dans `config.py`. Plusieurs valeurs sont des valeurs de départ à ajuster, pas des résultats établis.
-
-| Paramètre | Valeur | Rôle |
-|---|---|---|
-| `POPULATION_SIZE`, `PARENTS_COUNT` | 100, 20 | Taille d'une génération, nombre de parents |
-| `FOOD_COUNT` | 10 | Nombre de sources |
-| `FOOD_RESPAWN_DELAY`, `FOOD_MAX_EATS` | 60, 3 | Délai de retour, repas avant épuisement |
-| `POISON_COUNT`, `POISON_ENERGY` | 5, 40 | Nombre de poisons, énergie perdue au contact |
-| `OBSTACLE_COUNT`, `OBSTACLE_SHAPES`, `OBSTACLE_RADIUS_MIN`, `OBSTACLE_RADIUS_MAX`, `OBSTACLE_MIN_GAP` | 6, les 3 formes, 20, 45, 30 | Nombre, formes possibles, taille (rayon du cercle circonscrit) et écart minimal entre cercles circonscrits |
-| `ENERGY_MAX`, `FOOD_ENERGY` | 200, 30 | Satiété, énergie d'une nourriture |
-| `ENERGY_BASE_COST`, `ENERGY_MOVE_COST` | 0,04, 0,03 | Coût d'énergie par tick |
-| `CREATURE_ACCELERATION`, `CREATURE_MAX_TURN`, `TURN_SPEED_PENALTY` | 0,25, 0,25, 0,5 | Mouvement |
-| `MUTATION_STD` | 0,1 | Force des mutations |
-| `NN_HIDDEN` | 6 | Neurones cachés |
-| `GEN_MAX_TICKS` | 36000 | Plafond de durée d'une génération |
-
-Changer `NN_INPUTS`, `NN_HIDDEN` ou `NN_OUTPUTS` rend les sauvegardes incompatibles. Les libellés affichés dans l'interface (`INPUT_LABELS`, `OUTPUT_LABELS`) doivent suivre le même ordre que les vecteurs de `World.sense` et `Creature.update`. Un `assert` vérifie leur nombre.
+`config.py` est la seule référence. Le menu peut remplacer certaines valeurs (`saves/settings.json`, écarts seulement). Les expériences sans affichage ne lisent jamais `settings.json`. Les valeurs sont des valeurs de départ, réglées par des expériences notées dans les commentaires.
 
 ## Structure du projet
 
 ```
-main.py                 Boucle pygame, événements, fin de génération
-config.py               Toutes les constantes
+main.py                 Boucle pygame, événements, menus, sauvegardes (aucune règle de simulation)
+config.py               Toutes les constantes (seule référence)
 core/
-  world.py              Monde : nourriture, repas, capteurs, fin de génération
-  creature.py           Créature : mouvement, énergie, compteurs d'exploration
-  food.py               Nourriture (délai, épuisement)
+  world.py              Monde : objets, déplacements, contacts (nourriture, poison), collisions
+  sensors.py            Capteurs : un capteur = une entrée de SENSORS
+  creature.py           Créature : mouvement, énergie, lignée, compteurs
+  food.py, obstacle.py  Nourriture/poison, obstacles (géométrie)
   physics.py            Distances et angles sur le tore
 brain/
   network.py            Réseau de neurones (génome = vecteur à plat)
+  profiles.py           Espèces : capteurs, couche cachée, sorties
+  scripted.py           Contrôleur écrit à la main (référence)
 evolution/
-  population.py         Sélection des parents, construction de la génération suivante
+  continuous.py         Naissances, morts, mesures (timeline.csv), sauvegarde d'une population
   mutation.py           Mutation gaussienne
-rendering/
-  scene.py              Dessin du monde et des créatures
-  hud.py                Panneaux de la barre latérale, graphe du réseau et courbes
-  menu.py               Barre de menu et menus déroulants
-  overlay.py            Barre de contrôle, légende, aide, infobulles, panneau Paramètres, grand réseau
-  obstacles.py          Sprites des obstacles (anémones animées)
-  layout.py, display.py Mise en page, plein écran
-utils/
-  persistence.py        Sauvegarde et chargement des génomes
-  logger.py             Écriture de stats.csv
-saves/                  Sauvegardes et statistiques (ignoré par git)
+experiments/
+  run.py                Plusieurs graines en parallèle, résultats conservés
+  summary.py            Résumé et comparaison d'expériences
+  jardin.py             Jardin commun : mêmes génomes, conditions différentes
+  gradient.py           Gradient de sélection : quel trait laisse le plus de petits
+  results/              Résultats (CSV dans git, génomes ignorés)
+rendering/              Tout l'affichage
+utils/                  Réglages du menu, format du temps
+tests/                  Tests (python -m pytest)
+saves/                  Partie en cours : timeline.csv, autosave.npz, populations/ (ignoré par git)
 ```
 
-## Lire les résultats
+## Ajouter une fonctionnalité
 
-- `alive` proche de 100 au plafond de 36 000 ticks : presque tout le monde survit, la sélection par la survie n'agit plus. Il faut durcir le monde (par exemple moins de nourriture).
-- `mean_food` des parents qui monte puis plafonne : la population a «résolu» le monde tel qu'il est.
-- `blind_frac` élevé avec une vitesse faible : les créatures attendent plutôt qu'elles ne cherchent.
-- Les premières générations peuvent sélectionner des créatures quasi immobiles : rester sur place coûte 0,04 par tick, donc une créature immobile survit environ 2500 ticks. Cela se corrige en quelques générations dans les exécutions observées.
+| Je veux ajouter... | Où |
+|---|---|
+| un capteur | une entrée dans `SENSORS` (`core/sensors.py`), puis le nommer dans un profil |
+| une espèce / un réseau | une entrée dans `PROFILES` (`brain/profiles.py`) |
+| un type d'objet perçu | une liste dans `World.items` (`core/world.py`) + un capteur `nearest_of("<type>")` |
+| une règle de vie (naissance, mort) | `ContinuousSimulation` (`evolution/continuous.py`) |
+| une mesure dans le temps | `ContinuousSimulation.sample` + `SAMPLE_HEADER`, puis une courbe dans `SERIES` (`rendering/hud.py`) |
+| un réglage du menu | `PARAMS` de `main.py`, une ligne du menu Paramètres (`rendering/menu.py`), son aide (`PARAM_INFO`, `rendering/overlay.py`) |
+
+Règle : un mécanisme à la fois, puis une expérience sur 4 graines au moins avant le suivant.
+
+## Expériences
+
+```bash
+python -m experiments.run --name <nom> --seeds 1 2 3 4 --ticks 120000 [--set FOOD_COUNT=30 MUTATION_STD=0.2]
+python -m experiments.run --name suite --from-population saves/populations/<fichier>.npz
+python -m experiments.summary experiments/results/<run A> experiments/results/<run B>
+python -m experiments.jardin <population.npz> aleatoire --densities 30 280
+python -m experiments.gradient experiments/results/<run>/seed_*/population_finale.npz
+```
+
+Chaque run écrit `experiments/results/<date>_<nom>/` : `run.json` (commande, commit, toutes les constantes), un `timeline.csv` par graine, `summary.csv` (moyenne et écart-type entre graines), et la population finale. Compter environ 7 min par graine pour 120 000 ticks sur 2 cœurs : lancer les longs runs depuis un terminal.
+
+Deux expériences dont les intervalles (± écart-type) se recouvrent ne sont pas départagées : ajouter des graines avant de conclure.
+
+## Résultats
+
+### Évolution continue (08/11/2026)
+
+- **Calibrage** : depuis des réseaux au hasard, seuil de reproduction 150 → extinction. Seuil 120 : 2 extinctions sur 8 graines avec 30 nourritures, 0 sur 8 avec 40.
+- **Équilibre** (4 graines × 120 000 ticks) : 0 extinction. Goulot au départ (200 → 20-50), puis population stable vers 283 ± 18 à partir de 60 000-80 000 ticks, sans que le plafond serve. À l'équilibre, ~2 repas par 1000 ticks de vie, soit à peu près la dépense d'une créature lente : la nourriture règle la population.
+- **Chute de la vitesse** (de 2-3 à ~0,4 à l'équilibre) :
+  - Jardin commun (mêmes génomes évolués, sans naissances) : vitesse 1,1-1,5 à 30 créatures, 0,4-0,6 à 280. Les réseaux au hasard ne réagissent presque pas (1,54 contre 1,42). La chute est donc surtout un **comportement appris par l'évolution qui dépend de la densité** (plasticité), pas un ralentissement figé dans les gènes.
+  - Gradient de sélection à l'équilibre (4 populations, ~1 500 morts chacune) : pas de lien simple entre lenteur et nombre de petits (rho moyen +0,07 ± 0,11). Les plus lents (vitesse ~0,1) et les plus rapides (~0,7-1) ont le moins de petits, les intermédiaires (0,2-0,5) le plus : forme de **sélection stabilisante**. Corrélation seulement : les plus lents sont peut-être lents parce qu'affaiblis.
+  - Limites : 2 tirages par condition du jardin, une seule suite par population pour le gradient.
+
+### Mode générations (supprimé le 08/11, historique)
+
+Le monde durci (×2, 5 nourritures, 20 poisons à 80, 25 obstacles) avec une sélection sur l'âge d'abord menait au piège d'immobilité sur 4 graines sur 4. Dans le monde réparé (10 nourritures), l'évolution progressait sur 4 graines sur 4. Résultats dans `experiments/results/20261108_20*` (format de l'époque, lisible par `experiments.summary`).
 
 ## Limites connues
 
-- Quand rien n'est en vue, les entrées du réseau sont constantes (la mémoire existe comme option de profil, non testée).
-- Sélection : seul `rank_key` (âge, nourriture, énergie) existe. Choisir l'objectif de sélection n'est pas encore implémenté.
-- Caméra et monde ×2 testés en headless uniquement (fenêtre simulée), pas sur la vraie fenêtre.
-- L'exploration n'est pas démontrée : les mesures disponibles montrent surtout des créatures qui attendent ou campent. Les règles de réapparition et d'épuisement sont là pour changer ça, sans résultat établi à ce jour.
-- Le coût de calcul est dominé par la simulation (400 créatures sur le monde ×2 : environ 5 ms par tick, mesuré en headless).
-- Les résultats d'une exécution unique ne prouvent pas grand-chose : les trajectoires varient d'une exécution à l'autre.
+- Le réseau n'a pas de mémoire : quand rien n'est en vue, ses entrées sont constantes.
+- Le corps n'évolue pas encore (prochaine étape : gène de taille).
+- La simulation est lente au-delà de quelques centaines de créatures (réseaux calculés un par un).
 
 ## Pistes
 
-Dans cet ordre : poison avec deux canaux de perception, obstacles, autres créatures, zones riches et pauvres, monde plus vaste, mémoire dans le réseau.
+Dans l'ordre : gène de taille avec son coût (et un témoin de dérive), reproduction à deux parents, environnement qui change, interactions (prédateurs, partage), signaux, apprentissage et transmission.

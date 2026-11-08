@@ -5,7 +5,7 @@ from core.physics import normalize_angle
 from brain.profiles import PROFILES
 
 class Creature:
-    def __init__(self, x, y, angle, energy, brain, profile):
+    def __init__(self, x, y, angle, energy, brain, profile, uid=0, parent_id=None, birth_tick=0, lineage_gen=0):
         self.x = float(x)
         self.y = float(y)
         self.angle = angle
@@ -15,6 +15,14 @@ class Creature:
         self.profile = profile   # Name of its network profile (species), see brain/profiles.py
         self._spec = PROFILES[profile]
         self.alive = True
+        self.death_cause = None   # "faim" or "vieillesse" (poison kills through hunger)
+        # Lineage (continuous evolution): identity, parent, birth, depth of the lineage (0 = random founder)
+        self.uid = uid
+        self.parent_id = parent_id
+        self.birth_tick = birth_tick
+        self.lineage_gen = lineage_gen
+        self.last_birth_age = None   # Age at its last birth (cooldown)
+        self.children = 0
         self.food_eaten = 0 
         self.poison_hits = 0
         self.obstacle_ticks = 0   # Ticks spent pressed against an obstacle
@@ -26,12 +34,14 @@ class Creature:
         self.blind_ticks = 0
         self.blind_speed_sum = 0.0
         self.blind_turn_sum = 0.0
+        self.speed_sum = 0.0     # Sum of its speed over its life: mean speed = speed_sum / age
 
     def update(self, inputs, world_width, world_height):
         if not self.alive:
             return
         if self.energy <= 0:
             self.alive = False
+            self.death_cause = "faim"
             return
 
         # The network decides: outputs are in [-1, 1] (tanh)
@@ -73,6 +83,7 @@ class Creature:
         self.energy -= config.ENERGY_BASE_COST + config.ENERGY_MOVE_COST * self.speed
 
         self.age += 1 #Added age increment to track how long the creature has been alive
+        self.speed_sum += self.speed
 
     def hit_by_poison(self, amount):
         """Touching a poison costs energy. The creature dies at its next update if the energy reaches 0."""

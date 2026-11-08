@@ -1,4 +1,14 @@
-#Configuration file for the game
+"""Configuration: the single reference for every setting.
+
+- The game may override some values from its menu: they are kept in saves/settings.json, which only holds the
+  values that differ from this file, and they are listed in the terminal at launch.
+- Headless experiments (experiments/run.py) never read settings.json: they use this file plus their --set options.
+- Headless runs write every constant in their run.json.
+
+World values (08/11/2026): back to the last world where evolution worked (one screen, 10 foods), keeping the poison,
+the cone of vision and the obstacles. The hardened world (×2, 5 foods, 20 poisons at 80, 25 obstacles per screen)
+ended every generation at ~2500 ticks with parents nearly still: see the README, section «Expériences».
+"""
 import os
 
 SCREEN_WIDTH = 1280
@@ -12,14 +22,15 @@ CREATURE_COLOR = (240, 200, 80)
 DEAD_COLOR = (90, 90, 90)
 
 # Configuration for world
-WORLD_SCALE = 2             # Side of the world in screens (a screen = SCREEN_WIDTH x SCREEN_HEIGHT): 1 = as big as the window area
+WORLD_SCALE = 1             # Side of the world in screens (a screen = SCREEN_WIDTH x SCREEN_HEIGHT): 1 = as big as the window area
 WORLD_WIDTH = round(SCREEN_WIDTH * WORLD_SCALE)
 WORLD_HEIGHT = round(SCREEN_HEIGHT * WORLD_SCALE)
 # FOOD_COUNT, POISON_COUNT and OBSTACLE_COUNT are given per screen-sized area: the world holds WORLD_SCALE² times more
 
 # Configuration for food
 SEED = 42
-FOOD_COUNT = 5
+FOOD_COUNT = 40             # 40 since the continuous evolution (08/11): at 30, 2 extinctions out of 8 seeds from a random start,
+                            # at 40, 0 out of 8. The generation runs of 08/11 used 10 (--set FOOD_COUNT=10 to reproduce them)
 FOOD_RADIUS = 4
 FOOD_COLOR = (90, 200, 110)
 
@@ -28,23 +39,6 @@ FOOD_ENERGY = 30.0
 INITIAL_ENERGY = 100.0
 ENERGY_MAX = 200.0          # Satiety: a creature only eats if the whole meal fits (energy + food <= max). Starting value, to tune
 
-# Configuration for population
-POPULATION_SIZE = 100       # Creatures in the whole world, split evenly between the active profiles
-
-# Configuration for evolution
-GEN_MAX_TICKS = 36000  # Safety cap: 10 simulated minutes (600 s x TICKS_PER_SECOND)
-PARENTS_COUNT = 20          # Parents kept in the whole world: each species keeps its share (same ratio as its population)
-
-
-def species_size(index, n_species):
-    """Creatures of the species number `index` (0-based) when `n_species` share POPULATION_SIZE; the remainder goes to the first ones."""
-    base, rest = divmod(POPULATION_SIZE, max(1, n_species))
-    return base + (1 if index < rest else 0)
-
-
-def parents_for(size):
-    """Parents kept by a species of `size` creatures: PARENTS_COUNT / POPULATION_SIZE of it (at least 1, fewer than size)."""
-    return max(1, min(size - 1, round(size * PARENTS_COUNT / POPULATION_SIZE))) if size > 1 else size
 
 # Configuration for time display
 TICKS_PER_SECOND = 60
@@ -65,20 +59,31 @@ ENERGY_MOVE_COST = 0.03     # Extra energy lost per tick, per unit of speed
 
 # Configuration for the neural network
 # The network itself (sensors, outputs, hidden layer, memory) is set by each profile: see brain/profiles.py
-# Profiles living in the same world, sharing POPULATION_SIZE creatures (menu Réseau, saved in settings.json)
-ACTIVE_PROFILES = ["chasseur", "chasseur_rassasie", "prudent", "vitesse_fixe"]
+# Profiles (species) of the founders: INITIAL_POPULATION split between them (menu Réseau, applied at the next restart)
+ACTIVE_PROFILES = ["complet"]
 NN_INIT_STD = 0.5           # Std of the initial random weights
 CREATURE_MAX_TURN = 0.25    # Max rotation per tick (radians) at rest, when the turn output is +/-1 (starting value, to tune)
 TURN_SPEED_PENALTY = 0.5    # The faster the creature, the wider its turns: max turn x (1 - penalty x speed / max speed). Starting value, to tune
 CREATURE_ACCELERATION = 0.25  # Max change of speed per tick, accelerating or braking (starting value, to tune)
 
+# Configuration for continuous evolution (evolution/continuous.py): no generations, creatures are born and die.
+# Starting values, to tune (see the project doc conception-evolution-continue.md)
+INITIAL_POPULATION = 200    # Random creatures at the start (split between ACTIVE_PROFILES)
+REPRO_THRESHOLD = 120.0     # Energy needed to give birth (150: random founders rarely reach it, extinction)
+REPRO_COST = 60.0           # Energy the parent loses at a birth
+REPRO_CHILD_ENERGY = 50.0   # Energy of the newborn (less than the cost: no perpetual motion)
+MATURITY_AGE = 600          # Ticks before a creature can give birth (10 s)
+REPRO_COOLDOWN = 300        # Ticks between two births of the same creature
+AGE_MAX = 6000              # Death of old age (100 s). 0 = never
+POP_MAX = 400               # Computing cap: at the cap births are blocked and counted (cap_blocked)
+SAMPLE_TICKS = 600          # One line of timeline.csv every SAMPLE_TICKS ticks
+
 # Configuration for mutation
-MUTATION_STD = 0.2          # Std of the gaussian noise added to each weight of a child
+MUTATION_STD = 0.1          # Std of the gaussian noise added to each weight of a child (0.2 was chosen on one seed only)
 
 # Configuration for saving and logging
 SAVE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "saves")
-# Each profile saves its population and its CSV in saves/profiles/<name>/ (brain/profiles.py)
-LOAD_ON_START = True        # Each profile resumes from its own save (saves/profiles/<name>/latest.npz) if it exists
+LOAD_ON_START = True        # The game resumes the population it had when it was closed (saves/autosave.npz)
 LOAD_SETTINGS = True        # Reuse the settings changed from the menu (saves/settings.json). False = values of this file
 
 # Configuration for rendering (organic style)
@@ -100,15 +105,24 @@ HUD_VALUE_COLOR = (235, 240, 240)
 # Configuration for food respawn
 FOOD_RESPAWN_DELAY = 60     # Ticks before an eaten food is available again (starting value, to tune)
 FOOD_FIXED_POSITIONS = True  # True: food comes back at the same place; False: at a new random place
-POISON_COUNT = 20           # Poison sources in the world (0 = no poison). The network sees the nearest one
+POISON_COUNT = 5            # Poison sources in the world (0 = no poison). The network sees the nearest one
 POISON_ENERGY = 40.0        # Energy lost by the creature that touches a poison (starting value, to tune)
 POISON_COLOR = (176, 96, 214)
 
 # Configuration for obstacles
-OBSTACLE_COUNT = 25         # Solid obstacles, drawn at random at the start of each generation (0 = none)
+OBSTACLE_COUNT = 6          # Solid obstacles, drawn at random at the start of each generation (0 = none)
 OBSTACLE_SHAPES = ("circle", "square", "triangle")   # Shapes drawn at random (one entry = only that shape)
 OBSTACLE_RADIUS_MIN = 20    # Radius range of the circle around the shape (world units)
 OBSTACLE_RADIUS_MAX = 45
 OBSTACLE_MIN_GAP = 30       # Minimum free space between two obstacles (a creature is 16 wide: it can always pass)
 OBSTACLE_COLOR = (92, 102, 112)
 FOOD_MAX_EATS = 3           # Times a source can be eaten before it moves elsewhere (starting value, to tune)
+
+
+def refresh_derived():
+    """Recomputes the values derived from others. Call after changing WORLD_SCALE, SCREEN_* or ENERGY_MAX at run time."""
+    global WORLD_WIDTH, WORLD_HEIGHT, ENERGY_INPUT_MAX, WINDOW_WIDTH
+    WORLD_WIDTH = round(SCREEN_WIDTH * WORLD_SCALE)
+    WORLD_HEIGHT = round(SCREEN_HEIGHT * WORLD_SCALE)
+    ENERGY_INPUT_MAX = ENERGY_MAX
+    WINDOW_WIDTH = SCREEN_WIDTH + PANEL_WIDTH

@@ -8,7 +8,6 @@ import pygame
 
 import config
 from brain.profiles import PROFILES, input_labels, output_labels
-from evolution.population import rank_key
 from rendering.hud import (VALUE, LABEL, MINT, AMBER, CORAL, create_fonts, network_rows,
                            _node, _edge, _clip)
 from rendering.obstacles import PALETTES
@@ -32,8 +31,9 @@ TOOLBAR = [
     ("color", "dots", "Couleur des créatures (énergie, vitesse, nourriture)", "C"),
     ("legend", "info", "Légende des couleurs et des symboles", "L"),
     None,
-    ("best", "star", "Sélectionner la meilleure créature", "B"),
-    ("follow", "target", "Suivre la lignée du meilleur d'une génération à l'autre", "T"),
+    ("best", "star", "Sélectionner la créature qui a eu le plus de petits", "B"),
+    ("follow", "target", "Suivre la lignée : à la mort de la sélection, passer à son plus jeune descendant", "T"),
+    ("save_pop", "save", "Sauvegarder cette population", "S"),
     ("graph", "net", "Graphe du réseau : masqué, petit (barre latérale), grand", "N"),
     None,
     ("params_panel", "sliders", "Paramètres de simulation", "P"),
@@ -43,7 +43,8 @@ TOOLBAR = [
 # Label, explanation of every setting of the panel (keys = main.PARAMS)
 PARAM_INFO = {
     "mutation": ("Mutation", "Amplitude du bruit ajouté à chaque poids d'un enfant."),
-    "parents": ("Parents conservés", "Parents gardés à chaque génération, pour tout le monde : chaque espèce en garde sa part (20 sur 100 = 20 %). La génération s'arrête quand chaque espèce est réduite à ses parents."),
+    "repro": ("Seuil de reproduction", "Énergie qu'il faut atteindre pour faire un petit (le parent perd 60, le petit naît avec 50)."),
+    "age_max": ("Âge maximal", "Mort de vieillesse. Sans elle, des immortels bloquent le renouvellement."),
     "fov": ("Champ de vision", "Ouverture du cône de vision. Tout autour = 360°."),
     "food": ("Nombre de nourritures", "Sources de nourriture dans le monde."),
     "food_energy": ("Énergie d'une nourriture", "Énergie gagnée à chaque repas."),
@@ -52,23 +53,23 @@ PARAM_INFO = {
     "fixed": ("Positions de la nourriture", "Fixes : elle revient au même endroit. Aléatoires : nouvel endroit à chaque fois."),
     "poison_count": ("Nombre de poisons", "Sources de poison dans le monde. 0 = aucun."),
     "poison_energy": ("Dégâts d'un poison", "Énergie perdue au contact d'un poison."),
-    "obstacle_count": ("Nombre d'obstacles", "Obstacles (formes et places tirées au hasard) au début de chaque génération. 0 = aucun."),
+    "obstacle_count": ("Nombre d'obstacles", "Obstacles (formes et places tirées au hasard). S'applique au prochain départ de zéro. 0 = aucun."),
 }
 
 # Explanations shown when the mouse rests on a label of the side bar: (logical y of the row, text)
 GEN_TIPS = [
-    (38, "Vivantes : créatures encore en vie. La génération s'arrête quand chaque espèce est réduite à ses parents ({parents} au total, répartis)."),
-    (68, "Temps : temps simulé écoulé, sur le plafond de la génération."),
-    (98, "Meilleur âge : durée de vie de la créature qui a tenu le plus longtemps. Premier critère de classement."),
-    (116, "Sans nourriture : créatures qui n'ont encore rien mangé dans cette génération."),
+    (38, "Vivantes sur le plafond de calcul ({pop_max}). Au plafond, les naissances sont bloquées : la population n'est plus réglée par la nourriture."),
+    (68, "Temps simulé depuis le départ de cette population."),
+    (86, "Naissances et morts depuis le départ. Une créature naît quand son parent atteint le seuil d'énergie."),
+    (104, "Génération de lignée : nombre d'ancêtres depuis les fondateurs tirés au hasard (0)."),
 ]
 CREATURE_TIPS = [
     (36, "Énergie restante. À 0, la créature meurt. Plafond : {energy_max:g}."),
     (66, "Vitesse actuelle, de 0 à {speed_max:g}. Elle change progressivement vers la vitesse demandée par le réseau."),
     (96, "Âge : durée de vie de cette créature (temps simulé)."),
-    (114, "Nourritures mangées / poisons touchés depuis le début de la génération."),
+    (114, "Nourritures mangées / poisons touchés depuis sa naissance."),
     (132, "Temps aveugle : part de sa vie passée sans aucune nourriture dans son champ de vision (cône)."),
-    (150, "Rang : classement par âge, puis nourriture mangée, puis énergie restante. 1 = la meilleure."),
+    (150, "Génération de lignée et nombre de petits. Les petits sont la seule chose que la sélection naturelle récompense."),
 ]
 NET_TIPS = {
     "Distance": "Distance à la nourriture visible la plus proche, divisée par la portée. 1 = rien en vue.",
@@ -88,7 +89,8 @@ HELP_KEYS = [
     ("Espace", "Pause / reprendre"), ("→", "Avancer d'un tick (en pause)"), ("↑  ↓", "Vitesse de simulation"),
     ("D", "Debug : off / sélection / toutes"), ("C", "Couleur : espèce / énergie / vitesse / nourriture"),
     ("L", "Légende"), ("G", "Courbes"), ("N", "Réseau : masqué / petit / grand"),
-    ("B", "Sélectionner la meilleure créature"), ("T", "Suivre la lignée du meilleur"),
+    ("B", "Sélectionner la créature qui a eu le plus de petits"), ("T", "Suivre la lignée"),
+    ("S", "Sauvegarder la population"),
     ("+  -  0", "Zoom avant, arrière, toute la carte"), ("V", "Caméra sur la sélection"),
     ("P", "Paramètres"), ("F", "Plein écran"), ("H  ?", "Cette aide"), ("Échap", "Fermer, puis quitter"),
 ]
@@ -174,6 +176,11 @@ def _icon(surf, name, rect, color, fonts, u):
             y = cy + (i - 1) * s * 0.85
             pygame.draw.line(surf, color, (cx - s, y), (cx + s, y), 1)
             pygame.draw.circle(surf, color, (cx - s + 2 * s * k, y), max(2, round(s * 0.3)))
+    elif name == "save":
+        body = pygame.Rect(cx - s, cy - s, 2 * s, 2 * s)
+        pygame.draw.rect(surf, color, body, w, border_radius=max(1, round(2 * u)))
+        pygame.draw.rect(surf, color, (cx - s * 0.5, cy - s, s, s * 0.7))
+        pygame.draw.line(surf, color, (cx - s * 0.6, cy + s * 0.35), (cx + s * 0.6, cy + s * 0.35), w)
     elif name == "help":
         img = fonts["base"].render("?", True, color)
         surf.blit(img, (cx - img.get_width() // 2, cy - img.get_height() // 2))
@@ -195,6 +202,7 @@ class Overlay:
         self.legend_open = False
         self.params_open = False
         self.net_big = False
+        self.toast_text, self.toast_until = None, 0.0   # Short message at the bottom of the world (toast())
         self.mouse = None
         self.mouse_since = 0.0
         self.state = {}
@@ -283,6 +291,10 @@ class Overlay:
 
     # ---------- drawing ----------
 
+    def toast(self, text, seconds=4.0):
+        """Shows `text` at the bottom of the world for a few seconds (saves, extinction...)."""
+        self.toast_text, self.toast_until = text, time.monotonic() + seconds
+
     def draw(self, window, state, world, selected, params):
         """state: paused, speed, debug (0-2), color, follow, graph (0-2). params: rows of the settings panel."""
         self.state = state
@@ -310,6 +322,12 @@ class Overlay:
 
         if state["paused"]:
             window.blit(self.banner, (w.centerx - self.banner.get_width() // 2, w.y + round(60 * u)))
+        if self.toast_text and time.monotonic() < self.toast_until:
+            img = f["base"].render(self.toast_text, True, VALUE)
+            box = img.get_rect(midbottom=(w.centerx, w.bottom - round(24 * u))).inflate(round(28 * u), round(14 * u))
+            pygame.draw.rect(window, PANEL, box, border_radius=round(8 * u))
+            pygame.draw.rect(window, BORDER, box, width=1, border_radius=round(8 * u))
+            window.blit(img, img.get_rect(center=box.center))
         if self.legend_open:
             self._draw_legend(window)
         if self.net_big:
@@ -428,8 +446,8 @@ class Overlay:
         pygame.draw.rect(window, BORDER, rect, width=1, border_radius=round(12 * u))
         self._rects["params"] = rect
         window.blit(f["title"].render("Paramètres de simulation", True, VALUE), (rect.x + pad, rect.y + round(12 * u)))
-        for k, line in enumerate(("Les changements s'appliquent au début de la génération suivante (orange = en attente).",
-                                  "« Appliquer maintenant » termine la génération en cours et applique tout de suite.")):
+        for k, line in enumerate(("Les changements s'appliquent tout de suite, sauf les obstacles (orange = en attente).",
+                                  "« Repartir de zéro » relance une population au hasard avec tous les réglages.")):
             window.blit(f["small"].render(_clip(f["small"], line, pw - 2 * pad), True, LABEL),
                         (rect.x + pad, rect.y + round((42 + 17 * k) * u)))
         mouse = self.mouse
@@ -465,7 +483,7 @@ class Overlay:
         # Footer buttons, right to left
         by, bh = rect.bottom - foot_h + round(12 * u), round(30 * u)
         x = rect.right - pad
-        buttons = (("params_close", "Fermer", True, False), ("end_gen", "Appliquer maintenant", True, any_pending),
+        buttons = (("params_close", "Fermer", True, False), ("restart_now", "Repartir de zéro", True, any_pending),
                    ("params_cancel", "Annuler les changements", any_pending, False))
         for action, text, enabled, accent in buttons:
             bw = f["small"].size(text)[0] + round(24 * u)
@@ -555,7 +573,7 @@ class Overlay:
             return None
         lx, ly = x - sb.x, y - sb.y
         u, ky = hud.u, hud.ky
-        fmt = dict(parents=config.PARENTS_COUNT, energy_max=config.ENERGY_MAX, speed_max=config.CREATURE_MAX_SPEED)
+        fmt = dict(pop_max=config.POP_MAX, energy_max=config.ENERGY_MAX, speed_max=config.CREATURE_MAX_SPEED)
         for name, rows in (("gen", GEN_TIPS), ("creature", CREATURE_TIPS)):
             slot = hud.slots.get(name)
             if slot and slot.collidepoint(lx, ly):
@@ -600,10 +618,8 @@ class Overlay:
             wx, wy = self.scene.screen_to_world(x - self.layout.world.x, y - self.layout.world.y)
             c = pick_creature(world, wx, wy, self.scene.pick_radius())
             if c is not None:
-                mates = [o for o in world.creatures if o.profile == c.profile]
-                better = sum(1 for o in mates if rank_key(o) > rank_key(c))
                 t = int(c.age / config.TICKS_PER_SECOND)
-                lines = [(f"{PROFILES[c.profile]['title']}  ·  rang {better + 1}/{len(mates)}" + ("" if c.alive else "  ·  morte"), "base", VALUE),
+                lines = [(f"{PROFILES[c.profile]['title']}  ·  gén. {c.lineage_gen}  ·  {c.children} petits" + ("" if c.alive else "  ·  morte"), "base", VALUE),
                          (f"Énergie {max(c.energy, 0):.0f}   Vitesse {c.speed:.1f}", "small", LABEL),
                          (f"Âge {t // 60:02d}:{t % 60:02d}   Nourriture {c.food_eaten}   Poison {c.poison_hits}", "small", LABEL),
                          ("Clic : fiche complète", "small", DIM)]
