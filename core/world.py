@@ -1,11 +1,13 @@
 import math
 
+import numpy as np
+
 import config
 from core.food import Food
 from core.obstacle import Obstacle
 from core.physics import torus_delta, normalize_angle
 from core.creature import Creature
-from brain.network import NeuralNetwork
+from brain.profiles import PROFILES, SENSORS, new_brain
 
 class World:
     def __init__(self, rng):
@@ -13,18 +15,23 @@ class World:
         self.width = config.WORLD_WIDTH
         self.height = config.WORLD_HEIGHT
         self.creatures = []
+        # FOOD_COUNT, POISON_COUNT and OBSTACLE_COUNT are given per screen-sized area: a bigger world holds more
+        self.area_factor = self.width * self.height / (config.SCREEN_WIDTH * config.SCREEN_HEIGHT)
         # Obstacles first: food, poison and creatures are never placed inside one
         self.obstacles = self._make_obstacles()
         reach = config.CREATURE_RADIUS + config.FOOD_RADIUS   # Far enough from an obstacle for a creature to touch it
-        self.foods = [Food(*self._free_position(reach), config.FOOD_ENERGY) for _ in range(config.FOOD_COUNT)]
+        self.foods = [Food(*self._free_position(reach), config.FOOD_ENERGY) for _ in range(self._count(config.FOOD_COUNT))]
         # Poison: same kind of object as food, but its `energy` is the damage. Seen through its own two inputs
-        self.poisons = [Food(*self._free_position(reach), config.POISON_ENERGY) for _ in range(config.POISON_COUNT)]
+        self.poisons = [Food(*self._free_position(reach), config.POISON_ENERGY) for _ in range(self._count(config.POISON_COUNT))]
         self.tick = 0
+
+    def _count(self, per_screen):
+        return round(per_screen * self.area_factor)
 
     def _make_obstacles(self):
         """Random obstacles (shapes from OBSTACLE_SHAPES), kept apart so that there is always room to pass between two."""
         obstacles = []
-        for _ in range(config.OBSTACLE_COUNT):
+        for _ in range(self._count(config.OBSTACLE_COUNT)):
             for _attempt in range(100):
                 radius = self.rng.uniform(config.OBSTACLE_RADIUS_MIN, config.OBSTACLE_RADIUS_MAX)
                 x, y = self.rng.uniform(0, self.width), self.rng.uniform(0, self.height)
@@ -67,10 +74,160 @@ class World:
                     creature.x = (o.x + pushed[0]) % self.width
                     creature.y = (o.y + pushed[1]) % self.height
                     touched = True
+        creature.touching = touched
         if touched:
             creature.obstacle_ticks += 1
 
     def update(self):
+        """One tick. Same rules as _update_reference, with the distance computations done for all creatures at once."""
+        if self.is_over():
+            return
+        # Phase 0: what every creature sees, computed together (items do not move during phase 1)
+        self.sense_all()
+
+        # Phase 1: every creature decides and moves
+        for creature in self.creatures:
+            if creature.alive:
+                creature.update(self.sense(creature), self.width, self.height)
+        alive = [c for c in self.creatures if c.alive]
+        n = len(alive)
+        if n:
+            X = np.fromiter((c.x for c in alive), float, n)
+            Y = np.fromiter((c.y for c in alive), float, n)
+            self._collide_all(alive, X, Y)
+            X = np.fromiter((c.x for c in alive), float, n)   # Collisions may have moved some of them
+            Y = np.fromiter((c.y for c in alive), float, n)
+            E = np.fromiter((c.energy for c in alive), float, n)
+            reach2 = (config.CREATURE_RADIUS + config.FOOD_RADIUS) ** 2
+            half_w, half_h = self.width / 2, self.height / 2
+
+            # Phase 2: food. Each source goes to the closest creature in contact that still has room for the meal
+            for food in self.foods:
+                if food.cooldown > 0:
+                    food.cooldown -= 1
+                    continue
+                dx = (food.x - X) % self.width
+                dx = np.where(dx > half_w, dx - self.width, dx)
+                dy = (food.y - Y) % self.height
+                dy = np.where(dy > half_h, dy - self.height, dy)
+                d2 = np.where(E + food.energy <= config.ENERGY_MAX, dx * dx + dy * dy, np.inf)
+                i = int(np.argmin(d2))
+                if d2[i] < reach2:
+                    best = alive[i]
+                    best.eat_food(food.energy)
+                    E[i] = min(E[i] + food.energy, config.ENERGY_MAX)
+                    food.cooldown = config.FOOD_RESPAWN_DELAY
+                    food.eats += 1
+                    if not config.FOOD_FIXED_POSITIONS or food.eats >= config.FOOD_MAX_EATS:
+                        food.x, food.y = self._free_position(config.CREATURE_RADIUS + config.FOOD_RADIUS)
+                        food.eats = 0
+
+            # Phase 3: poison. The closest creature touching it is hurt; the poison then moves to a new random place
+            for poison in self.poisons:
+                if poison.cooldown > 0:
+                    poison.cooldown -= 1
+                    continue
+                dx = (poison.x - X) % self.width
+                dx = np.where(dx > half_w, dx - self.width, dx)
+                dy = (poison.y - Y) % self.height
+                dy = np.where(dy > half_h, dy - self.height, dy)
+                d2 = dx * dx + dy * dy
+                i = int(np.argmin(d2))
+                if d2[i] < reach2:
+                    alive[i].hit_by_poison(poison.energy)
+                    poison.cooldown = config.FOOD_RESPAWN_DELAY
+                    poison.x, poison.y = self._free_position(config.CREATURE_RADIUS + config.FOOD_RADIUS)
+        else:
+            for item in self.foods + self.poisons:
+                if item.cooldown > 0:
+                    item.cooldown -= 1
+
+        self.tick += 1
+
+    def _collide_all(self, alive, X, Y):
+        """Obstacle collisions: a cheap numpy test finds the few creatures near an obstacle, only those go through
+        the exact push of _collide. The others are simply not touching."""
+        near = np.zeros(len(alive), dtype=bool)
+        for o in self.obstacles:
+            dx = (X - o.x + self.width / 2) % self.width - self.width / 2
+            dy = (Y - o.y + self.height / 2) % self.height - self.height / 2
+            near |= dx * dx + dy * dy < (o.radius + config.CREATURE_RADIUS) ** 2
+        for c, is_near in zip(alive, near):
+            if is_near:
+                self._collide(c)
+            else:
+                c.touching = False
+
+    def sense_all(self):
+        """Nearest food, poison and obstacle in view of every living creature, for all of them at once (numpy).
+        Same rule as nearest(): within range, inside the field of view, available, closest wins (an exact tie goes
+        to the last item of the list, like nearest). The result is cached on each creature for this tick."""
+        alive = [c for c in self.creatures if c.alive]
+        n = len(alive)
+        if not n:
+            return
+        needed = {"food"}
+        for name in {c.profile for c in alive}:
+            keys = PROFILES[name]["sensors"]
+            if "poison" in keys:
+                needed.add("poison")
+            if "obstacle" in keys:
+                needed.add("obstacle")
+        cx = np.fromiter((c.x for c in alive), float, n)
+        cy = np.fromiter((c.y for c in alive), float, n)
+        heading = np.fromiter((c.angle for c in alive), float, n)
+        range_ = config.VISION_RANGE
+        range2 = range_ ** 2
+        all_around = config.VISION_FOV_DEGREES >= 360
+        half_fov = math.radians(config.VISION_FOV_DEGREES) / 2.0
+        for c in alive:
+            c._near = {}
+            c._near_tick = self.tick
+        rows = np.arange(n)
+        for key, items in (("food", self.foods), ("poison", self.poisons), ("obstacle", self.obstacles)):
+            if key not in needed:
+                continue
+            m = len(items)
+            if m == 0:
+                for c in alive:
+                    c._near[key] = None
+                    if key == "food":
+                        c.food_nearby = False
+                continue
+            ix = np.fromiter((i.x for i in items), float, m)
+            iy = np.fromiter((i.y for i in items), float, m)
+            cool = np.fromiter((i.cooldown for i in items), float, m)
+            dx = (ix[None, :] - cx[:, None]) % self.width
+            dx = np.where(dx > self.width / 2, dx - self.width, dx)
+            dy = (iy[None, :] - cy[:, None]) % self.height
+            dy = np.where(dy > self.height / 2, dy - self.height, dy)
+            d2 = dx * dx + dy * dy
+            if key == "obstacle":
+                # Distance to the real outline, only for the creatures that can reach the obstacle
+                for j, o in enumerate(items):
+                    idx = np.nonzero(d2[:, j] <= (range_ + o.radius) ** 2)[0]
+                    if idx.size:
+                        edge = o.edge_distance_np(-dx[idx, j], -dy[idx, j])
+                        d2[idx, j] = edge * edge
+            visible = d2 <= range2
+            if not all_around:
+                rel = (np.arctan2(dy, dx) - heading[:, None] + math.pi) % (2 * math.pi) - math.pi
+                visible &= np.abs(rel) <= half_fov
+            in_view = visible.any(axis=1)
+            masked = np.where(visible & (cool <= 0)[None, :], d2, np.inf)
+            j_best = m - 1 - np.argmin(masked[:, ::-1], axis=1)   # Last of equal minima, like nearest()
+            best = masked[rows, j_best]
+            for i, c in enumerate(alive):
+                if key == "food":
+                    c.food_nearby = bool(in_view[i])
+                if best[i] < np.inf:
+                    j = j_best[i]
+                    c._near[key] = (float(best[i]), float(dx[i, j]), float(dy[i, j]))
+                else:
+                    c._near[key] = None
+
+    def _update_reference(self):
+        """Plain loop version of update(), one creature at a time. Slow: kept as the reference the tests compare to."""
 
         if self.is_over():
             return
@@ -135,17 +292,18 @@ class World:
 
         self.tick += 1
 
-    def add_creature(self, brain):
+    def add_creature(self, brain, profile):
         x, y = self._free_position(config.CREATURE_RADIUS)
         angle = self.rng.uniform(-math.pi, math.pi)
-        creature = Creature(x, y, angle, config.INITIAL_ENERGY, brain)
+        creature = Creature(x, y, angle, config.INITIAL_ENERGY, brain, profile)
         self.creatures.append(creature)
 
-    def add_population(self,count):
+    def add_population(self, profile, count):
+        """`count` creatures of the profile with random networks."""
         for _ in range(count):
-            brain = NeuralNetwork(config.NN_INPUTS, config.NN_HIDDEN, config.NN_OUTPUTS)
+            brain = new_brain(profile)
             brain.randomize(self.rng, config.NN_INIT_STD)
-            self.add_creature(brain)
+            self.add_creature(brain, profile)
 
     def nearest(self, creature, items):
         """Nearest available item in the creature's field of view: ((distance², dx, dy) or None, in_view).
@@ -190,25 +348,30 @@ class World:
         return [distance, angle]
 
     def sense(self, creature):
-        """Retourne les entrées du réseau, normalisées :
-        [distance, angle relatif, énergie, vitesse, peut manger, distance poison, angle poison,
-        distance obstacle, angle obstacle]."""
-        food, in_view = self.nearest(creature, self.foods)
-        creature.food_nearby = in_view  # Any food in view, even one that is not available yet (metric only)
-        poison, _ = self.nearest(creature, self.poisons)
-        obstacle, _ = self.nearest(creature, self.obstacles)
-
-        energy = max(0.0, min(creature.energy / config.ENERGY_INPUT_MAX, 1.0))
-        speed = creature.speed / config.CREATURE_MAX_SPEED
-        # 1.0 if a meal would fit (same rule as the food phase), else 0.0
-        can_eat = 1.0 if creature.energy + config.FOOD_ENERGY <= config.ENERGY_MAX else 0.0
-
-        return (self._direction(creature, food) + [energy, speed, can_eat]
-                + self._direction(creature, poison) + self._direction(creature, obstacle))
+        """Network inputs: the sensors of the creature's profile (brain/profiles.py), then its memory cells.
+        Uses what sense_all found for this tick when it is there, else looks up the nearest items itself
+        (the interface calls it for the selected creature). The nearest food is always looked up: it feeds the
+        `food_nearby` metric."""
+        if getattr(creature, "_near_tick", -1) == self.tick:
+            ctx = creature._near
+        else:
+            food, in_view = self.nearest(creature, self.foods)
+            creature.food_nearby = in_view  # Any food in view, even one that is not available yet (metric only)
+            ctx = {"food": food}
+        values = []
+        for key in PROFILES[creature.profile]["sensors"]:
+            values += SENSORS[key][1](self, creature, ctx)
+        return values + creature.memory
 
     def is_over(self):
-        alive = sum(1 for c in self.creatures if c.alive)
-        # The parents threshold only makes sense if the population is bigger than it
-        threshold = config.PARENTS_COUNT if len(self.creatures) > config.PARENTS_COUNT else 0
-        return alive <= threshold or self.tick >= config.GEN_MAX_TICKS
-
+        """The generation ends at the time cap, or when every species is down to its number of parents
+        (config.parents_for: a species of one creature ends when it is dead)."""
+        if self.tick >= config.GEN_MAX_TICKS:
+            return True
+        total, alive = {}, {}
+        for c in self.creatures:
+            total[c.profile] = total.get(c.profile, 0) + 1
+            if c.alive:
+                alive[c.profile] = alive.get(c.profile, 0) + 1
+        return all(alive.get(p, 0) <= (config.parents_for(n) if n > 1 else 0)
+                   for p, n in total.items())

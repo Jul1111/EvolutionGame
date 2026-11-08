@@ -25,6 +25,10 @@ La simulation reprend automatiquement la dernière sauvegarde si elle existe (vo
 | Espace | Pause |
 | → | Avancer d'un tick (en pause) |
 | Clic gauche | Sélectionner une créature dans le monde, ou utiliser la barre de menu |
+| Molette | Zoom sur le curseur (dézoom maximum = tout le monde visible) |
+| Glisser (clic gauche maintenu) | Déplacer la caméra |
+| + / - / 0 | Zoom avant / arrière / tout le monde |
+| V | La caméra suit la créature sélectionnée |
 | D | Mode debug : désactivé → plus ancienne créature vivante → toutes les créatures vivantes |
 | C | Changer le mode de couleur des créatures |
 | G | Afficher ou masquer les courbes |
@@ -55,6 +59,7 @@ La simulation reprend automatiquement la dernière sauvegarde si elle existe (vo
 | Affichage | Debug (cône de vision, trait vers la nourriture la plus proche et, en violet, vers le poison le plus proche), couleur, courbes, graphe du réseau, plein écran |
 | Courbes | Une case par courbe à afficher, dans la couleur de la courbe : meilleur âge, nourriture (moyenne, max, totale, par minute), vitesse (moyenne, sans nourriture en vue, rapport des deux), part aveugle, virage aveugle, énergie, vivantes, poison (parents, total, rapport poison / nourriture). Défaut : meilleur âge, nourriture moy., vitesse moy., poison touché (parents). Chaque courbe a sa propre échelle. La sélection n'est pas conservée au redémarrage |
 | Paramètres | Ouvrir le panneau Paramètres, mutation, parents conservés, nombre de nourritures, énergie d'une nourriture, délai de réapparition, repas avant épuisement, positions de la nourriture (fixes ou aléatoires), nombre de poisons, dégâts d'un poison, nombre d'obstacles. Un clic passe à la valeur suivante parmi des valeurs prédéfinies. La valeur est appliquée au début de la génération suivante (marquée d'un `*` en attendant), et est conservée au redémarrage dans `saves/settings.json` (elle remplace alors la valeur de `config.py` ; supprimer le fichier ou mettre `LOAD_SETTINGS = False` pour revenir à `config.py`) |
+| Réseau | Choisir le profil de réseau (voir « Les profils de réseau »). Appliqué à la fin de la génération en cours (marqué d'un `*` en attendant), et conservé au redémarrage |
 | Sauvegarde | Terminer la génération maintenant, repartir de zéro (confirmation demandée) |
 | Aide | Aide et raccourcis, légende |
 
@@ -122,12 +127,35 @@ La vision est un cône : portée de 200 (`VISION_RANGE`), ouverture de 120° cen
 
 La seed est fixée (42) : un lancement de zéro est reproductible. Une reprise de sauvegarde ne l'est pas exactement, car l'état du générateur aléatoire n'est pas sauvegardé.
 
+## Les espèces (profils de réseau)
+
+Plusieurs profils évoluent **dans le même monde, en même temps** : 100 créatures au total, réparties à égalité entre les espèces actives (25 chacune avec 4 profils, `POPULATION_SIZE`), la même nourriture, le même poison, les mêmes obstacles, une seule horloge de génération. Chaque espèce a sa propre sélection : elle garde la même part de parents (`PARENTS_COUNT` = 20 sur 100, soit 5 sur 25) et complète avec des enfants mutés. La génération se termine quand chaque espèce est réduite à ses parents (5 vivantes sur 25), ou au plafond de durée. Changer le nombre d'espèces change leur effectif : une sauvegarde trop grosse est tronquée à ses meilleurs parents.
+
+Un profil dit quels capteurs alimentent le réseau, la taille de sa couche cachée (0 = couche directe, sans neurones cachés), si la vitesse est une sortie ou une valeur fixe, et le nombre de cellules de mémoire.
+
+| Profil | Entrées | Sorties | Poids |
+|---|---|---|---|
+| `chasseur` | nourriture (distance, angle) | virage, vitesse | 6 |
+| `chasseur_rassasie` | nourriture + peut manger | virage, vitesse | 8 |
+| `prudent` | nourriture + poison, 3 neurones cachés | virage, vitesse | 23 |
+| `vitesse_fixe` | nourriture | virage (vitesse fixe) | 3 |
+
+Choix des espèces actives : menu **Réseau** (cases à cocher). Appliqué à la fin de la génération en cours, conservé au redémarrage (`ACTIVE_PROFILES` dans `saves/settings.json`, ou `config.py`).
+
+Sauvegardes : une par espèce dans `saves/profiles/<nom>/` (`latest.npz`, `stats.csv`). « Repartir de zéro » remet toutes les espèces à zéro. Les numéros de génération sont indépendants par espèce. Le graphe « Comparer les profils » (menu Courbes) aligne les espèces par ligne de CSV, pas par numéro de génération : tant que toutes tournent ensemble, c'est la même chose.
+
+Pour ajouter un profil : une entrée dans `PROFILES` de `brain/profiles.py`. Capteurs disponibles dans `SENSORS`. Une créature ne peut que tourner et choisir sa vitesse (ou rouler à vitesse fixe). Les cellules de mémoire sont les seules sorties en plus.
+
+## Taille du monde et caméra
+
+`WORLD_SCALE` dans `config.py` (2 par défaut) : côté du monde en écrans. 2 donne 2560×1440, soit 4 fois la surface de la fenêtre. Les nombres de nourritures, poisons et obstacles sont donnés par écran de 1280×720 et multipliés par la surface. Le monde est toroïdal : ce qui sort d'un côté rentre de l'autre, la caméra dessine les copies près des bords.
+
 ## Sauvegardes et statistiques
 
 Tout est dans `saves/`, ignoré par git.
 
-- `latest.npz` : génomes des 20 parents et numéro de génération, écrasé à chaque fin de génération. Au lancement, `LOAD_ON_START = True` reprend cette sauvegarde.
-- `stats.csv` : une ligne par génération.
+- `profiles/<nom>/latest.npz` : génomes des 20 parents et numéro de génération, écrasé à chaque fin de génération. Au lancement, `LOAD_ON_START = True` reprend cette sauvegarde.
+- `profiles/<nom>/stats.csv` : une ligne par génération et par espèce.
 - Si la taille du réseau a changé, l'ancienne sauvegarde est mise de côté (`latest_incompatible_<date>.npz`) et l'évolution repart de zéro.
 - Si l'évolution repart de zéro, l'ancien `stats.csv` est mis de côté (`stats_ancien_<date>.csv`).
 
@@ -202,9 +230,11 @@ saves/                  Sauvegardes et statistiques (ignoré par git)
 
 ## Limites connues
 
-- Le réseau n'a pas de mémoire. Quand rien n'est en vue, ses entrées sont constantes.
+- Quand rien n'est en vue, les entrées du réseau sont constantes (la mémoire existe comme option de profil, non testée).
+- Sélection : seul `rank_key` (âge, nourriture, énergie) existe. Choisir l'objectif de sélection n'est pas encore implémenté.
+- Caméra et monde ×2 testés en headless uniquement (fenêtre simulée), pas sur la vraie fenêtre.
 - L'exploration n'est pas démontrée : les mesures disponibles montrent surtout des créatures qui attendent ou campent. Les règles de réapparition et d'épuisement sont là pour changer ça, sans résultat établi à ce jour.
-- Le coût de calcul est dominé par la simulation (un réseau numpy par créature et par tick). Il n'a pas été profilé finement.
+- Le coût de calcul est dominé par la simulation (400 créatures sur le monde ×2 : environ 5 ms par tick, mesuré en headless).
 - Les résultats d'une exécution unique ne prouvent pas grand-chose : les trajectoires varient d'une exécution à l'autre.
 
 ## Pistes

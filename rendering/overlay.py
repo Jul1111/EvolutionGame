@@ -7,6 +7,7 @@ import time
 import pygame
 
 import config
+from brain.profiles import PROFILES, input_labels, output_labels
 from evolution.population import rank_key
 from rendering.hud import (VALUE, LABEL, MINT, AMBER, CORAL, create_fonts, network_rows,
                            _node, _edge, _clip)
@@ -42,7 +43,7 @@ TOOLBAR = [
 # Label, explanation of every setting of the panel (keys = main.PARAMS)
 PARAM_INFO = {
     "mutation": ("Mutation", "Amplitude du bruit ajouté à chaque poids d'un enfant."),
-    "parents": ("Parents conservés", "Créatures gardées à chaque génération. La génération s'arrête à ce nombre de survivantes."),
+    "parents": ("Parents conservés", "Parents gardés à chaque génération, pour tout le monde : chaque espèce en garde sa part (20 sur 100 = 20 %). La génération s'arrête quand chaque espèce est réduite à ses parents."),
     "fov": ("Champ de vision", "Ouverture du cône de vision. Tout autour = 360°."),
     "food": ("Nombre de nourritures", "Sources de nourriture dans le monde."),
     "food_energy": ("Énergie d'une nourriture", "Énergie gagnée à chaque repas."),
@@ -56,7 +57,7 @@ PARAM_INFO = {
 
 # Explanations shown when the mouse rests on a label of the side bar: (logical y of the row, text)
 GEN_TIPS = [
-    (38, "Vivantes : créatures encore en vie. La génération s'arrête quand il en reste {parents} ou moins."),
+    (38, "Vivantes : créatures encore en vie. La génération s'arrête quand chaque espèce est réduite à ses parents ({parents} au total, répartis)."),
     (68, "Temps : temps simulé écoulé, sur le plafond de la génération."),
     (98, "Meilleur âge : durée de vie de la créature qui a tenu le plus longtemps. Premier critère de classement."),
     (116, "Sans nourriture : créatures qui n'ont encore rien mangé dans cette génération."),
@@ -85,12 +86,14 @@ NET_TIPS = {
 
 HELP_KEYS = [
     ("Espace", "Pause / reprendre"), ("→", "Avancer d'un tick (en pause)"), ("↑  ↓", "Vitesse de simulation"),
-    ("D", "Debug : off / sélection / toutes"), ("C", "Couleur : énergie / vitesse / nourriture"),
+    ("D", "Debug : off / sélection / toutes"), ("C", "Couleur : espèce / énergie / vitesse / nourriture"),
     ("L", "Légende"), ("G", "Courbes"), ("N", "Réseau : masqué / petit / grand"),
     ("B", "Sélectionner la meilleure créature"), ("T", "Suivre la lignée du meilleur"),
+    ("+  -  0", "Zoom avant, arrière, toute la carte"), ("V", "Caméra sur la sélection"),
     ("P", "Paramètres"), ("F", "Plein écran"), ("H  ?", "Cette aide"), ("Échap", "Fermer, puis quitter"),
 ]
 HELP_MOUSE = [
+    "Molette : zoom sur le pointeur. Glisser dans le monde : déplacer la vue.",
     "Clic sur une créature : fiche, réseau et trajectoire.",
     "Clic dans le vide : désélectionner.",
     "Survol d'une créature : résumé rapide.",
@@ -492,7 +495,7 @@ class Overlay:
         inputs = world.sense(selected)
         selected.food_nearby = flag
         hidden, outputs = selected.brain.activations(inputs)
-        rows = network_rows(inputs, outputs)
+        rows = network_rows(inputs, outputs, selected.profile)
         n_in, n_h, n_out = len(inputs), len(hidden), len(outputs)
         top, bottom = round(52 * u), round(34 * u)
         left_w, right_w = round(190 * u), round(140 * u)
@@ -505,7 +508,12 @@ class Overlay:
 
         pin, ph_, pout = column(xs[0], n_in), column(xs[1], n_h), column(xs[2], n_out)
         r = max(5, min(round(13 * u), int(area.h / max(n_in, n_h, n_out) / 2.3)))
-        wmax = max(float(abs(selected.brain.w1).max()), float(abs(selected.brain.w2).max()), 1e-9)
+        wmax = max(float(abs(selected.brain.w1).max()),
+                   float(abs(selected.brain.w2).max()) if selected.brain.w2.size else 0.0, 1e-9)
+        if n_h == 0:   # No hidden neuron: inputs wired straight to the outputs
+            for o in range(n_out):
+                for i in range(n_in):
+                    _edge(surf, pin[i], pout[o], float(selected.brain.w1[o, i]), float(inputs[i]), wmax)
         for h in range(n_h):
             for i in range(n_in):
                 _edge(surf, pin[i], ph_[h], float(selected.brain.w1[h, i]), float(inputs[i]), wmax)
@@ -560,8 +568,8 @@ class Overlay:
                 return None
         slot = hud.slots.get("net")
         if slot and slot.collidepoint(lx, ly) and selected is not None and selected.alive:
-            labels = list(config.INPUT_LABELS) + list(config.OUTPUT_LABELS)
-            n_in = len(config.INPUT_LABELS)
+            labels = input_labels(selected.profile) + output_labels(selected.profile)
+            n_in = len(input_labels(selected.profile))
             base = slot.y + (round(36 * u) if not hud.show_graph else round(32 * u) + round(hud.graph_h * u) + round(12 * u))
             for i, label in enumerate(labels):
                 top = base + round((i * 15 + (4 if i >= n_in else 0)) * u)
@@ -589,13 +597,13 @@ class Overlay:
         over_ui = self.bar_rect.collidepoint(x, y) or any(
             self._rects.get(k) and self._rects[k].collidepoint(x, y) for k in ("legend", "net"))
         if lines is None and self.layout.world.collidepoint(x, y) and not over_ui and dwell > 0.08:
-            wx = (x - self.layout.world.x) / self.layout.scale
-            wy = (y - self.layout.world.y) / self.layout.scale
-            c = pick_creature(world, wx, wy)
+            wx, wy = self.scene.screen_to_world(x - self.layout.world.x, y - self.layout.world.y)
+            c = pick_creature(world, wx, wy, self.scene.pick_radius())
             if c is not None:
-                better = sum(1 for o in world.creatures if rank_key(o) > rank_key(c))
+                mates = [o for o in world.creatures if o.profile == c.profile]
+                better = sum(1 for o in mates if rank_key(o) > rank_key(c))
                 t = int(c.age / config.TICKS_PER_SECOND)
-                lines = [(f"Rang {better + 1}/{len(world.creatures)}" + ("" if c.alive else "  ·  morte"), "base", VALUE),
+                lines = [(f"{PROFILES[c.profile]['title']}  ·  rang {better + 1}/{len(mates)}" + ("" if c.alive else "  ·  morte"), "base", VALUE),
                          (f"Énergie {max(c.energy, 0):.0f}   Vitesse {c.speed:.1f}", "small", LABEL),
                          (f"Âge {t // 60:02d}:{t % 60:02d}   Nourriture {c.food_eaten}   Poison {c.poison_hits}", "small", LABEL),
                          ("Clic : fiche complète", "small", DIM)]

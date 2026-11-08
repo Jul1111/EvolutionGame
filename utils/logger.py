@@ -4,6 +4,7 @@ import os
 import time
 
 import config
+from brain.profiles import paths, config_values
 
 # Measures of the generation, computed by main.py
 BASE_HEADER = ["generation", "ticks", "alive", "best_age", "mean_food", "max_food", "mean_speed",
@@ -36,14 +37,24 @@ def _cell(value):
     return value
 
 
-def _header():
-    return BASE_HEADER + [n.lower() for n in _config_names()]
+def _names(profile):
+    """Names of the logged constants: those of config.py, then the ones describing the profile's network."""
+    return _config_names() + sorted(config_values(profile))
 
 
-def _migrate_or_set_aside(header):
-    """Existing stats.csv with other columns: if every old column still exists, rewrite the file with the new
+def _header(profile):
+    return BASE_HEADER + [n.lower() for n in _names(profile)]
+
+
+def _value(profile, name):
+    own = config_values(profile)
+    return own[name] if name in own else getattr(config, name)
+
+
+def _migrate_or_set_aside(file, header):
+    """Existing CSV with other columns: if every old column still exists, rewrite the file with the new
     columns (empty for the old rows, we do not know their values); else set it aside (timestamped)."""
-    with open(config.STATS_FILE, newline="", encoding="utf-8") as f:
+    with open(file, newline="", encoding="utf-8") as f:
         reader = csv.reader(f)
         old_header = next(reader, None)
         rows = list(reader)
@@ -51,41 +62,43 @@ def _migrate_or_set_aside(header):
         return
     renamed = [OLD_NAMES.get(name, name) for name in old_header or []]
     if old_header and all(name in header for name in renamed):
-        tmp = config.STATS_FILE + ".tmp"
+        tmp = file + ".tmp"
         with open(tmp, "w", newline="", encoding="utf-8") as f:
             writer = csv.writer(f)
             writer.writerow(header)
             for row in rows:
                 by_name = dict(zip(renamed, row))
                 writer.writerow([by_name.get(name, "") for name in header])
-        os.replace(tmp, config.STATS_FILE)
+        os.replace(tmp, file)
         return
     stamp = time.strftime("%Y%m%d_%H%M%S")
-    os.replace(config.STATS_FILE, config.STATS_FILE.replace(".csv", f"_ancien_{stamp}.csv"))
+    os.replace(file, file.replace(".csv", f"_ancien_{stamp}.csv"))
 
 
-def log_generation(stats):
-    """Ajoute une ligne à saves/stats.csv. `stats` : dict avec les clés de BASE_HEADER (None = case vide).
+def log_generation(profile, stats):
+    """Ajoute une ligne au CSV du profil. `stats` : dict avec les clés de BASE_HEADER (None = case vide).
     Les réglages de config.py sont ajoutés tels qu'ils sont à cet instant (ceux de la génération qui vient de finir)."""
-    os.makedirs(config.SAVE_DIR, exist_ok=True)
-    header = _header()
-    if os.path.exists(config.STATS_FILE):
-        _migrate_or_set_aside(header)
-    new_file = not os.path.exists(config.STATS_FILE)  # À tester AVANT d'ouvrir le fichier
+    file = paths(profile)[1]
+    os.makedirs(os.path.dirname(file), exist_ok=True)
+    header = _header(profile)
+    if os.path.exists(file):
+        _migrate_or_set_aside(file, header)
+    new_file = not os.path.exists(file)  # À tester AVANT d'ouvrir le fichier
     row = []
     for key in BASE_HEADER:
         value = stats[key]
         row.append(round(value, 3) if isinstance(value, float) else _cell(value))
-    row += [_cell(getattr(config, n)) for n in _config_names()]
-    with open(config.STATS_FILE, "a", newline="", encoding="utf-8") as f:
+    row += [_cell(_value(profile, n)) for n in _names(profile)]
+    with open(file, "a", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
         if new_file:
             writer.writerow(header)
         writer.writerow(row)
 
 
-def archive_stats():
-    """Fresh start: set aside an existing stats.csv (timestamped) so generations are not mixed."""
-    if os.path.exists(config.STATS_FILE):
+def archive_stats(profile):
+    """Fresh start: set aside the existing CSV of the profile (timestamped) so generations are not mixed."""
+    file = paths(profile)[1]
+    if os.path.exists(file):
         stamp = time.strftime("%Y%m%d_%H%M%S")
-        os.replace(config.STATS_FILE, config.STATS_FILE.replace(".csv", f"_ancien_{stamp}.csv"))
+        os.replace(file, file.replace(".csv", f"_ancien_{stamp}.csv"))

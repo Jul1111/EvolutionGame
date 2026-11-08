@@ -7,28 +7,29 @@ class NeuralNetwork:
         self.n_hidden = n_hidden
         self.n_outputs = n_outputs
         
-        self.w1 = np.zeros((n_hidden, n_inputs))  # Poids de la couche d'entrée à la couche cachée
-        self.b1 = np.zeros((n_hidden,))           # Biais de la couche
-        self.w2 = np.zeros((n_outputs, n_hidden))  # Poids de la couche cachée à la couche de sortie
-        self.b2 = np.zeros((n_outputs,))           # Biais de la couche
+        # Sans neurone caché (n_hidden = 0), les entrées vont directement aux sorties : tout est dans w1 et b1
+        self.direct = n_hidden == 0
+        self.w1 = np.zeros((n_outputs if self.direct else n_hidden, n_inputs))  # Poids de la couche d'entrée
+        self.b1 = np.zeros((self.w1.shape[0],))                                  # Biais de la couche
+        self.w2 = np.zeros((n_outputs, n_hidden))  # Poids de la couche cachée à la couche de sortie (vide si direct)
+        self.b2 = np.zeros((0 if self.direct else n_outputs,))                   # Biais de la couche
 
     def n_weights(self):
         """Retourne le nombre total de poids et biais dans le réseau."""
-        return (self.n_hidden * self.n_inputs + self.n_hidden + 
+        if self.direct:
+            return self.n_outputs * self.n_inputs + self.n_outputs
+        return (self.n_hidden * self.n_inputs + self.n_hidden +
                 self.n_outputs * self.n_hidden + self.n_outputs)
 
     def forward(self, inputs):
         """Fait passer les entrées x à travers le réseau et retourne les sorties."""
-        x = np.array(inputs, dtype=float)
-
-        hidden = np.tanh(self.w1 @ x + self.b1)  # Activation de la couche cachée
-        output = np.tanh(self.w2 @ hidden + self.b2)  # Activation de la couche de sortie
-        
-        return output
+        return self.activations(inputs)[1]
 
     def activations(self, inputs):
         """Comme forward, mais renvoie aussi la couche cachée : (hidden, output). Sert à l'affichage, ne modifie rien."""
         x = np.array(inputs, dtype=float)
+        if self.direct:
+            return np.zeros(0), np.tanh(self.w1 @ x + self.b1)
         hidden = np.tanh(self.w1 @ x + self.b1)
         output = np.tanh(self.w2 @ hidden + self.b2)
         return hidden, output

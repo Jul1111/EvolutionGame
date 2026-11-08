@@ -1,5 +1,5 @@
 import config
-from brain.network import NeuralNetwork
+from brain.profiles import new_brain
 from evolution.mutation import mutate
 
 
@@ -15,19 +15,21 @@ def select_parents(creatures, count):
     return sorted(creatures, key=rank_key, reverse=True)[:count]
 
 
-def _brain_from_genome(genome):
-    brain = NeuralNetwork(config.NN_INPUTS, config.NN_HIDDEN, config.NN_OUTPUTS)
+def _brain_from_genome(genome, profile):
+    brain = new_brain(profile)
     brain.set_genome(genome)
     return brain
 
 
-def brains_from_genomes(genomes, rng):
-    """Retourne POPULATION_SIZE cerveaux : les parents (élitisme) puis des enfants mutés."""
+def brains_from_genomes(genomes, rng, profile, size):
+    """Retourne `size` cerveaux du profil : les parents (élitisme) puis des enfants mutés.
+    Une sauvegarde plus grosse que la place disponible est tronquée (les génomes sont classés du meilleur au pire)."""
+    genomes = genomes[:config.parents_for(size)]
     # Élitisme : copies des parents, créatures neuves (âge, énergie, position remis à zéro)
-    brains = [_brain_from_genome(g) for g in genomes]
+    brains = [_brain_from_genome(g, profile) for g in genomes]
 
     # Enfants : un parent après l'autre, copie + bruit
-    for i in range(config.POPULATION_SIZE - config.PARENTS_COUNT):
+    for i in range(size - len(genomes)):
         parent_genome = genomes[i % len(genomes)]
-        brains.append(_brain_from_genome(mutate(parent_genome, rng, config.MUTATION_STD)))
+        brains.append(_brain_from_genome(mutate(parent_genome, rng, config.MUTATION_STD), profile))
     return brains

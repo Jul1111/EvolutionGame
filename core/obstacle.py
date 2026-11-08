@@ -1,5 +1,7 @@
 import math
 
+import numpy as np
+
 SIDES = {"triangle": 3, "square": 4}   # Any other shape name is a disc
 
 
@@ -47,6 +49,22 @@ class Obstacle:
         """Distance from the point to the shape (0 when inside)."""
         cx, cy, inside = self.closest(px, py)
         return 0.0 if inside else math.hypot(px - cx, py - cy)
+
+    def edge_distance_np(self, px, py):
+        """edge_distance for arrays of points (relative to the centre): same result, computed all at once."""
+        if self.vertices is None:
+            return np.maximum(0.0, np.hypot(px, py) - self.radius)
+        best = np.full(px.shape, np.inf)
+        inside = np.ones(px.shape, dtype=bool)
+        n = len(self.vertices)
+        for i in range(n):
+            ax, ay = self.vertices[i]
+            bx, by = self.vertices[(i + 1) % n]
+            ex, ey = bx - ax, by - ay
+            inside &= ex * (py - ay) - ey * (px - ax) >= 0
+            t = np.clip(((px - ax) * ex + (py - ay) * ey) / (ex * ex + ey * ey), 0.0, 1.0)
+            best = np.minimum(best, np.hypot(px - (ax + t * ex), py - (ay + t * ey)))
+        return np.where(inside, 0.0, best)
 
     def push(self, px, py, margin):
         """New position when the point is closer than `margin` to the shape (or inside it), else None."""

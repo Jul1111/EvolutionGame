@@ -2,19 +2,24 @@ import math
 
 import config
 from core.physics import normalize_angle
+from brain.profiles import PROFILES
 
 class Creature:
-    def __init__(self, x, y, angle, energy, brain):
+    def __init__(self, x, y, angle, energy, brain, profile):
         self.x = float(x)
         self.y = float(y)
         self.angle = angle
         self.speed = 0.0  # Current speed, decided by the network at each tick
         self.energy = energy
         self.brain = brain
+        self.profile = profile   # Name of its network profile (species), see brain/profiles.py
+        self._spec = PROFILES[profile]
         self.alive = True
         self.food_eaten = 0 
         self.poison_hits = 0
         self.obstacle_ticks = 0   # Ticks spent pressed against an obstacle
+        self.touching = False     # Pressed against an obstacle at the last tick (a sensor of some profiles)
+        self.memory = [0.0] * PROFILES[profile]["memory"]   # Extra network outputs, fed back as inputs at the next tick
         self.age = 0
         # Exploration metrics: what the creature does when it sees no food
         self.food_nearby = True  # Set by World.sense each tick
@@ -32,7 +37,14 @@ class Creature:
         # The network decides: outputs are in [-1, 1] (tanh)
         outputs = self.brain.forward(inputs)
         turn = float(outputs[0])
-        speed_command = float(outputs[1])
+        if self._spec["speed_output"]:
+            speed_command = float(outputs[1])
+            first_memory = 2
+        else:
+            speed_command = self._spec["fixed_speed"]   # This species cannot change its speed
+            first_memory = 1
+        if len(outputs) > first_memory:
+            self.memory = [float(v) for v in outputs[first_memory:]]
 
         # Inertia: the network asks for a target speed, the speed moves toward it with limited acceleration
         target_speed = (speed_command + 1.0) / 2.0 * config.CREATURE_MAX_SPEED

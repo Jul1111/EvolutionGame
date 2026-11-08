@@ -1,5 +1,6 @@
 import pygame
 
+from brain.profiles import PROFILES, n_params
 from rendering.hud import VALUE, LABEL, MINT, SERIES, create_fonts
 
 BAR_BG = (19, 23, 28)
@@ -28,6 +29,11 @@ MENUS = [
         ("graph", "Graphe du réseau : {graph}", "action", None, "N"),
         ("legend", "Légende", "toggle", "legend", "L"),
         None,
+        ("zoom_in", "Zoom avant", "action", None, "+  /  molette"),
+        ("zoom_out", "Zoom arrière", "action", None, "-"),
+        ("view_fit", "Voir toute la carte", "action", None, "0"),
+        ("cam_follow", "Caméra sur la sélection", "toggle", "cam_follow", "V"),
+        None,
         ("best", "Sélectionner la meilleure créature", "action", None, "B"),
         ("follow", "Suivre la lignée du meilleur", "toggle", "follow", "T"),
         None,
@@ -35,7 +41,8 @@ MENUS = [
     ]),
     # One check box per curve of the chart, in the colour of the curve. The menu stays open to pick several.
     ("Courbes", [("series:" + key, label, "toggle", "s_" + key, "", color) for key, label, color, *_ in SERIES]
-     + [None, ("series_default", "Courbes par défaut", "action", None, "")]),
+     + [None, ("chart_compare", "Comparer les profils (plusieurs profils)", "toggle", "compare", ""),
+        ("series_default", "Courbes par défaut", "action", None, "")]),
     # Settings cycle through preset values at each click. A "*" marks a value waiting for the next generation.
     ("Paramètres", [
         ("params_panel", "Ouvrir le panneau Paramètres...", "action", None, "P"),
@@ -56,6 +63,11 @@ MENUS = [
         None,
         ("obstacle_count", "Nombre d'obstacles : {obstacle_count}", "action", None, ""),
     ]),
+    # One check box per network profile (brain/profiles.py), in the colour of the species. Checked profiles live in the
+    # same world; the choice is applied when the generation ends. Each profile keeps its own population and CSV,
+    # so a profile removed and added back resumes where it stopped.
+    ("Réseau", [("profile:" + name, "{pl_" + name + "}", "toggle", "p_" + name, "", spec["color"])
+                for name, spec in PROFILES.items()]),
     ("Sauvegarde", [
         ("end_gen", "Terminer la génération maintenant", "action", None, ""),
         None,
@@ -66,6 +78,11 @@ MENUS = [
         ("legend", "Légende", "toggle", "legend", "L"),
     ]),
 ]
+
+
+def profile_label(name):
+    """Menu text of a profile: its title and size."""
+    return f"{PROFILES[name]['title']} ({n_params(name)} poids)"
 
 
 class MenuBar:

@@ -28,6 +28,16 @@ def load_settings(names):
         if isinstance(default, bool):
             if not isinstance(value, bool):
                 continue
+        elif isinstance(default, list):
+            if not isinstance(value, list):
+                continue
+            from brain.profiles import PROFILES
+            value = [v for v in value if v in PROFILES]   # Unknown names are dropped (a profile was removed)
+            if not value:
+                continue
+        elif isinstance(default, str):
+            if not isinstance(value, str):
+                continue
         elif isinstance(value, bool) or not isinstance(value, (int, float)):
             continue
         else:

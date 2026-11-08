@@ -202,7 +202,7 @@ def _entry(o, k):
     key = (o.shape, round(o.radius, 3), round(o.rotation, 3), round(k, 4))
     entry = _cache.get(key)
     if entry is None:
-        if len(_cache) > 40:
+        if len(_cache) > 240:   # Several zoom levels of a few dozen obstacles
             _cache.clear()
         seed = int(o.radius * 1000) * 7919 + int(o.rotation * 1000) * 104729 + len(o.shape)
         rng = random.Random(seed)                 # Private generator: the simulation's one is never used
