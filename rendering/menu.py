@@ -2,6 +2,7 @@ import pygame
 
 from brain.profiles import PROFILES, n_params
 from rendering.hud import VALUE, LABEL, MINT, SERIES, create_fonts
+from rendering.glass import frost
 
 BAR_BG = (19, 23, 28)
 LINE = (48, 54, 60)
@@ -25,9 +26,12 @@ MENUS = [
         ("debug", "Debug : {debug}", "action", None, "D"),
         ("color", "Couleur : {color}", "action", None, "C"),
         None,
-        ("chart", "Courbes", "toggle", "chart", "G"),
+        ("chart", "Courbes : {chart}", "action", None, "G"),
         ("graph", "Graphe du réseau : {graph}", "action", None, "N"),
         ("legend", "Légende", "toggle", "legend", "L"),
+        ("minimap", "Mini-carte", "toggle", "minimap", "M"),
+        ("effects", "Naissances et morts dans le monde", "toggle", "effects", "E"),
+        ("panels", "Panneaux", "toggle", "panels", "Tab"),
         None,
         ("zoom_in", "Zoom avant", "action", None, "+  /  molette"),
         ("zoom_out", "Zoom arrière", "action", None, "-"),
@@ -170,7 +174,7 @@ class MenuBar:
         self.state = state
         f, u = self.fonts, self.u
         bar = self.layout.menu
-        pygame.draw.rect(window, BAR_BG, bar)
+        frost(window, bar, 0, tint=BAR_BG, alpha=170, edge=False)   # Frosted glass over the world
         pygame.draw.line(window, LINE, (0, bar.bottom - 1), (bar.right, bar.bottom - 1))
         mouse = self.hover_pos
 
@@ -192,7 +196,7 @@ class MenuBar:
             return
         x0, y0 = rows[0][0].topleft
         box = pygame.Rect(x0, y0, rows[0][0].w, rows[-1][0].bottom - y0).inflate(0, round(8 * u))
-        pygame.draw.rect(window, DROP_BG, box, border_radius=max(4, round(8 * u)))
+        frost(window, box, max(4, round(8 * u)), tint=DROP_BG, alpha=215, edge=False)
         pygame.draw.rect(window, DROP_BORDER, box, width=1, border_radius=max(4, round(8 * u)))
         pad, side = round(12 * u), round(14 * u)
         for rect, entry in rows:

@@ -6,6 +6,8 @@ from brain.profiles import PROFILES, input_labels, output_labels
 from rendering.scene import energy_color
 from utils.timefmt import format_time  # noqa: F401  (main.py imports it from here)
 
+from rendering.glass import frost
+
 VALUE = config.HUD_VALUE_COLOR
 LABEL = config.HUD_LABEL_COLOR
 MINT = (120, 224, 176)
@@ -125,8 +127,8 @@ class Ctx:
 def _panel(width, height, u):
     surf = pygame.Surface((width, height), pygame.SRCALPHA)
     radius = max(4, round(12 * u))
-    pygame.draw.rect(surf, config.HUD_PANEL_COLOR, surf.get_rect(), border_radius=radius)
-    pygame.draw.rect(surf, (255, 255, 255, 28), surf.get_rect(), width=1, border_radius=radius)
+    # Light tint only: the frosted glass under it (glass.frost, drawn by Hud.draw) gives the background and the edge
+    pygame.draw.rect(surf, (*config.HUD_PANEL_COLOR[:3], 55), surf.get_rect(), border_radius=radius)
     return surf
 
 
@@ -292,6 +294,8 @@ class Hud:
         self.profiles = list(config.ACTIVE_PROFILES)        # Species in the world
         self.timeline_path = None   # timeline.csv of the running simulation (set by main.py)
         self.rows = []
+        self.visible = True    # Tab hides every panel (clean view of the world)
+        self.lineage = None    # LineageTracker of the scene (set by main.py)
 
     # ---------- layout ----------
 
@@ -302,10 +306,7 @@ class Hud:
         self.fonts = create_fonts(self.u)
         small = self.fonts["small"]
         hint_color = (110, 122, 128)
-        self.hints = [
-            small.render("H : aide et raccourcis", True, hint_color),
-            small.render("Survole un libellé pour l'expliquer.", True, hint_color),
-        ]
+        self.hints = []   # No loose text over the world: the « ? » button and the Aide menu list the shortcuts
         self._compute_slots()
 
     def _net_height(self):
@@ -422,7 +423,8 @@ class Hud:
     # ---------- panels ----------
 
     def _draw_generation(self, world, fps, speed, info, debug_mode, paused, color_label):
-        """Population card. info: births, deaths (since the start), extinct (bool)."""
+        """Population card. info: births, deaths (since the start), extinct (bool), pop_max, setup.
+        Rates come from the last line of timeline.csv; lineages from the display tracker (rendering/lineage.py)."""
         f, c = self.fonts, Ctx(self.u, self.ky)
         p = self.bg["gen"].copy()
         W, pad = p.get_width(), c.x(14)
@@ -446,26 +448,47 @@ class Hud:
         bar_h = max(3, c.x(5))
         cap = info.get("pop_max", config.POP_MAX)
         _row(p, f, c, 38, "Vivantes / plafond", f"{n}/{cap}")
-        _bar(p, pad, c.y(59), W - 2 * pad, bar_h, n / cap if cap else 0, energy_color(0.85))
+        _bar(p, pad, c.y(59), W - 2 * pad, bar_h, n / cap if cap else 0, (204, 172, 132))
         _row(p, f, c, 68, "Temps simulé", format_time(world.tick))
-        _row(p, f, c, 86, "Naissances / morts", f"{info.get('births', 0)} / {info.get('deaths', 0)}")
-        _row(p, f, c, 104, "Lignée moy. / max",
-             f"{sum(gens) / n:.1f} / {max(gens)}" if n else "-")
+        last = self.rows[-1] if self.rows else None
+        per_min = 60 * config.TICKS_PER_SECOND / config.SAMPLE_TICKS   # Lines of timeline.csv per simulated minute
+        if last is not None:
+            born = (last.get("births") or 0) * per_min
+            dead = ((last.get("deaths_hunger") or 0) + (last.get("deaths_age") or 0)) * per_min
+            rates = f"+{born:.0f} / -{dead:.0f}"
+        else:
+            rates = "-"
+        _row(p, f, c, 86, "Naissances / morts par min", rates)
+        _row(p, f, c, 104, "Générations moy. / max", f"{sum(gens) / n:.1f} / {max(gens)}" if n else "-")
+        lineage = getattr(self, "lineage", None)
+        if lineage is not None and n:
+            count, share, _ = lineage.summary(world)
+            share_txt = f"{share:.0%}" if share >= 0.1 else f"{share * 100:.1f} %"
+            _row(p, f, c, 122, "Lignées · la plus grande", f"{count} · {share_txt}")
         if len(self.profiles) > 1:
             # One dot (the species colour) and the number of living creatures per species
-            _text(p, f["base"], "Espèces", pad, c.y(122), LABEL)
+            _text(p, f["base"], "Espèces", pad, c.y(140), LABEL)
             x = W - pad
             for name in reversed(self.profiles):
                 n_alive = sum(1 for cr in creatures if cr.alive and cr.profile == name)
-                img = _text(p, f["small"], str(n_alive), x, c.y(124), VALUE, right=True)
+                img = _text(p, f["small"], str(n_alive), x, c.y(142), VALUE, right=True)
                 x -= img.get_width() + c.x(5)
-                pygame.draw.circle(p, PROFILES[name]["color"], (x - c.x(3), c.y(124) + img.get_height() // 2), max(3, c.x(4)))
+                pygame.draw.circle(p, PROFILES[name]["color"], (x - c.x(3), c.y(142) + img.get_height() // 2), max(3, c.x(4)))
                 x -= c.x(14)
+        else:
+            # Mini curve of the population over the last relevés
+            pops = [r.get("population") for r in self.rows[-80:] if r.get("population") is not None]
+            area = pygame.Rect(pad, c.y(138), W - 2 * pad, max(c.x(10), c.y(16)))
+            pygame.draw.rect(p, (255, 255, 255, 12), area, border_radius=max(2, c.x(4)))
+            if len(pops) > 1:
+                top = max(pops) or 1
+                pts = [(area.x + area.w * i / (len(pops) - 1), area.bottom - 2 - (area.h - 4) * v / top)
+                       for i, v in enumerate(pops)]
+                pygame.draw.aalines(p, (204, 172, 132), False, pts)
 
         debug_label = ("off", "sélection", "toutes")[debug_mode]
-        _text(p, f["small"], f"x{speed}  ·  {fps:.0f} FPS", pad, c.y(142), LABEL)
-        _text(p, f["small"], f"debug : {debug_label}", W - pad, c.y(142), LABEL, right=True)
-        _text(p, f["small"], f"couleur : {color_label}", pad, c.y(158), LABEL)
+        _text(p, f["small"], f"couleur : {color_label}  ·  debug : {debug_label}", pad, c.y(158), LABEL)
+        _text(p, f["small"], f"{fps:.0f} FPS", W - pad, c.y(158), LABEL, right=True)
         return p
 
     def _draw_creature(self, world, selected):
@@ -582,8 +605,11 @@ class Hud:
 
     def draw(self, sidebar, strip, world, fps, speed, info, debug_mode, paused, selected, color_label):
         """sidebar: surface of layout.sidebar. strip: surface of layout.strip, or None."""
-        sidebar.fill(config.SIDEBAR_BG_COLOR)
-        pygame.draw.line(sidebar, (48, 54, 60), (0, 0), (0, sidebar.get_height()))
+        if not self.visible:
+            return   # Tab: panels hidden, the whole world is visible
+        radius = max(4, round(12 * self.u))
+        for rect in self.slots.values():
+            frost(sidebar, rect, radius)   # The panels float over the world in frosted glass
         panels = {
             "gen": lambda: self._draw_generation(world, fps, speed, info, debug_mode, paused, color_label),
             "creature": lambda: self._draw_creature(world, selected),

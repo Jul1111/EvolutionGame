@@ -13,6 +13,7 @@ from rendering.hud import Hud, SERIES_BY_KEY
 from rendering.menu import MenuBar, profile_label
 from brain.profiles import PROFILES
 from rendering.overlay import Overlay, PARAM_INFO
+from utils.presets import PresetBrowser
 from rendering.scene import Scene, pick_creature
 from rendering.display import Display
 from rendering.layout import compute_layout
@@ -38,6 +39,9 @@ def main():
     hud = Hud()
     menu = MenuBar()
     overlay = Overlay(hud, scene)   # Tool bar, legend, help, hover tips, settings panel, large network
+    hud.lineage = scene.lineage     # Living lineages in the Population panel
+    presets = PresetBrowser()       # Saved settings (saves/presets/), browsed in the settings panel
+    overlay.presets = presets
     cam_follow = False              # True: the camera stays on the selected creature
     drag_start = None               # Mouse position of a left press in the world (select on release, pan if dragged)
     dragging = False
@@ -212,7 +216,43 @@ def main():
         elif action == "step":
             step_request = paused
         elif action == "chart":
-            hud.toggle_chart()
+            # Curves: hidden → side panel → large view over the world → hidden
+            if overlay.chart_big:
+                overlay.chart_big = False
+            elif hud.show_chart:
+                hud.toggle_chart()
+                overlay.chart_big = True
+            else:
+                hud.toggle_chart()
+        elif action == "panels":
+            hud.visible = not hud.visible
+        elif action == "minimap":
+            overlay.minimap.enabled = not overlay.minimap.enabled
+        elif action == "effects":
+            scene.effects.enabled = not scene.effects.enabled
+        elif action == "cam_follow_off":
+            cam_follow = False   # The mini-map moved the view by hand
+        elif action in ("preset_prev", "preset_next"):
+            presets.refresh()
+            presets.move(-1 if action == "preset_prev" else 1)
+            return True
+        elif action == "preset_save":
+            values = {name: pending.get(a, getattr(config, name)) for a, (name, _, _) in PARAMS.items()}
+            values["ACTIVE_PROFILES"] = list(config.ACTIVE_PROFILES if pending_profiles is None else pending_profiles)
+            overlay.toast(f"Préréglage enregistré : saves/presets/{presets.save(values)}")
+            return True
+        elif action == "preset_apply":
+            values = presets.load()
+            if values:
+                for a, (name, _, _) in PARAMS.items():
+                    if name in values:
+                        apply_param(a, values[name])
+                if values.get("ACTIVE_PROFILES"):
+                    wanted = [p for p in PROFILES if p in values["ACTIVE_PROFILES"]]
+                    pending_profiles = None if wanted == config.ACTIVE_PROFILES else wanted
+                    persist_settings()
+                overlay.toast("Préréglage appliqué")
+            return True
         elif action == "graph":
             # Network view: hidden → small (side bar) → large (over the world) → hidden
             if overlay.net_big:
@@ -322,7 +362,8 @@ def main():
             pygame.K_p: "params_panel", pygame.K_b: "best", pygame.K_t: "follow", pygame.K_s: "save_pop",
             pygame.K_EQUALS: "zoom_in", pygame.K_PLUS: "zoom_in", pygame.K_KP_PLUS: "zoom_in",
             pygame.K_MINUS: "zoom_out", pygame.K_KP_MINUS: "zoom_out", pygame.K_0: "view_fit",
-            pygame.K_KP0: "view_fit", pygame.K_1: "view_screen", pygame.K_KP1: "view_screen", pygame.K_v: "cam_follow"}
+            pygame.K_KP0: "view_fit", pygame.K_1: "view_screen", pygame.K_KP1: "view_screen", pygame.K_v: "cam_follow",
+            pygame.K_TAB: "panels", pygame.K_m: "minimap", pygame.K_e: "effects"}
     reset_pending = False
 
     speed_index = 0
@@ -377,7 +418,7 @@ def main():
                         scene.pan_pixels(event.rel[0] * ratio, event.rel[1] * ratio)
             elif event.type == pygame.MOUSEWHEEL:
                 mx, my = display.to_pixels(pygame.mouse.get_pos())
-                if layout.world.collidepoint(mx, my) and menu.open_index is None and not overlay.any_modal():
+                if layout.world.collidepoint(mx, my) and menu.open_index is None and not overlay.blocks(mx, my):
                     scene.zoom_by(1.15 ** event.y, (mx - layout.world.x, my - layout.world.y))
             elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
                 if drag_start is not None and not dragging:
@@ -433,22 +474,26 @@ def main():
                   "setup": setup is not None},
                  debug_mode, paused, selected, scene.color_label())
         net_state = 2 if overlay.net_big else (1 if hud.show_graph else 0)
+        chart_state = 2 if overlay.chart_big else (1 if hud.show_chart else 0)
         params_info = [(a, *PARAM_INFO.get(a, (a, "")), fmt(getattr(config, name)),
                         fmt(pending[a]) if a in pending else None)
                        for a, (name, _, fmt) in PARAMS.items()] if overlay.params_open else []
         overlay.draw(window, {"paused": paused, "speed": speed, "debug": debug_mode, "follow": follow,
-                              "graph": net_state}, world, selected, params_info)
+                              "graph": net_state, "chart": chart_state, "cam_follow": cam_follow,
+                              "profiles": list(config.ACTIVE_PROFILES if pending_profiles is None else pending_profiles),
+                              "profiles_pending": pending_profiles is not None}, world, selected, params_info)
         if menu.open_index is None:
             reset_pending = False
         menu.draw(window, {
             "speed": speed, "paused": paused, "debug": ("off", "sélection", "toutes")[debug_mode],
-            "color": scene.color_label(), "chart": hud.show_chart, "graph": ("non", "petit", "grand")[net_state],
+            "color": scene.color_label(), "chart": ("non", "panneau", "grand")[chart_state], "graph": ("non", "petit", "grand")[net_state],
             "legend": overlay.legend_open, "follow": follow,
             "fullscreen": display.fullscreen,
             **{"s_" + key: key in hud.chart_keys for key in SERIES_BY_KEY},
             **{a: fmt(pending.get(a, getattr(config, name))) + ("  *" if a in pending else "")
                for a, (name, _, fmt) in PARAMS.items()},
-            "cam_follow": cam_follow,
+            "cam_follow": cam_follow, "minimap": overlay.minimap.enabled, "effects": scene.effects.enabled,
+            "panels": hud.visible,
             "load_pop": (f"Charger : {os.path.basename(last_saved)}" if last_saved else "Charger une population (aucune)"),
             **{"p_" + n: n in (config.ACTIVE_PROFILES if pending_profiles is None else pending_profiles) for n in PROFILES},
             **{"pl_" + n: profile_label(n) + ("  *" if pending_profiles is not None

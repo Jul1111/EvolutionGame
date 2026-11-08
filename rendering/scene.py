@@ -7,12 +7,14 @@ import config
 from core.physics import torus_delta
 from brain.profiles import PROFILES
 from rendering.obstacles import draw_obstacle
+from rendering.lineage import LineageTracker, lineage_color
+from rendering.effects import Effects
 
 ENERGY_BUCKETS = 16   # Number of pre-rendered creature sprites (one per energy level)
 FOOD_FRAMES = 12      # Number of pre-rendered food pulsation frames
 MIN_ZOOM_RATIO = 0.25   # Zooming out stops at a quarter of the zoom that fits the whole world
 COPY_VEIL_ALPHA = 120   # Darkening of the torus copies around the real map (0-255)
-COLOR_MODES = ("espèce", "énergie", "vitesse", "nourriture", "taille")  # What the creature colour encodes (key C)
+COLOR_MODES = ("espèce", "énergie", "vitesse", "nourriture", "taille", "lignée")  # What the creature colour encodes (key C)
 TRAIL_COLOR = (255, 226, 140)
 TRAIL_FADE = (24, 30, 34)
 SUPERSAMPLE = 4       # Sprites are drawn 4x bigger then shrunk, for smooth edges
@@ -73,8 +75,12 @@ class Scene:
         self.max_zoom = 4.0
         self._fit_world()
         self.zoom = 1.0  # Starts at the scale of one screen (the whole world when it is 1×1)
-        self.color_mode = 0
-        self.bucket_colors = [energy_color(i / (ENERGY_BUCKETS - 1)) for i in range(ENERGY_BUCKETS)]
+        # One species: its colour says nothing, so energy is shown (several species: one colour each)
+        self.color_mode = 0 if len(config.ACTIVE_PROFILES) > 1 else COLOR_MODES.index("énergie")
+        self.bucket_colors = [body_color(i / (ENERGY_BUCKETS - 1)) for i in range(ENERGY_BUCKETS)]
+        self.lineage = LineageTracker()   # Founder of each creature: colour mode «lignée», Population panel
+        self.effects = Effects()          # Births and deaths drawn in the world (key E)
+        self._lineage_sprites = {}
 
     def cycle_color_mode(self):
         self.color_mode = (self.color_mode + 1) % len(COLOR_MODES)
@@ -101,6 +107,7 @@ class Scene:
             self.food_sprites = [self._build_food(f) for f in range(FOOD_FRAMES)]
             self.poison_sprites = [self._build_poison(f) for f in range(FOOD_FRAMES)]
             self._sized = {}   # Body sprites resized for the size gene: (id of sprite, size step) → sprite
+            self._lineage_sprites = {}
 
     # ---------- camera ----------
 
@@ -314,6 +321,8 @@ class Scene:
         """screen: the world area. debug_mode: 0 = off, 1 = selected (else oldest living) creature, 2 = all living."""
         k = self.scale
         screen.blit(self.background, (0, 0))
+        self.lineage.update(world)
+        self.effects.update(world)
         now = pygame.time.get_ticks()  # real time: pulsation does not accelerate with the sim speed
         self._draw_obstacles(screen, world)
 
@@ -349,6 +358,11 @@ class Scene:
             if mode == "espèce":
                 color = PROFILES[c.profile]["color"]
                 sprite = self.species_sprites[c.profile]
+            elif mode == "lignée":
+                color = lineage_color(self.lineage.of(c))
+                sprite = self._lineage_sprites.get(color)
+                if sprite is None:
+                    sprite = self._lineage_sprites[color] = self._build_body(color)
             else:
                 if mode == "énergie":
                     ratio = c.energy / c.energy_max
@@ -379,6 +393,7 @@ class Scene:
                 nub = (round(px + cos_a * r * 0.62), round(py + sin_a * r * 0.62))
                 pygame.draw.circle(screen, nub_color, nub, nub_radius)
 
+        self.effects.draw(screen, world, self)
         self._draw_copies_veil(screen, world)
 
         if selected is not None:
@@ -451,3 +466,13 @@ class Scene:
                     pygame.draw.aaline(screen, color, (cx, cy), (cx + dx * k, cy + dy * k))
             if mode == 1:
                 pygame.draw.circle(screen, (255, 255, 255), center, round((c.radius + 5) * k), 1)
+
+
+BODY_HIGH = (120, 196, 255)   # Full end of the creature scale: sky blue, never green (green is food)
+
+
+def body_color(t):
+    """Creature colour for a ratio t in [0, 1]: coral → amber → sky blue."""
+    if t < 0.5:
+        return _lerp(config.ENERGY_LOW_COLOR, config.ENERGY_MID_COLOR, t * 2.0)
+    return _lerp(config.ENERGY_MID_COLOR, BODY_HIGH, (t - 0.5) * 2.0)

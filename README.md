@@ -50,7 +50,9 @@ Les résultats sont écrits dans `experiments/results/<date>_<nom>/`. Méthode, 
 | Espace / → | Pause / tick suivant |
 | Molette, glisser | Zoom, déplacement |
 | V / B / T | Suivre la sélection / meilleur reproducteur / lignée |
-| G / N | Courbes / graphe du réseau |
+| G / N | Courbes (panneau, puis grand) / graphe du réseau |
+| Tab / M / E | Panneaux / mini-carte / naissances et morts |
+| C | Couleur : espèce, énergie, vitesse, nourriture, taille, lignée |
 | S | Sauvegarder la population |
 | P / H | Paramètres / aide |
 

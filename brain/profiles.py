@@ -14,7 +14,7 @@ from core.sensors import SENSORS
 PROFILES = {
     # The network of the runs that worked (100 generations, 08/11): 9 inputs, 6 hidden, 74 weights
     "complet": {"title": "Complet", "sensors": ["food", "energy", "speed", "can_eat", "poison", "obstacle"],
-                "hidden": 6, "speed_output": True, "memory": 0, "color": (120, 224, 176)},
+                "hidden": 6, "speed_output": True, "memory": 0, "color": (255, 150, 110)},
     "chasseur": {"title": "Chasseur", "sensors": ["food"], "hidden": 0, "speed_output": True, "memory": 0,
                  "color": (255, 196, 77)},
     "chasseur_rassasie": {"title": "Chasseur rassasié", "sensors": ["food", "can_eat"], "hidden": 0,
