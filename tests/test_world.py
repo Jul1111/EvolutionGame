@@ -45,7 +45,8 @@ def test_no_creature_inside_an_obstacle():
 
 
 def test_sense_length_matches_profile():
-    w = _world(4, profiles=("complet", "prudent", "chasseur", "chasseur_rassasie", "vitesse_fixe", "scripte"))
+    from brain.profiles import PROFILES
+    w = _world(4, profiles=tuple(PROFILES))
     w.update()
     for c in w.creatures:
         assert len(w.sense(c)) == len(input_labels(c.profile))
@@ -65,3 +66,32 @@ def test_food_and_poison_never_reappear_on_or_near_a_creature():
                         d = math.hypot(torus_delta(c.x, f.x, w.width), torus_delta(c.y, f.y, w.height))
                         assert d >= c.radius + config.FOOD_RADIUS + config.SPAWN_CLEARANCE - 1e-9
     assert w.eaten > 0 and w.poisoned > 0
+
+
+def test_hunger_and_noise_sensors():
+    from core.sensors import SENSORS
+    w = _world(6, profiles=("complet_faim",))
+    c = w.creatures[0]
+    c.unseen_ticks = config.HUNGER_SCALE // 2
+    assert abs(SENSORS["hunger"].fn(w, c, {})[0] - 0.5) < 1e-9
+    c.unseen_ticks = 10 * config.HUNGER_SCALE
+    assert SENSORS["hunger"].fn(w, c, {})[0] == 1.0
+    # Noise: in [-1, 1], changes with the tick and the creature, and never touches the world's random generator
+    state = w.rng.getstate()
+    values = []
+    for t in range(50):
+        w.tick = t
+        values.append(SENSORS["noise"].fn(w, c, {})[0])
+    assert w.rng.getstate() == state
+    assert all(-1 <= v <= 1 for v in values) and len(set(values)) == 50
+    w.tick = 3
+    assert SENSORS["noise"].fn(w, c, {})[0] == values[3]
+
+
+def test_unseen_ticks_count_and_reset():
+    w = _world(7, profiles=("complet_faim",))
+    for _ in range(300):
+        w.update()
+    for c in w.creatures:
+        if c.alive:
+            assert c.unseen_ticks == 0 if c.food_nearby else c.unseen_ticks >= 1

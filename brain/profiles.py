@@ -15,6 +15,17 @@ PROFILES = {
     # The network of the runs that worked (100 generations, 08/11): 9 inputs, 6 hidden, 74 weights
     "complet": {"title": "Complet", "sensors": ["food", "energy", "speed", "can_eat", "poison", "obstacle"],
                 "hidden": 6, "speed_output": True, "memory": 0, "color": (255, 150, 110)},
+    # Exploration tools (09/11): the same network plus one way to act when nothing is in view.
+    # To compare them, put them in the same world as «complet» (duel): the one that spreads is the one that helps
+    "complet_faim": {"title": "Complet + faim", "sensors": ["food", "energy", "speed", "can_eat", "poison", "obstacle",
+                                                            "hunger"],
+                     "hidden": 6, "speed_output": True, "memory": 0, "color": (120, 200, 255)},
+    "complet_bruit": {"title": "Complet + bruit", "sensors": ["food", "energy", "speed", "can_eat", "poison",
+                                                              "obstacle", "noise"],
+                      "hidden": 6, "speed_output": True, "memory": 0, "color": (230, 150, 255)},
+    "complet_memoire": {"title": "Complet + mémoire", "sensors": ["food", "energy", "speed", "can_eat", "poison",
+                                                                  "obstacle"],
+                        "hidden": 6, "speed_output": True, "memory": 2, "color": (255, 214, 102)},
     "chasseur": {"title": "Chasseur", "sensors": ["food"], "hidden": 0, "speed_output": True, "memory": 0,
                  "color": (255, 196, 77)},
     "chasseur_rassasie": {"title": "Chasseur rassasié", "sensors": ["food", "can_eat"], "hidden": 0,

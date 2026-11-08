@@ -75,6 +75,8 @@ CREATURE_TIPS = [
     (150, "Taille (gène du corps, de {size_min:g} à {size_max:g}), génération de lignée et nombre de petits. Les petits sont la seule chose que la sélection naturelle récompense."),
 ]
 NET_TIPS = {
+    "Faim": "Temps depuis la dernière nourriture vue, de 0 à 1 en {hunger} s. Seule entrée qui change quand rien n'est en vue.",
+    "Bruit": "Valeur au hasard à chaque tick, entre -1 et 1 : permet une marche aléatoire.",
     "Distance": "Distance à la nourriture visible la plus proche, divisée par la portée. 1 = rien en vue.",
     "Angle": "Direction de cette nourriture par rapport au cap. 0 = droit devant, + = à droite, - = à gauche.",
     "Énergie": "Énergie de la créature, divisée par le maximum.",
@@ -806,7 +808,8 @@ class Overlay:
             for i, label in enumerate(labels):
                 top = base + round((i * 15 + (4 if i >= n_in else 0)) * u)
                 if top <= ly < top + round(15 * u):
-                    return NET_TIPS.get(label)
+                    tip = NET_TIPS.get(label)
+                    return tip.format(hunger=config.HUNGER_SCALE // config.TICKS_PER_SECOND) if tip else None
         return None
 
     def draw_tips(self, window, world, selected, menu_open):

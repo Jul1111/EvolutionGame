@@ -40,6 +40,20 @@ def _compass(world, c, ctx):
     return [math.cos(c.angle), math.sin(c.angle)]   # Heading in the world (the creature has no other way to know it)
 
 
+def _hunger(world, c, ctx):
+    # Time since it last saw an available food, 0 → 1 over HUNGER_SCALE ticks. The only input that keeps changing
+    # when nothing is in view: lets evolution find «the longer I see nothing, the more I move»
+    return [min(1.0, c.unseen_ticks / config.HUNGER_SCALE)]
+
+
+def _noise(world, c, ctx):
+    # A new value in [-1, 1] at each tick, different for each creature: lets a network wander at random.
+    # Computed from (creature, tick), not drawn from the world's random generator: looking at a creature in the
+    # interface never changes the simulation
+    v = math.sin(c.uid * 12.9898 + world.tick * 78.233) * 43758.5453
+    return [2.0 * (v - math.floor(v)) - 1.0]
+
+
 def _touch(world, c, ctx):
     return [1.0 if c.touching else 0.0]   # Pushed against an obstacle at the last tick
 
@@ -53,4 +67,6 @@ SENSORS = {
     "obstacle": Sensor(["Dist. obstacle", "Angle obstacle"], nearest_of("obstacle"), {"obstacle"}),
     "compass": Sensor(["Cap cos", "Cap sin"], _compass, set()),
     "touch": Sensor(["Contact"], _touch, set()),
+    "hunger": Sensor(["Faim"], _hunger, set()),
+    "noise": Sensor(["Bruit"], _noise, set()),
 }

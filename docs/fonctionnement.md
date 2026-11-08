@@ -34,11 +34,22 @@ Un profil dit quels capteurs alimentent le réseau, la taille de la couche cach�
 | Profil | Entrées | Sorties | Poids |
 |---|---|---|---|
 | `complet` (défaut) | nourriture, énergie, vitesse, peut manger, poison, obstacle ; 6 cachés | virage, vitesse | 74 |
+| `complet_faim` | `complet` + faim (temps depuis la dernière nourriture vue, 0 → 1 en 10 s) | virage, vitesse | 80 |
+| `complet_bruit` | `complet` + bruit (valeur au hasard à chaque tick, entre -1 et 1) | virage, vitesse | 80 |
+| `complet_memoire` | `complet` + 2 cellules de mémoire (sorties renvoyées en entrée au tick suivant) | virage, vitesse, 2 mémoires | 100 |
 | `chasseur` | nourriture | virage, vitesse | 6 |
 | `chasseur_rassasie` | nourriture + peut manger | virage, vitesse | 8 |
 | `prudent` | nourriture + poison, 3 cachés | virage, vitesse | 23 |
 | `vitesse_fixe` | nourriture | virage (vitesse fixe) | 3 |
 | `scripte` | règles écrites à la main (`brain/scripted.py`), n'évolue pas : point de référence | virage, vitesse | 0 |
+
+## Explorer quand rien n'est en vue
+
+Sans rien en vue, les entrées de `complet` sont presque constantes : il ne peut qu'aller tout droit, tourner en rond ou s'arrêter. `complet_faim`, `complet_bruit` et `complet_memoire` lui donnent chacune un moyen d'agir autrement, sans coder l'exploration à leur place.
+
+- **Mesurer** : courbes «Part du temps sans nourriture en vue», «Vitesse sans nourriture en vue», «Virage sans nourriture en vue» (colonnes `blind_frac`, `blind_speed`, `blind_turn` de `timeline.csv`). Explorer = aller vite et assez droit quand rien n'est en vue. «En vue» = une nourriture disponible dans le cône (une nourriture mangée réapparaît ailleurs).
+- **Duel** : cocher plusieurs espèces dans l'écran de réglages. Elles partagent le monde ; le panneau Population montre la courbe et l'effectif de chacune (colonnes `pop__<espèce>`). Celle qui envahit le monde porte quelque chose d'utile. Sans affichage : `python -m experiments.run --name duel_faim --profiles complet complet_faim --ticks 120000`, puis la table «Espèces» (part moyenne, graines où elle est majoritaire, graines où elle s'est éteinte).
+- Les 200 fondateurs sont partagés entre les espèces : chacune part plus petite, le risque d'extinction au départ augmente.
 
 ## Configuration
 

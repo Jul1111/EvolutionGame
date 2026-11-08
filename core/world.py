@@ -261,8 +261,8 @@ class World:
             if not all_around:
                 rel = (np.arctan2(dy, dx) - heading[:, None] + math.pi) % (2 * math.pi) - math.pi
                 visible &= np.abs(rel) <= half_fov
-            in_view = visible.any(axis=1)
             masked = np.where(visible & (cool <= 0)[None, :], d2, np.inf)
+            in_view = np.isfinite(masked).any(axis=1)   # An available item in view
             j_best = m - 1 - np.argmin(masked[:, ::-1], axis=1)   # Last of equal minima, like nearest()
             best = masked[rows, j_best]
             for i, c in enumerate(alive):
@@ -379,7 +379,7 @@ class World:
     def nearest(self, creature, items):
         """Nearest available item in the creature's field of view: ((distance², dx, dy) or None, in_view).
         In view = within the vision range AND within VISION_FOV_DEGREES centred on the heading.
-        in_view says whether any item is in view, available or not. Also used by the debug overlay."""
+        in_view says whether an available item is in view. Also used by the debug overlay."""
         best = None
         range2 = config.VISION_RANGE ** 2
         best_distance2 = range2
@@ -401,9 +401,9 @@ class World:
             # Range is tested first: the angle (atan2) is only computed for the few items that are close enough
             if not all_around and abs(normalize_angle(math.atan2(dy, dx) - creature.angle)) > half_fov:
                 continue  # Outside the field of view
-            in_view = True
             if item.cooldown > 0:
                 continue  # Not available yet: the network cannot see it
+            in_view = True
             if distance2 <= best_distance2:
                 best_distance2 = distance2
                 best = (distance2, dx, dy)
@@ -427,7 +427,7 @@ class World:
             ctx = creature._near
         else:
             food, in_view = self.nearest(creature, self.foods)
-            creature.food_nearby = in_view  # Any food in view, even one that is not available yet (metric only)
+            creature.food_nearby = in_view  # An available food in view
             ctx = {"food": food}
         values = []
         for key in PROFILES[creature.profile]["sensors"]:

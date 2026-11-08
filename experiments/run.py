@@ -3,6 +3,7 @@
     python -m experiments.run --name base --seeds 1 2 3 4 --ticks 120000
     python -m experiments.run --name moins_nourr --set FOOD_COUNT=30
     python -m experiments.run --name suite --from-population saves/populations/<fichier>.npz
+    python -m experiments.run --name duel_faim --profiles complet complet_faim --ticks 120000     (duel d'espèces)
     python -m experiments.run --name suite --from-population experiments/results/<run>/seed_{seed}/population_finale.npz
 
 Each run writes experiments/results/<date>_<name>/:
@@ -121,9 +122,10 @@ def main(argv=None):
         for fut in futures:
             print(fut.result())
 
-    from experiments.summary import summarize_timeline, print_timeline_table
+    from experiments.summary import summarize_timeline, print_timeline_table, print_species_table
     summarize_timeline(out_dir)
     print_timeline_table([out_dir])
+    print_species_table([out_dir])
 
 
 if __name__ == "__main__":

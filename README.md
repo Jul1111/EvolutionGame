@@ -88,6 +88,8 @@ tests/         Tests pytest
 
 - [x] Évolution continue par sélection naturelle
 - [x] Gène de taille
+- [x] Mesure de l'exploration, espèces faim / bruit / mémoire, duels d'espèces
+- [ ] Duels : quelle aide à explorer l'emporte ?
 - [ ] Étude du gène de taille (actif contre neutre)
 - [ ] Reproduction à deux parents
 - [ ] Environnement changeant
@@ -100,7 +102,7 @@ Un mécanisme à la fois, validé sur 4 graines minimum. Voir [docs/contribuer.m
 
 ## Limites connues
 
-- Pas de mémoire dans le réseau.
+- Mémoire seulement pour l'espèce `complet_memoire` (2 cellules), pas encore étudiée.
 - Performances limitées au-delà de quelques centaines de créatures.
 
 ## Licence

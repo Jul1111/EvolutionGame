@@ -23,7 +23,9 @@ from evolution.mutation import mutate
 
 SAMPLE_HEADER = ["tick", "population", "births", "deaths_hunger", "deaths_age", "mean_age_at_death",
                  "mean_lineage_gen", "max_lineage_gen", "food_rate", "poison_rate", "mean_speed", "mean_energy",
-                 "cap_blocked", "food_available", "mean_size", "size_std", "min_size", "max_size"]
+                 "cap_blocked", "food_available", "mean_size", "size_std", "min_size", "max_size",
+                 "blind_frac", "blind_speed", "blind_turn"]
+# Then one column per species of the run: pop__<profile> (living creatures of that species)
 
 
 class ContinuousSimulation:
@@ -44,6 +46,8 @@ class ContinuousSimulation:
         self.death_log = [] if log_deaths else None
         self._reset_counters()
         profiles = list(founders) if founders else list(config.ACTIVE_PROFILES)
+        self.species = profiles
+        self.header = SAMPLE_HEADER + [f"pop__{p}" for p in profiles]
         for index, name in enumerate(profiles):
             if founders:
                 for genome, size in founders[name]:
@@ -55,10 +59,12 @@ class ContinuousSimulation:
                     brain = new_brain(name)
                     brain.randomize(rng, config.NN_INIT_STD)
                     self._add(brain, name)
-        if timeline_path and not (append and os.path.exists(timeline_path)):
+        if timeline_path and append and os.path.exists(timeline_path):
+            self.header = _upgrade_header(timeline_path, self.header)
+        elif timeline_path:
             os.makedirs(os.path.dirname(timeline_path) or ".", exist_ok=True)
             with open(timeline_path, "w", newline="", encoding="utf-8") as f:
-                csv.writer(f).writerow(SAMPLE_HEADER)
+                csv.writer(f).writerow(self.header)
 
     # ---------- one tick ----------
 
@@ -70,6 +76,11 @@ class ContinuousSimulation:
         world.update()
         living = [c for c in world.creatures if c.alive]
         self.life_ticks += len(living)
+        for c in living:
+            if not c.food_nearby:   # Nothing available in view: what does it do? (exploration measures)
+                self.blind_ticks += 1
+                self.blind_speed += c.speed
+                self.blind_turn += abs(c.last_turn)
         for c in living:
             if config.AGE_MAX and c.age >= config.AGE_MAX:
                 c.alive = False
@@ -167,6 +178,9 @@ class ContinuousSimulation:
         self.death_ages = []
         self.cap_blocked = 0
         self.life_ticks = 0
+        self.blind_ticks = 0
+        self.blind_speed = 0.0
+        self.blind_turn = 0.0
         self._eaten0 = getattr(self.world, "eaten", 0)
         self._poisoned0 = getattr(self.world, "poisoned", 0)
 
@@ -196,6 +210,12 @@ class ContinuousSimulation:
             "size_std": statistics.pstdev(c.size for c in cs) if n else None,
             "min_size": min((c.size for c in cs), default=None),
             "max_size": max((c.size for c in cs), default=None),
+            # Exploration: share of the life ticks with no available food in view, and the speed and |turn| then.
+            # Exploring = moving fast and fairly straight when nothing is in view
+            "blind_frac": self.blind_ticks / self.life_ticks if self.life_ticks else None,
+            "blind_speed": self.blind_speed / self.blind_ticks if self.blind_ticks else None,
+            "blind_turn": self.blind_turn / self.blind_ticks if self.blind_ticks else None,
+            **{f"pop__{p}": sum(1 for c in cs if c.profile == p) for p in self.species},
         }
 
     def _sample(self):
@@ -203,7 +223,7 @@ class ContinuousSimulation:
         self.last_sample = s
         if self.timeline_path:
             with open(self.timeline_path, "a", newline="", encoding="utf-8") as f:
-                csv.writer(f).writerow([_cell(s[k]) for k in SAMPLE_HEADER])
+                csv.writer(f).writerow([_cell(s.get(k)) for k in self.header])
         if self.verbose:
             print(f"t {s['tick']:>7} | pop {s['population']:>4} | naiss. {s['births']:>3} | morts faim "
                   f"{s['deaths_hunger']:>3} vieil. {s['deaths_age']:>3} | lignée {_cell(s['mean_lineage_gen'])} | "
@@ -274,6 +294,27 @@ def latest_snapshot():
         return None
     files = sorted(f for f in os.listdir(folder) if f.endswith(".npz"))
     return os.path.join(folder, files[-1]) if files else None
+
+
+def _upgrade_header(path, header):
+    """A resumed run whose timeline.csv has other columns (older version, other species): rewritten with the new
+    columns, empty cells where the old rows had no value."""
+    with open(path, newline="", encoding="utf-8") as f:
+        reader = csv.reader(f)
+        old = next(reader, None)
+        rows = list(reader)
+    if old == header:
+        return header
+    columns = header + [c for c in (old or []) if c not in header]
+    tmp = path + ".tmp"
+    with open(tmp, "w", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
+        writer.writerow(columns)
+        for row in rows:
+            values = dict(zip(old or [], row))
+            writer.writerow([values.get(c, "") for c in columns])
+    os.replace(tmp, path)
+    return columns
 
 
 def _share(total, index, n):

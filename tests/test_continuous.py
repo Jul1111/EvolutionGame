@@ -138,3 +138,28 @@ def test_sizes_saved_and_loaded(tmp_path):
     assert sizes == sorted(c.size for c in sim.world.creatures)
     again = ContinuousSimulation(random.Random(2), founders=founders)
     assert sorted(c.size for c in again.world.creatures) == sizes
+
+
+def test_timeline_has_exploration_and_species_columns(tmp_path):
+    import csv as _csv
+    config.SAMPLE_TICKS = 50
+    config.ACTIVE_PROFILES = ["complet", "complet_faim"]
+    path = str(tmp_path / "t.csv")
+    sim = _sim(timeline_path=path)
+    sim.run(200)
+    rows = list(_csv.DictReader(open(path, encoding="utf-8")))
+    last = rows[-1]
+    assert int(last["pop__complet"]) + int(last["pop__complet_faim"]) == int(last["population"])
+    assert 0 <= float(last["blind_frac"]) <= 1 and last["blind_speed"] != ""
+    # Resumed with one more species: the file gets the new column, old rows keep their values
+    founders = load_population_from(sim)
+    founders["complet_bruit"] = founders["complet_faim"][:0]
+    again = ContinuousSimulation(random.Random(3), path, founders=founders, start_tick=sim.world.tick, append=True)
+    again.run(100)
+    rows = list(_csv.DictReader(open(path, encoding="utf-8")))
+    assert "pop__complet_bruit" in rows[0]
+    assert rows[0]["pop__complet"] != "" and rows[-1]["pop__complet_bruit"] == "0"
+
+
+def load_population_from(sim):
+    return {p: [(c.brain.get_genome(), c.size) for c in sim.world.creatures if c.profile == p] for p in sim.species}

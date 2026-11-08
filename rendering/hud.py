@@ -185,10 +185,14 @@ SERIES = [
     ("food_available", "Nourritures disponibles", (178, 224, 120), _col("food_available"), None, lambda v: f"{v:.0f}"),
     ("mean_size", "Taille moy.", (236, 200, 120), _col("mean_size"), lambda: config.SIZE_MAX, lambda v: f"{v:.2f}"),
     ("size_std", "Écart de taille", (200, 170, 110), _col("size_std"), None, lambda v: f"{v:.2f}"),
+    ("blind_frac", "Part du temps sans nourriture en vue", CORAL, _col("blind_frac"), lambda: 1.0, lambda v: f"{v:.0%}"),
+    ("blind_speed", "Vitesse sans nourriture en vue", (132, 132, 236), _col("blind_speed"),
+     lambda: config.CREATURE_MAX_SPEED, lambda v: f"{v:.2f}"),
+    ("blind_turn", "Virage sans nourriture en vue", (236, 142, 72), _col("blind_turn"), lambda: 1.0, lambda v: f"{v:.2f}"),
     ("cap_blocked", "Naissances bloquées (plafond)", (230, 122, 182), _col("cap_blocked"), None, lambda v: f"{v:.0f}"),
 ]
 SERIES_BY_KEY = {s[0]: s for s in SERIES}
-DEFAULT_SERIES = ("population", "food_rate", "mean_speed", "mean_lineage_gen")
+DEFAULT_SERIES = ("population", "food_rate", "mean_speed", "blind_speed")
 
 
 def _clip(font, text, max_w):
@@ -461,20 +465,29 @@ class Hud:
         _row(p, f, c, 86, "Naissances / morts par min", rates)
         _row(p, f, c, 104, "Générations moy. / max", f"{sum(gens) / n:.1f} / {max(gens)}" if n else "-")
         lineage = getattr(self, "lineage", None)
-        if lineage is not None and n:
+        if lineage is not None and n and len(self.profiles) == 1:   # Several species: their counts take this row
             count, share, _ = lineage.summary(world)
             share_txt = f"{share:.0%}" if share >= 0.1 else f"{share * 100:.1f} %"
             _row(p, f, c, 122, "Lignées · la plus grande", f"{count} · {share_txt}")
         if len(self.profiles) > 1:
-            # One dot (the species colour) and the number of living creatures per species
-            _text(p, f["base"], "Espèces", pad, c.y(140), LABEL)
+            # Duel: one curve per species (its colour, common scale) and its number of living creatures
             x = W - pad
             for name in reversed(self.profiles):
                 n_alive = sum(1 for cr in creatures if cr.alive and cr.profile == name)
-                img = _text(p, f["small"], str(n_alive), x, c.y(142), VALUE, right=True)
+                img = _text(p, f["small"], str(n_alive), x, c.y(124), VALUE, right=True)
                 x -= img.get_width() + c.x(5)
-                pygame.draw.circle(p, PROFILES[name]["color"], (x - c.x(3), c.y(142) + img.get_height() // 2), max(3, c.x(4)))
+                pygame.draw.circle(p, PROFILES[name]["color"], (x - c.x(3), c.y(124) + img.get_height() // 2), max(3, c.x(4)))
                 x -= c.x(14)
+            area = pygame.Rect(pad, c.y(138), W - 2 * pad, max(c.x(10), c.y(16)))
+            pygame.draw.rect(p, (255, 255, 255, 12), area, border_radius=max(2, c.x(4)))
+            recent = self.rows[-80:]
+            series = {nm: [r.get(f"pop__{nm}") for r in recent] for nm in self.profiles}
+            top = max([v for vs in series.values() for v in vs if v is not None] + [1])
+            for nm, vals in series.items():
+                pts = [(area.x + area.w * i / max(1, len(vals) - 1), area.bottom - 2 - (area.h - 4) * v / top)
+                       for i, v in enumerate(vals) if v is not None]
+                if len(pts) > 1:
+                    pygame.draw.aalines(p, PROFILES[nm]["color"], False, pts)
         else:
             # Mini curve of the population over the last relevés
             pops = [r.get("population") for r in self.rows[-80:] if r.get("population") is not None]

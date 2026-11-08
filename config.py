@@ -117,6 +117,7 @@ HUD_VALUE_COLOR = (235, 240, 240)
 
 # Configuration for food respawn
 FOOD_RESPAWN_DELAY = 60     # Ticks before an eaten food is available again, always at a new random place
+HUNGER_SCALE = 600          # Sensor «faim»: ticks without seeing food for the input to reach 1 (10 s)
 SPAWN_CLEARANCE = 20        # Food and poison never reappear closer than this to the edge of a creature (never on one)
 POISON_COUNT = 5            # Poison sources in the world (0 = no poison). The network sees the nearest one
 POISON_ENERGY = 40.0        # Energy lost by the creature that touches a poison (starting value, to tune)

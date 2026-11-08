@@ -87,7 +87,7 @@ def print_table(run_dirs, last=10):
 # ---------- continuous evolution (timeline.csv) ----------
 
 TIMELINE_METRICS = ["population", "births", "food_rate", "poison_rate", "mean_lineage_gen", "mean_speed",
-                    "mean_age_at_death", "cap_blocked"]
+                    "blind_frac", "blind_speed", "blind_turn", "mean_age_at_death", "cap_blocked"]
 
 
 def load_timelines(run_dir):
@@ -143,6 +143,37 @@ def print_timeline_table(run_dirs, last=10):
         print(f"{os.path.basename(run_dir.rstrip(os.sep))[:34]:<34} {f'{extinct}/{len(timelines)}':>11}{cells}")
 
 
+def print_species_table(run_dirs, last=10):
+    """Duel: share of each species in the population (last relevés of each seed), and on how many seeds it is the
+    majority or extinct. A species that spreads on most seeds carries something useful."""
+    for run_dir in run_dirs:
+        timelines = load_timelines(run_dir)
+        species = sorted({k[5:] for rows in timelines.values() for k in (rows[0] if rows else {}) if k.startswith("pop__")})
+        if len(species) < 2:
+            continue
+        print(f"\nEspèces ({os.path.basename(run_dir.rstrip(os.sep))}) : part de la population, {last} derniers relevés")
+        print(f"{'espèce':<20} {'part moy.':>10} {'écart':>8} {'majoritaire':>12} {'éteinte':>8}")
+        shares = {sp: [] for sp in species}
+        majority = {sp: 0 for sp in species}
+        extinct = {sp: 0 for sp in species}
+        for rows in timelines.values():
+            tail = rows[-last:]
+            totals = {sp: sum(_float(r.get(f"pop__{sp}")) or 0 for r in tail) for sp in species}
+            whole = sum(totals.values())
+            if not whole:
+                continue
+            for sp in species:
+                shares[sp].append(totals[sp] / whole)
+                extinct[sp] += (_float(rows[-1].get(f"pop__{sp}")) or 0) == 0
+            majority[max(species, key=lambda sp: totals[sp])] += 1
+        for sp in species:
+            vals = shares[sp]
+            if vals:
+                std = statistics.stdev(vals) if len(vals) > 1 else float("nan")
+                print(f"{sp:<20} {statistics.mean(vals):>10.0%} {std:>8.0%} {majority[sp]:>9}/{len(vals)} "
+                      f"{extinct[sp]:>5}/{len(vals)}")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("runs", nargs="+")
@@ -158,6 +189,7 @@ def main():
         print_table(generational, args.last)
     if continuous:
         print_timeline_table(continuous, args.last)
+        print_species_table(continuous, args.last)
 
 
 if __name__ == "__main__":

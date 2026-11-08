@@ -36,6 +36,8 @@ class Creature:
         self.blind_ticks = 0
         self.blind_speed_sum = 0.0
         self.blind_turn_sum = 0.0
+        self.last_turn = 0.0     # Turn output of the last tick (exploration measures)
+        self.unseen_ticks = 0    # Ticks since it last saw an available food (sensor «faim»)
         self.speed_sum = 0.0     # Sum of its speed over its life: mean speed = speed_sum / age
 
     def set_size(self, size):
@@ -77,11 +79,15 @@ class Creature:
         max_turn = config.CREATURE_MAX_TURN * (1.0 - config.TURN_SPEED_PENALTY * self.speed / config.CREATURE_MAX_SPEED)
         self.angle = normalize_angle(self.angle + turn * max_turn)
 
-        # Blind = no food at all within range, available or not (waiting next to a source is not exploring)
+        # Blind = no available food in view (food that was eaten is somewhere else when it comes back)
+        self.last_turn = turn
         if not self.food_nearby:
             self.blind_ticks += 1
             self.blind_speed_sum += self.speed
             self.blind_turn_sum += abs(turn)
+            self.unseen_ticks += 1
+        else:
+            self.unseen_ticks = 0
 
         # Update the creature's position based on its speed and angle
         self.x += self.speed * math.cos(self.angle)
