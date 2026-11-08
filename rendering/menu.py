@@ -62,6 +62,7 @@ MENUS = [
         ("poison_energy", "Dégâts d'un poison : {poison_energy}", "action", None, ""),
         None,
         ("obstacle_count", "Nombre d'obstacles : {obstacle_count}", "action", None, ""),
+        ("world_scale", "Taille du monde : {world_scale}", "action", None, ""),
     ]),
     # One check box per network profile (brain/profiles.py), in the colour of the species: the species of the random
     # founders, applied at the next restart from zero.

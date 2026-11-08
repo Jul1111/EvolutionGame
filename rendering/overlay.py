@@ -53,12 +53,13 @@ PARAM_INFO = {
     "fixed": ("Positions de la nourriture", "Fixes : elle revient au même endroit. Aléatoires : nouvel endroit à chaque fois."),
     "poison_count": ("Nombre de poisons", "Sources de poison dans le monde. 0 = aucun."),
     "poison_energy": ("Dégâts d'un poison", "Énergie perdue au contact d'un poison."),
+    "world_scale": ("Taille du monde", "Côté du monde en écrans. 2×2 = 4 fois plus de surface, de nourriture et de créatures, et environ 4 fois plus lent. Au prochain départ de zéro."),
     "obstacle_count": ("Nombre d'obstacles", "Obstacles (formes et places tirées au hasard). S'applique au prochain départ de zéro. 0 = aucun."),
 }
 
 # Explanations shown when the mouse rests on a label of the side bar: (logical y of the row, text)
 GEN_TIPS = [
-    (38, "Vivantes sur le plafond de calcul ({pop_max}). Au plafond, les naissances sont bloquées : la population n'est plus réglée par la nourriture."),
+    (38, "Vivantes sur le plafond de calcul ({pop_max} par écran). Au plafond, les naissances sont bloquées : la population n'est plus réglée par la nourriture."),
     (68, "Temps simulé depuis le départ de cette population."),
     (86, "Naissances et morts depuis le départ. Une créature naît quand son parent atteint le seuil d'énergie."),
     (104, "Génération de lignée : nombre d'ancêtres depuis les fondateurs tirés au hasard (0)."),
@@ -446,7 +447,7 @@ class Overlay:
         pygame.draw.rect(window, BORDER, rect, width=1, border_radius=round(12 * u))
         self._rects["params"] = rect
         window.blit(f["title"].render("Paramètres de simulation", True, VALUE), (rect.x + pad, rect.y + round(12 * u)))
-        for k, line in enumerate(("Les changements s'appliquent tout de suite, sauf les obstacles (orange = en attente).",
+        for k, line in enumerate(("Les changements s'appliquent tout de suite, sauf obstacles et taille du monde (orange = en attente).",
                                   "« Repartir de zéro » relance une population au hasard avec tous les réglages.")):
             window.blit(f["small"].render(_clip(f["small"], line, pw - 2 * pad), True, LABEL),
                         (rect.x + pad, rect.y + round((42 + 17 * k) * u)))

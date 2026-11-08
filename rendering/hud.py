@@ -168,7 +168,7 @@ def _col(name):
 # Curves that can be shown: (key, label, colour, value(row), fixed maximum or None = largest value seen, text format).
 # One point per line of timeline.csv. Each curve is scaled to its own range.
 SERIES = [
-    ("population", "Population", (204, 172, 132), _col("population"), lambda: config.POP_MAX, lambda v: f"{v:.0f}"),
+    ("population", "Population", (204, 172, 132), _col("population"), None, lambda v: f"{v:.0f}"),
     ("births", "Naissances (par relevé)", MINT, _col("births"), None, lambda v: f"{v:.0f}"),
     ("deaths_hunger", "Morts de faim (par relevé)", CORAL, _col("deaths_hunger"), None, lambda v: f"{v:.0f}"),
     ("deaths_age", "Morts de vieillesse (par relevé)", (150, 164, 178), _col("deaths_age"), None, lambda v: f"{v:.0f}"),
@@ -440,8 +440,9 @@ class Hud:
                            max(3, c.x(4)))
 
         bar_h = max(3, c.x(5))
-        _row(p, f, c, 38, "Vivantes / plafond", f"{n}/{config.POP_MAX}")
-        _bar(p, pad, c.y(59), W - 2 * pad, bar_h, n / config.POP_MAX if config.POP_MAX else 0, energy_color(0.85))
+        cap = info.get("pop_max", config.POP_MAX)
+        _row(p, f, c, 38, "Vivantes / plafond", f"{n}/{cap}")
+        _bar(p, pad, c.y(59), W - 2 * pad, bar_h, n / cap if cap else 0, energy_color(0.85))
         _row(p, f, c, 68, "Temps simulé", format_time(world.tick))
         _row(p, f, c, 86, "Naissances / morts", f"{info.get('births', 0)} / {info.get('deaths', 0)}")
         _row(p, f, c, 104, "Lignée moy. / max",

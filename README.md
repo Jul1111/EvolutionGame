@@ -28,7 +28,7 @@ Au lancement, le terminal liste les réglages du menu qui remplacent `config.py`
 | ↑ / ↓ | Vitesse de simulation (×1 à ×100) |
 | Espace / → | Pause / avancer d'un tick (en pause) |
 | Clic | Sélectionner une créature, ou utiliser les menus |
-| Molette, glisser, + - 0 | Zoom, déplacer la vue, tout le monde |
+| Molette, glisser, + - 0 | Zoom (jusqu'à 4 fois plus loin que la carte entière : le tore apparaît répété, assombri, autour de la carte encadrée), déplacer la vue, toute la carte |
 | V | Caméra sur la créature sélectionnée |
 | B | Sélectionner la créature qui a eu le plus de petits |
 | T | Suivre la lignée : à la mort de la sélection, passer à son plus jeune descendant vivant |
@@ -44,7 +44,7 @@ Au lancement, le terminal liste les réglages du menu qui remplacent `config.py`
 - **Panneau Créature** : énergie, vitesse, âge, repas et poisons, temps aveugle, génération de lignée et nombre de petits.
 - **Réseau** : entrées et sorties de la créature sélectionnée, en barres ou en graphe.
 - **Courbes dans le temps** (menu Courbes) : une valeur toutes les 10 s simulées, lue dans `saves/timeline.csv`. Population, naissances, morts (faim, vieillesse), repas et poisons par 1000 ticks de vie, vitesse, énergie, génération de lignée, âge à la mort, nourriture disponible, naissances bloquées par le plafond.
-- **Paramètres** (touche P) : mutation, seuil de reproduction, âge maximal, champ de vision, nourriture (nombre, énergie, délai, épuisement, positions), poison (nombre, dégâts), obstacles. Tout s'applique tout de suite, sauf le nombre d'obstacles (au prochain départ de zéro, marqué en orange). Les choix sont gardés dans `saves/settings.json`, qui ne contient que les écarts avec `config.py`.
+- **Paramètres** (touche P) : mutation, seuil de reproduction, âge maximal, champ de vision, nourriture (nombre, énergie, délai, épuisement, positions), poison (nombre, dégâts), obstacles, taille du monde (1×1, 2×2 ou 3×3 écrans). Tout s'applique tout de suite, sauf les obstacles et la taille du monde (au prochain départ de zéro, marqués en orange). Nourriture, obstacles, fondateurs et plafond sont donnés par écran : un monde 2×2 en a 4 fois plus, et tourne environ 4 fois plus lentement. Les choix sont gardés dans `saves/settings.json`, qui ne contient que les écarts avec `config.py`.
 - **Menu Réseau** : espèces des fondateurs, appliquées au prochain départ de zéro.
 - **Menu Sauvegarde** : sauvegarder la population, charger la dernière sauvegardée, repartir de zéro (confirmation demandée).
 - **Extinction** : la simulation se met en pause avec un message. Repartir de zéro ou charger une population.

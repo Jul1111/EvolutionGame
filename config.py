@@ -22,7 +22,8 @@ CREATURE_COLOR = (240, 200, 80)
 DEAD_COLOR = (90, 90, 90)
 
 # Configuration for world
-WORLD_SCALE = 1             # Side of the world in screens (a screen = SCREEN_WIDTH x SCREEN_HEIGHT): 1 = as big as the window area
+WORLD_SCALE = 1             # Side of the world in screens (a screen = SCREEN_WIDTH x SCREEN_HEIGHT). 2 = 4 times the area,
+                            # food, obstacles, founders and cap included; about 4 times slower. Menu Paramètres, next restart
 WORLD_WIDTH = round(SCREEN_WIDTH * WORLD_SCALE)
 WORLD_HEIGHT = round(SCREEN_HEIGHT * WORLD_SCALE)
 # FOOD_COUNT, POISON_COUNT and OBSTACLE_COUNT are given per screen-sized area: the world holds WORLD_SCALE² times more
@@ -68,14 +69,14 @@ CREATURE_ACCELERATION = 0.25  # Max change of speed per tick, accelerating or br
 
 # Configuration for continuous evolution (evolution/continuous.py): no generations, creatures are born and die.
 # Starting values, to tune (see the project doc conception-evolution-continue.md)
-INITIAL_POPULATION = 200    # Random creatures at the start (split between ACTIVE_PROFILES)
+INITIAL_POPULATION = 200    # Random creatures at the start, per screen-sized area (split between ACTIVE_PROFILES)
 REPRO_THRESHOLD = 120.0     # Energy needed to give birth (150: random founders rarely reach it, extinction)
 REPRO_COST = 60.0           # Energy the parent loses at a birth
 REPRO_CHILD_ENERGY = 50.0   # Energy of the newborn (less than the cost: no perpetual motion)
 MATURITY_AGE = 600          # Ticks before a creature can give birth (10 s)
 REPRO_COOLDOWN = 300        # Ticks between two births of the same creature
 AGE_MAX = 6000              # Death of old age (100 s). 0 = never
-POP_MAX = 400               # Computing cap: at the cap births are blocked and counted (cap_blocked)
+POP_MAX = 400               # Computing cap per screen-sized area: at the cap births are blocked and counted (cap_blocked)
 SAMPLE_TICKS = 600          # One line of timeline.csv every SAMPLE_TICKS ticks
 
 # Configuration for mutation

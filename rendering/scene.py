@@ -10,6 +10,8 @@ from rendering.obstacles import draw_obstacle
 
 ENERGY_BUCKETS = 16   # Number of pre-rendered creature sprites (one per energy level)
 FOOD_FRAMES = 12      # Number of pre-rendered food pulsation frames
+MIN_ZOOM_RATIO = 0.25   # Zooming out stops at a quarter of the zoom that fits the whole world
+COPY_VEIL_ALPHA = 120   # Darkening of the torus copies around the real map (0-255)
 COLOR_MODES = ("espèce", "énergie", "vitesse", "nourriture")  # What the creature colour encodes (key C)
 TRAIL_COLOR = (255, 226, 140)
 TRAIL_FADE = (24, 30, 34)
@@ -68,9 +70,9 @@ class Scene:
         # Camera: centre in world units, zoom = logical units per world unit (1 = native, below 1 = zoomed out)
         self.cam_x = config.WORLD_WIDTH / 2
         self.cam_y = config.WORLD_HEIGHT / 2
-        self.min_zoom = min(1.0, config.SCREEN_WIDTH / config.WORLD_WIDTH, config.SCREEN_HEIGHT / config.WORLD_HEIGHT)
         self.max_zoom = 4.0
-        self.zoom = self.min_zoom  # Starts on the whole world
+        self._fit_world()
+        self.zoom = self.fit_zoom  # Starts on the whole world
         self.color_mode = 0
         self.bucket_colors = [energy_color(i / (ENERGY_BUCKETS - 1)) for i in range(ENERGY_BUCKETS)]
 
@@ -115,13 +117,27 @@ class Scene:
         self._wrap_camera()
         self._refresh_sprites()
 
+    def _fit_world(self):
+        """Zoom that shows the whole world (fit_zoom), and how far one can zoom out beyond it (MIN_ZOOM_RATIO):
+        below fit_zoom the torus is shown repeated around the real map, darker."""
+        self.fit_zoom = min(1.0, config.SCREEN_WIDTH / config.WORLD_WIDTH, config.SCREEN_HEIGHT / config.WORLD_HEIGHT)
+        self.min_zoom = self.fit_zoom * MIN_ZOOM_RATIO
+
+    def world_changed(self):
+        """Call after WORLD_SCALE changed (new world): new zoom limits, view on the whole world."""
+        self._fit_world()
+        if self.size is not None:
+            self.view_all()
+        else:
+            self.zoom = self.fit_zoom
+
     def zoom_by(self, factor, anchor=None):
         self.set_zoom(self.zoom * factor, anchor)
 
     def view_all(self):
         """The whole world in view."""
         self.cam_x, self.cam_y = config.WORLD_WIDTH / 2, config.WORLD_HEIGHT / 2
-        self.set_zoom(self.min_zoom)
+        self.set_zoom(self.fit_zoom)
 
     def pan_pixels(self, dx, dy):
         """Move the view by (dx, dy) pixels of the world area (the world follows the mouse)."""
@@ -149,18 +165,33 @@ class Scene:
 
     def _images(self, world, x, y, r):
         """Screen centres (pixels) where a thing at world point (x, y) with world radius r is visible: usually one,
-        up to four near a torus seam, none when it is out of view."""
+        up to four near a torus seam, more when zoomed out beyond the map (torus repeated), none when out of view."""
         k = self.scale
         vw, vh = self.size
         W, H = world.width, world.height
         dx = (x - self.cam_x + W / 2) % W - W / 2
         dy = (y - self.cam_y + H / 2) % H - H / 2
         hx, hy = vw / (2 * k) + r, vh / (2 * k) + r
-        xs = [d for d in (dx, dx - W, dx + W) if -hx <= d <= hx]
+        xs = [dx + n * W for n in range(math.ceil((-hx - dx) / W), math.floor((hx - dx) / W) + 1)]
         if not xs:
             return ()
-        ys = [d for d in (dy, dy - H, dy + H) if -hy <= d <= hy]
+        ys = [dy + n * H for n in range(math.ceil((-hy - dy) / H), math.floor((hy - dy) / H) + 1)]
         return [(vw / 2 + a * k, vh / 2 + b * k) for a in xs for b in ys]
+
+    def _draw_copies_veil(self, screen, world):
+        """Zoomed out beyond the map: the copies of the torus around the real map are darkened and the map is
+        outlined, so one sees where the world ends and how creatures pass from one edge to the other."""
+        if self.zoom >= self.fit_zoom - 1e-9:
+            return
+        k = self.scale
+        vw, vh = self.size
+        tile = pygame.Rect(round(vw / 2 - self.cam_x * k), round(vh / 2 - self.cam_y * k),
+                           round(world.width * k), round(world.height * k))
+        veil = pygame.Surface((vw, vh), pygame.SRCALPHA)
+        veil.fill((0, 0, 0, COPY_VEIL_ALPHA))
+        veil.fill((0, 0, 0, 0), tile)
+        screen.blit(veil, (0, 0))
+        pygame.draw.rect(screen, (150, 165, 170), tile, 1)
 
     def _project(self, world, x, y):
         """Screen position (pixels) of the image of a world point nearest to the camera."""
@@ -325,6 +356,8 @@ class Scene:
                 # Heading marker: small light dot towards the front
                 nub = (round(px + cos_a * r * 0.62), round(py + sin_a * r * 0.62))
                 pygame.draw.circle(screen, nub_color, nub, nub_radius)
+
+        self._draw_copies_veil(screen, world)
 
         if selected is not None:
             width = max(1, round(k))

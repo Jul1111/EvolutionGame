@@ -50,7 +50,7 @@ class ContinuousSimulation:
                     brain.set_genome(genome)
                     self._add(brain, name)
             else:
-                for _ in range(_share(config.INITIAL_POPULATION, index, len(profiles))):
+                for _ in range(_share(round(config.INITIAL_POPULATION * self.world.area_factor), index, len(profiles))):
                     brain = new_brain(name)
                     brain.randomize(rng, config.NN_INIT_STD)
                     self._add(brain, name)
@@ -74,7 +74,7 @@ class ContinuousSimulation:
                 c.alive = False
                 c.death_cause = "vieillesse"
         for parent in [c for c in living if c.alive and self._can_give_birth(c)]:
-            if len(world.creatures) >= config.POP_MAX:
+            if len(world.creatures) >= self.pop_max:
                 self.cap_blocked += 1
                 continue
             self._give_birth(parent)
@@ -96,6 +96,11 @@ class ContinuousSimulation:
             if self.world.tick % config.SAMPLE_TICKS:
                 self._sample()   # Last line: the extinction itself
         return not self.extinct
+
+    @property
+    def pop_max(self):
+        """Computing cap of this world: POP_MAX per screen-sized area, like food and obstacles."""
+        return round(config.POP_MAX * self.world.area_factor)
 
     @property
     def new_sample(self):
