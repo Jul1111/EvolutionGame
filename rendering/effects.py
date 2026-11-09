@@ -50,9 +50,9 @@ class Effects:
                 if kind == "birth":
                     r = (8 + 22 * t) * k
                     color = tuple(int(c * (1 - t) + 18 * t) for c in BIRTH_COLOR)
-                    pygame.draw.circle(screen, color, (round(px), round(py)), max(2, round(r)), width)
+                    screen.circle(color, (round(px), round(py)), max(2, round(r)), width)
                 else:
                     s = max(2, round((3.5 + 1.5 * t) * k))
                     color = tuple(int(c * (1 - t) + 18 * t) for c in DEATH_COLOR)
-                    pygame.draw.line(screen, color, (px - s, py - s), (px + s, py + s), width)
-                    pygame.draw.line(screen, color, (px - s, py + s), (px + s, py - s), width)
+                    screen.line(color, (px - s, py - s), (px + s, py + s), width)
+                    screen.line(color, (px - s, py + s), (px + s, py - s), width)

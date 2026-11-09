@@ -38,6 +38,7 @@ def main():
     # Rendering: world scene (background, food, creatures) and HUD (panel, curves)
     scene = Scene()
     hud = Hud()
+    hud.renderer = display.renderer_label()   # «GPU» or «CPU», shown next to the FPS
     menu = MenuBar()
     overlay = Overlay(hud, scene)   # Tool bar, legend, help, hover tips, settings panel, large network
     hud.lineage = scene.lineage     # Living lineages in the Population panel
@@ -400,6 +401,7 @@ def main():
 
     speed_index = 0
     real_speed = 0.0   # Ticks per frame actually run (time budget), smoothed
+    draw_ms = 10.0     # Drawing time of a frame (smoothed), for the simulation budget
 
     running = True
     while running:
@@ -488,9 +490,11 @@ def main():
 
         # Run several simulation ticks per frame, according to the chosen speed
         ticks_to_run = 0 if setup is not None else (1 if step_request else (0 if paused else speed))
-        # Time budget: at high speed the simulation stops for this frame once SIM_FRAME_BUDGET_MS is spent, so the
-        # window stays fluid. The real speed (ticks per frame actually run) is shown next to the asked one.
-        deadline = time.perf_counter() + config.SIM_FRAME_BUDGET_MS / 1000
+        # Time budget: at high speed the simulation only gets what the drawing leaves of a frame at MIN_FPS (the
+        # drawing time is measured every frame: bigger window, more panels → less simulation, same fluidity).
+        # The real speed (ticks per frame actually run) is shown next to the asked one.
+        sim_budget = max(config.SIM_MIN_BUDGET_MS, 1000 / config.MIN_FPS - draw_ms)
+        deadline = time.perf_counter() + sim_budget / 1000
         ran = 0
         for _ in range(ticks_to_run):
             if ran and time.perf_counter() > deadline:
@@ -519,11 +523,13 @@ def main():
             if sim.new_sample:
                 hud.reload_stats()
 
+        draw_start = time.perf_counter()   # From here to the flip: drawing (measured for the simulation budget)
         if cam_follow and selected is not None and selected.alive:
             scene.center_on(selected.x, selected.y)
 
         # Draw the world, then the heads-up display (HUD)
-        scene.draw(world_view, world, debug_mode, selected, trail)
+        display.begin()   # Graphics card: a new picture (rendering/gpu.py)
+        scene.draw(display.canvas(layout.world), world, debug_mode, selected, trail)
         hud.draw(sidebar, strip_view, world, clock.get_fps(), speed,
                  {"births": sim.total_births, "deaths": sim.total_deaths, "extinct": sim.extinct, "pop_max": sim.pop_max,
                   "setup": setup is not None},
@@ -561,6 +567,7 @@ def main():
         overlay.draw_tips(window, world, selected, menu.open_index is not None)
 
         display.flip()
+        draw_ms = 0.8 * draw_ms + 0.2 * (time.perf_counter() - draw_start) * 1000   # Smoothed drawing time
         clock.tick(config.FPS)
 
     # The population is kept for the next launch (LOAD_ON_START). After an extinction there is nothing to keep.

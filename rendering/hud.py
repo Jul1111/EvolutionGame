@@ -501,7 +501,7 @@ class Hud:
 
         debug_label = ("off", "sélection", "toutes")[debug_mode]
         _text(p, f["small"], f"couleur : {color_label}  ·  debug : {debug_label}", pad, c.y(158), LABEL)
-        _text(p, f["small"], f"{fps:.0f} FPS", W - pad, c.y(158), LABEL, right=True)
+        _text(p, f["small"], f"{fps:.0f} FPS · {getattr(self, 'renderer', 'CPU')}", W - pad, c.y(158), LABEL, right=True)
         return p
 
     def _draw_creature(self, world, selected):

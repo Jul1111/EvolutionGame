@@ -30,6 +30,26 @@ BLOBS = [
 ]
 
 
+class _Layer:
+    """Picture of the whole map (zoomed out beyond it), drawn once then copied: holds its canvas."""
+
+    def __init__(self, canvas):
+        self.canvas = canvas
+
+    def get_size(self):
+        return self.canvas.get_size()
+
+
+def _fblits(screen, batch):
+    """Draws [(sprite, top-left)] in one call when pygame-ce offers fblits, else one blit each."""
+    if not batch:
+        return
+    if hasattr(screen, "fblits"):
+        screen.fblits(batch)
+    else:
+        screen.blits(batch, doreturn=False)
+
+
 def _lerp(a, b, t):
     return tuple(int(a[i] + (b[i] - a[i]) * t) for i in range(3))
 
@@ -77,6 +97,7 @@ class Scene:
         self.zoom = 1.0  # Starts at the scale of one screen (the whole world when it is 1×1)
         # One species: its colour says nothing, so energy is shown (several species: one colour each)
         self.color_mode = 0 if len(config.ACTIVE_PROFILES) > 1 else COLOR_MODES.index("énergie")
+        self._shade_cache = {}   # Body colour → (tail colour, heading-dot colour)
         self.bucket_colors = [body_color(i / (ENERGY_BUCKETS - 1)) for i in range(ENERGY_BUCKETS)]
         self.lineage = LineageTracker()   # Founder of each creature: colour mode «lignée», Population panel
         self.effects = Effects()          # Births and deaths drawn in the world (key E)
@@ -201,18 +222,14 @@ class Scene:
         vw, vh = self.size
         tile = pygame.Rect(round(vw / 2 - self.cam_x * k), round(vh / 2 - self.cam_y * k),
                            round(world.width * k), round(world.height * k))
-        veil = getattr(self, "_veil", None)
-        if veil is None or veil.get_size() != (vw, vh):
-            veil = self._veil = pygame.Surface((vw, vh), pygame.SRCALPHA)
-            veil.fill((0, 0, 0, COPY_VEIL_ALPHA))
-        # Four bands around the real map (no new surface each frame)
-        inner = tile.clip(screen.get_rect())
+        # Four bands around the real map
+        inner = tile.clip(pygame.Rect((0, 0), (vw, vh)))
         for band in (pygame.Rect(0, 0, vw, max(0, inner.top)), pygame.Rect(0, inner.bottom, vw, max(0, vh - inner.bottom)),
                      pygame.Rect(0, inner.top, max(0, inner.left), inner.h),
                      pygame.Rect(inner.right, inner.top, max(0, vw - inner.right), inner.h)):
             if band.w > 0 and band.h > 0:
-                screen.blit(veil, band.topleft, band)
-        pygame.draw.rect(screen, (150, 165, 170), tile, 1)
+                screen.fill_rect((0, 0, 0, COPY_VEIL_ALPHA), band)
+        screen.rect((150, 165, 170), tile, 1)
 
     def _project(self, world, x, y):
         """Screen position (pixels) of the image of a world point nearest to the camera."""
@@ -316,8 +333,21 @@ class Scene:
         key = (id(sprite), step)
         if key not in self._sized:
             w = max(2, round(sprite.get_width() * step))
-            self._sized[key] = pygame.transform.smoothscale(sprite, (w, w))
+            self._sized[key] = pygame.transform.smoothscale(sprite, (w, w)).convert_alpha()
         return self._sized[key]
+
+    def _shades(self, color):
+        """Tail and heading-dot colours of a body colour, computed once per colour (not once per creature per frame)."""
+        cached = self._shade_cache.get(color)
+        if cached is None:
+            cached = self._shade_cache[color] = (_lerp(color, (10, 12, 16), 0.35), _lerp(color, (255, 255, 255), 0.75))
+        return cached
+
+    def _queue(self, batch, sprite, positions):
+        """Same as _blit_at, but adds (sprite, top-left) to `batch`, drawn later in one fblits call."""
+        hw, hh = sprite.get_width() / 2, sprite.get_height() / 2
+        for px, py in positions:
+            batch.append((sprite, (round(px - hw), round(py - hh))))
 
     def _blit_at(self, screen, sprite, positions):
         hw, hh = sprite.get_width() / 2, sprite.get_height() / 2
@@ -337,13 +367,13 @@ class Scene:
         vw, vh = self.size
         tw, th = max(1, round(world.width * k)), max(1, round(world.height * k))
         tile = getattr(self, "_tile", None)
-        if tile is None or tile.get_size() != (tw, th):
-            tile = self._tile = pygame.Surface((tw, th), pygame.SRCALPHA)
+        if tile is None or tile.get_size() != (tw, th) or type(tile.canvas) is not type(screen):
+            tile = self._tile = _Layer(screen.layer(tw, th))
         saved = (self.cam_x, self.cam_y, self.size)
         self.cam_x, self.cam_y, self.size = world.width / 2, world.height / 2, (tw, th)
         self._in_tile = True
         try:
-            self._draw_view(tile, world, debug_mode, selected, trail)
+            self._draw_view(tile.canvas, world, debug_mode, selected, trail)
         finally:
             self.cam_x, self.cam_y, self.size = saved
             self._in_tile = False
@@ -352,14 +382,14 @@ class Scene:
         W, H = world.width * k, world.height * k
         for i in range(math.floor(-ox / W), math.ceil((vw - ox) / W) + 1):
             for j in range(math.floor(-oy / H), math.ceil((vh - oy) / H) + 1):
-                screen.blit(tile, (round(ox + i * W), round(oy + j * H)))
+                screen.blit_layer(tile.canvas, (round(ox + i * W), round(oy + j * H)))
         self._draw_copies_veil(screen, world)
 
     def _draw_view(self, screen, world, debug_mode, selected=None, trail=None):
         """screen: the world area. debug_mode: 0 = off, 1 = selected (else oldest living) creature, 2 = all living."""
         k = self.scale
         if getattr(self, "_in_tile", False):
-            screen.fill((0, 0, 0, 0))   # Transparent map: the screen background shows under every copy
+            screen.clear()   # Transparent map: the screen background shows under every copy
         else:
             screen.blit(self.background, (0, 0))
         self.lineage.update(world)
@@ -367,21 +397,25 @@ class Scene:
         now = pygame.time.get_ticks()  # real time: pulsation does not accelerate with the sim speed
         self._draw_obstacles(screen, world)
 
+        # Small sprites are queued and drawn with one fblits call per layer (pygame-ce): same pixels, far fewer
+        # Python calls than one blit each
+        batch = []
         for i, food in enumerate(world.foods):
             if food.cooldown > 0:
                 continue  # Eaten, not back yet
             frame = int(now / 90 + i * 3) % FOOD_FRAMES
-            self._blit_at(screen, self.food_sprites[frame], self._images(world, food.x, food.y, 14))
+            self._queue(batch, self.food_sprites[frame], self._images(world, food.x, food.y, 14))
 
         for i, poison in enumerate(world.poisons):
             if poison.cooldown > 0:
                 continue  # Just triggered, not back yet
             frame = int(now / 110 + i * 5) % FOOD_FRAMES
-            self._blit_at(screen, self.poison_sprites[frame], self._images(world, poison.x, poison.y, 14))
+            self._queue(batch, self.poison_sprites[frame], self._images(world, poison.x, poison.y, 14))
 
         for c in world.creatures:
             if not c.alive:
-                self._blit_at(screen, self.dead_sprite, self._images(world, c.x, c.y, 14))
+                self._queue(batch, self.dead_sprite, self._images(world, c.x, c.y, 14))
+        screen.fblits(batch)
 
         if trail is not None:
             self._draw_trail(screen, trail, world)
@@ -390,6 +424,7 @@ class Scene:
         nub_radius = max(1, round(2 * k))
         max_food = max([c.food_eaten for c in world.creatures if c.alive] + [1])
         mode = COLOR_MODES[self.color_mode]
+        bodies, nubs = [], []
         for c in world.creatures:
             if not c.alive:
                 continue
@@ -420,19 +455,22 @@ class Scene:
             sprite = self._sized_sprite(sprite, c.body)
             r = r0 * c.body
             cos_a, sin_a = math.cos(c.angle), math.sin(c.angle)
-            tail_color = _lerp(color, (10, 12, 16), 0.35)
-            nub_color = _lerp(color, (255, 255, 255), 0.75)
+            tail_color, nub_color = self._shades(color)
+            hw = sprite.get_width() / 2
             for px, py in images:
                 # Tail behind the creature: longer when it moves faster
                 if c.speed > 0.3:
                     length = c.speed * 3.0 * k
                     p0 = (px - cos_a * r, py - sin_a * r)
                     p1 = (px - cos_a * (r + length), py - sin_a * (r + length))
-                    pygame.draw.aaline(screen, tail_color, p0, p1)
-                self._blit_at(screen, sprite, ((px, py),))
+                    screen.aaline(tail_color, p0, p1)
+                bodies.append((sprite, (round(px - hw), round(py - hw))))
                 # Heading marker: small light dot towards the front
-                nub = (round(px + cos_a * r * 0.62), round(py + sin_a * r * 0.62))
-                pygame.draw.circle(screen, nub_color, nub, nub_radius)
+                nubs.append((nub_color, (round(px + cos_a * r * 0.62), round(py + sin_a * r * 0.62))))
+        # Tails first (above), then every body in one call, then the heading dots on top of the bodies
+        screen.fblits(bodies)
+        for nub_color, nub in nubs:
+            screen.circle(nub_color, nub, nub_radius)
 
         self.effects.draw(screen, world, self)
         self._draw_copies_veil(screen, world)
@@ -442,8 +480,8 @@ class Scene:
             r = r0 * selected.body
             for px, py in self._images(world, selected.x, selected.y, 20):
                 center = (round(px), round(py))
-                pygame.draw.circle(screen, (255, 255, 255), center, round(r + 6 * k), width)
-                pygame.draw.circle(screen, (120, 125, 130), center, round(r + 9 * k), width)
+                screen.circle((255, 255, 255), center, round(r + 6 * k), width)
+                screen.circle((120, 125, 130), center, round(r + 9 * k), width)
 
         if debug_mode:
             self._draw_debug(screen, world, debug_mode, selected)
@@ -468,7 +506,7 @@ class Scene:
             cur = trail[i]
             x1 = x0 + ((cur[0] - prev[0] + W / 2) % W - W / 2) * k   # Shortest way from the previous point
             y1 = y0 + ((cur[1] - prev[1] + H / 2) % H - H / 2) * k
-            pygame.draw.aaline(screen, _lerp(TRAIL_FADE, TRAIL_COLOR, i / n), (x0, y0), (x1, y1))
+            screen.aaline(_lerp(TRAIL_FADE, TRAIL_COLOR, i / n), (x0, y0), (x1, y1))
             prev, x0, y0 = cur, x1, y1
 
     def _draw_debug(self, screen, world, mode, selected=None):
@@ -489,24 +527,24 @@ class Scene:
             cx, cy = self._project(world, c.x, c.y)
             center = (round(cx), round(cy))
             if config.VISION_FOV_DEGREES >= 360:
-                pygame.draw.circle(screen, vision_color, center, radius, 1)
+                screen.circle(vision_color, center, radius, 1)
             else:
                 # Field of view: the two edges and the arc between them, centred on the heading
                 n = max(8, round(config.VISION_FOV_DEGREES / 5))
                 arc = [(center[0] + math.cos(c.angle - half_fov + 2 * half_fov * i / n) * radius,
                         center[1] + math.sin(c.angle - half_fov + 2 * half_fov * i / n) * radius)
                        for i in range(n + 1)]
-                pygame.draw.lines(screen, vision_color, False, [arc[0], center, arc[-1]], 1)
-                pygame.draw.lines(screen, vision_color, False, arc, 1)
+                screen.lines(vision_color, False, [arc[0], center, arc[-1]], 1)
+                screen.lines(vision_color, False, arc, 1)
             # Same rule as World.sense (the world's own method): nearest available item in view
             for items, color in ((world.foods, config.DEBUG_LINK_COLOR), (world.poisons, config.POISON_COLOR),
                                  (world.obstacles, config.OBSTACLE_COLOR)):
                 best, _ = world.nearest(c, items)
                 if best is not None:
                     _, dx, dy = best
-                    pygame.draw.aaline(screen, color, (cx, cy), (cx + dx * k, cy + dy * k))
+                    screen.aaline(color, (cx, cy), (cx + dx * k, cy + dy * k))
             if mode == 1:
-                pygame.draw.circle(screen, (255, 255, 255), center, round((c.radius + 5) * k), 1)
+                screen.circle((255, 255, 255), center, round((c.radius + 5) * k), 1)
 
 
 BODY_HIGH = (120, 196, 255)   # Full end of the creature scale: sky blue, never green (green is food)

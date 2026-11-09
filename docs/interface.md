@@ -4,7 +4,7 @@
 
 | Touche | Action |
 |---|---|
-| ↑ / ↓ | Vitesse de simulation demandée (×1 à ×100). La simulation ne prend pas plus de 25 ms par image (`SIM_FRAME_BUDGET_MS`) pour garder la fenêtre fluide : quand la machine ne suit pas, la vitesse réelle s'affiche en orange |
+| ↑ / ↓ | Vitesse de simulation demandée (×1 à ×100). La simulation ne prend que ce que le dessin laisse d'une image à 30 FPS (`MIN_FPS`, au moins `SIM_MIN_BUDGET_MS` = 4 ms) : la fenêtre reste fluide, et quand la machine ne suit pas, la vitesse réelle s'affiche en orange |
 | Espace / → | Pause / avancer d'un tick (en pause) |
 | Clic | Sélectionner une créature, ou utiliser les menus |
 | Molette, glisser, + - 0 1 | Zoom (jusqu'à 4 fois plus loin que la carte entière : le tore apparaît répété, assombri, autour de la carte encadrée), déplacer la vue, toute la carte, échelle d'un écran |
@@ -37,3 +37,17 @@
 - **Extinction** : la simulation se met en pause avec un message. Repartir de zéro ou charger une population.
 - À la fermeture, la population est gardée (`saves/autosave.npz`) et proposée au lancement suivant (bouton «Reprendre»). Après une extinction, il n'y a rien à garder.
 
+
+## Rendu par la carte graphique
+
+`RENDERER` dans `config.py` (ou la variable d'environnement `EVOLUTION_RENDERER`) :
+
+- `auto` (défaut) : la carte graphique dessine (`rendering/gpu.py`) si SDL trouve un moteur matériel (Metal sur Mac, OpenGL, Direct3D). Sinon, le processeur, comme avant.
+- `gpu` : la carte graphique même sans moteur matériel (moteur logiciel de SDL : plus lent que le processeur).
+- `cpu` : le processeur.
+
+Le moteur utilisé s'affiche à côté des FPS (panneau Population : «GPU» ou «CPU»).
+
+Fonctionnement : le monde (fond, sprites, anémones, traits, cercles) est dessiné par la carte graphique (`rendering/canvas.py`, même code de dessin que le processeur). L'interface (panneaux, texte) est toujours dessinée par le processeur sur un calque transparent ; seules les zones dessinées sont envoyées à la carte graphique. Le verre dépoli est fait par la carte graphique : copie de la zone, trois réductions de moitié (moyenne), teinte, agrandissement, coins arrondis par masque. Avant chaque verre, l'interface déjà dessinée est envoyée : un menu par-dessus un panneau floute bien le panneau.
+
+Comparer sur ta machine : lancer une fois normalement, une fois avec `EVOLUTION_RENDERER=cpu python main.py`, et lire les FPS à ×1 et la vitesse réelle à ×100.

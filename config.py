@@ -47,7 +47,11 @@ TICKS_PER_SECOND = 60
 
 # Configuration for simulation speed
 SPEED_STEPS = [1, 2, 5, 10, 20, 50, 100]
-SIM_FRAME_BUDGET_MS = 25   # At most this much simulation per frame: the window stays around 30 FPS or more at any speed
+RENDERER = "auto"          # "auto": the graphics card draws (rendering/gpu.py) if SDL finds a hardware renderer (Metal,
+                           # OpenGL, Direct3D), else the processor. "gpu": graphics card even without hardware (software
+                           # renderer, slower). "cpu": the processor. Also the EVOLUTION_RENDERER environment variable
+MIN_FPS = 30               # At high speed the simulation only takes what drawing leaves of a frame at this rate
+SIM_MIN_BUDGET_MS = 4      # ...but always at least this much per frame, however slow the drawing
 
 # Configuration for senses
 VISION_RANGE = 200          # Maximum distance at which a creature sees food
