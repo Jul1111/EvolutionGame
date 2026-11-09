@@ -182,6 +182,7 @@ SERIES = [
      lambda v: f"{v:.1f}"),
     ("mean_age_at_death", "Âge moyen à la mort", (236, 142, 72), _col("mean_age_at_death"), lambda: config.AGE_MAX or None,
      format_time),
+    ("food_sources", "Sources de nourriture", (120, 210, 150), _col("food_sources"), None, lambda v: f"{v:.0f}"),
     ("food_available", "Nourritures disponibles", (178, 224, 120), _col("food_available"), None, lambda v: f"{v:.0f}"),
     ("mean_size", "Taille moy.", (236, 200, 120), _col("mean_size"), lambda: config.SIZE_MAX, lambda v: f"{v:.2f}"),
     ("size_std", "Écart de taille", (200, 170, 110), _col("size_std"), None, lambda v: f"{v:.2f}"),

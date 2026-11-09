@@ -330,11 +330,13 @@ class World:
 
         self.tick += 1
 
-    def resize_items(self):
-        """Applies FOOD_COUNT and POISON_COUNT changed during the run: new items at free places, or the last ones removed.
+    def resize_items(self, food_per_screen=None):
+        """Applies the food and poison counts (per screen) during the run: new items at free places, or the last ones
+        removed. `food_per_screen`: the count of this moment (scarcer food, evolution/continuous.py), else FOOD_COUNT.
         Obstacles are only drawn when the world is created."""
         reach = config.CREATURE_RADIUS + config.FOOD_RADIUS
-        for items, count, energy in ((self.foods, config.FOOD_COUNT, config.FOOD_ENERGY),
+        food = config.FOOD_COUNT if food_per_screen is None else food_per_screen
+        for items, count, energy in ((self.foods, food, config.FOOD_ENERGY),
                                      (self.poisons, config.POISON_COUNT, config.POISON_ENERGY)):
             target = self._count(count)
             del items[target:]

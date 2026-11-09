@@ -21,10 +21,12 @@ from brain.profiles import new_brain
 from core.world import World
 from evolution.mutation import mutate
 
+FOOD_UPDATE_TICKS = 60   # How often the number of food sources follows the scarcer-food schedule
+
 SAMPLE_HEADER = ["tick", "population", "births", "deaths_hunger", "deaths_age", "mean_age_at_death",
                  "mean_lineage_gen", "max_lineage_gen", "food_rate", "poison_rate", "mean_speed", "mean_energy",
                  "cap_blocked", "food_available", "mean_size", "size_std", "min_size", "max_size",
-                 "blind_frac", "blind_speed", "blind_turn"]
+                 "blind_frac", "blind_speed", "blind_turn", "food_sources"]
 # Then one column per species of the run: pop__<profile> (living creatures of that species)
 
 
@@ -73,6 +75,8 @@ class ContinuousSimulation:
         if self.extinct:
             return False
         world = self.world
+        if world.tick % FOOD_UPDATE_TICKS == 0:
+            self.update_food()
         world.update()
         living = [c for c in world.creatures if c.alive]
         self.life_ticks += len(living)
@@ -104,10 +108,29 @@ class ContinuousSimulation:
                 self._sample()   # Last line: the extinction itself
         return not self.extinct
 
+    def food_per_screen(self):
+        """Food sources per screen now: FOOD_COUNT until FOOD_RAMP_START, then down (or up) to FOOD_COUNT_TARGET in
+        FOOD_RAMP_TICKS. Based on the world's tick, so a resumed run goes on where it was."""
+        start, target = config.FOOD_COUNT, config.FOOD_COUNT_TARGET
+        elapsed = self.world.tick - config.FOOD_RAMP_START
+        if elapsed <= 0:
+            return start
+        if config.FOOD_RAMP_TICKS <= 0:
+            return target
+        t = min(1.0, elapsed / config.FOOD_RAMP_TICKS)
+        return start + (target - start) * t
+
+    def update_food(self):
+        """Adjusts the number of food sources to food_per_screen() (called every FOOD_UPDATE_TICKS, and when a
+        setting changes)."""
+        wanted = self.world._count(self.food_per_screen())
+        if wanted != len(self.world.foods):
+            self.world.resize_items(self.food_per_screen())
+
     @property
     def pop_max(self):
-        """Computing cap of this world: POP_MAX per screen-sized area, like food and obstacles."""
-        return round(config.POP_MAX * self.world.area_factor)
+        """Computing cap: POP_MAX creatures in the whole world, whatever its size (not scaled like food and obstacles)."""
+        return config.POP_MAX
 
     @property
     def new_sample(self):
@@ -200,6 +223,7 @@ class ContinuousSimulation:
             "mean_energy": sum(c.energy for c in cs) / n if n else None,
             "cap_blocked": self.cap_blocked,
             "food_available": sum(1 for f in self.world.foods if f.cooldown <= 0),
+            "food_sources": len(self.world.foods),
             # Body gene (whatever SIZE_MODE: in "neutre" it drifts without effect)
             "mean_size": statistics.mean(c.size for c in cs) if n else None,
             "size_std": statistics.pstdev(c.size for c in cs) if n else None,

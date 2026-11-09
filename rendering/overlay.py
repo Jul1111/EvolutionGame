@@ -48,7 +48,10 @@ PARAM_INFO = {
     "repro": ("Seuil de reproduction", "Énergie qu'il faut atteindre pour faire un petit (le parent perd 60, le petit naît avec 50)."),
     "age_max": ("Âge maximal", "Mort de vieillesse. Sans elle, des immortels bloquent le renouvellement."),
     "fov": ("Champ de vision", "Ouverture du cône de vision. Tout autour = 360°."),
-    "food": ("Nombre de nourritures", "Sources de nourriture dans le monde."),
+    "food": ("Nourriture au départ", "Sources de nourriture par écran au début : beaucoup, pour que des créatures tirées au hasard passent le premier goulot."),
+    "food_target": ("Nourriture ensuite", "Sources par écran une fois la nourriture raréfiée : les créatures évoluées s'en sortent, et un grand monde ne remplit plus le plafond."),
+    "food_ramp_start": ("Abondance pendant", "Temps simulé pendant lequel la nourriture reste au niveau de départ, le temps que la population passe le premier goulot."),
+    "food_ramp": ("Raréfaction en", "Temps simulé pour passer de la nourriture au départ à la nourriture ensuite. «aussitôt» = directement la valeur d'ensuite."),
     "food_energy": ("Énergie d'une nourriture", "Énergie gagnée à chaque repas."),
     "respawn": ("Délai de réapparition", "Temps avant qu'une nourriture mangée soit de nouveau disponible."),
     "poison_count": ("Nombre de poisons", "Sources de poison dans le monde. 0 = aucun."),
@@ -61,7 +64,7 @@ PARAM_INFO = {
 
 # Explanations shown when the mouse rests on a label of the side bar: (logical y of the row, text)
 GEN_TIPS = [
-    (38, "Vivantes sur le plafond de calcul ({pop_max} par écran). Au plafond, les naissances sont bloquées : la population n'est plus réglée par la nourriture."),
+    (38, "Vivantes sur le plafond de calcul ({pop_max}, quelle que soit la taille du monde). Au plafond, les naissances sont bloquées : la population n'est plus réglée par la nourriture."),
     (68, "Temps simulé depuis le départ de cette population."),
     (86, "Naissances et morts depuis le départ. Une créature naît quand son parent atteint le seuil d'énergie."),
     (104, "Génération de lignée : nombre d'ancêtres depuis les fondateurs tirés au hasard (0)."),
@@ -103,7 +106,7 @@ HELP_KEYS = [
 # Columns and sections of the settings panel (keys = main.PARAMS). Unknown keys go to «Autres».
 PARAM_COLUMNS = (
     (("Évolution", ("mutation", "repro", "age_max", "size_mode")), ("Perception", ("fov",)),
-     ("Nourriture", ("food", "food_energy", "respawn"))),
+     ("Nourriture", ("food", "food_ramp_start", "food_target", "food_ramp", "food_energy", "respawn"))),
     (("Dangers", ("poison_count", "poison_energy", "obstacle_count")), ("Monde", ("founders", "world_scale"))),
 )
 

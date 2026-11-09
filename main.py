@@ -62,6 +62,9 @@ def main():
         "age_max": ("AGE_MAX", [0, 3000, 6000, 12000], lambda v: format_time(v) if v else "jamais"),
         "fov": ("VISION_FOV_DEGREES", [60, 90, 120, 180, 270, 360], lambda v: "tout autour" if v >= 360 else f"{v}°"),
         "food": ("FOOD_COUNT", [5, 10, 20, 30, 40, 60], str),
+        "food_target": ("FOOD_COUNT_TARGET", [5, 10, 15, 20, 25, 30, 40, 60], str),
+        "food_ramp_start": ("FOOD_RAMP_START", [0, 10000, 20000, 40000, 60000], lambda v: format_time(v) if v else "dès le départ"),
+        "food_ramp": ("FOOD_RAMP_TICKS", [0, 12000, 30000, 60000, 120000], lambda v: format_time(v) if v else "aussitôt"),
         "food_energy": ("FOOD_ENERGY", [15.0, 30.0, 45.0, 60.0], lambda v: f"{v:g}"),
         "respawn": ("FOOD_RESPAWN_DELAY", [0, 30, 60, 120, 300], lambda v: f"{v} ticks"),
         "poison_count": ("POISON_COUNT", [0, 3, 5, 8, 12, 20, 30], str),
@@ -164,7 +167,7 @@ def main():
                 pending[key] = value
         else:
             setattr(config, name, value)
-            world.resize_items()   # Food and poison counts or energies take effect in the running world
+            world.resize_items(sim.food_per_screen())   # Food and poison counts or energies take effect now
         persist_settings()
 
     pending = {}   # action → value waiting for the next restart (RESTART_PARAMS only)

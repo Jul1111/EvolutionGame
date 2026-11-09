@@ -31,8 +31,14 @@ WORLD_HEIGHT = round(SCREEN_HEIGHT * WORLD_SCALE)
 
 # Configuration for food
 SEED = 42
-FOOD_COUNT = 40             # 40 since the continuous evolution (08/11): at 30, 2 extinctions out of 8 seeds from a random start,
-                            # at 40, 0 out of 8. The generation runs of 08/11 used 10 (--set FOOD_COUNT=10 to reproduce them)
+FOOD_COUNT = 40             # Food sources per screen AT THE START. Random founders need plenty to get through the first
+                            # bottleneck: at 25-30 they die out (09/11, 2×2 and 3×3, 2 seeds each)
+FOOD_COUNT_TARGET = 40      # ...then the food can become scarcer, down to this many per screen. Same value as FOOD_COUNT =
+                            # no change (default). Tested 09/11 (3×3, 60° vision, start 40, plenty 20 000 ticks, ramp
+                            # 30 000): 15 → still at POP_MAX; 12 → crash to 2 creatures or back to the cap; 10 → extinction.
+                            # 1×1, 120°, target 15: 1 extinction at the start out of 4, then 25-52 creatures and falling
+FOOD_RAMP_START = 20000     # Ticks of plenty first: food only starts to get scarcer once the first bottleneck is past
+FOOD_RAMP_TICKS = 30000     # Then ticks for the food to go from FOOD_COUNT to the target
 FOOD_RADIUS = 4
 FOOD_COLOR = (90, 200, 110)
 
@@ -82,7 +88,7 @@ REPRO_CHILD_ENERGY = 50.0   # Energy of the newborn (less than the cost: no perp
 MATURITY_AGE = 600          # Ticks before a creature can give birth (10 s)
 REPRO_COOLDOWN = 300        # Ticks between two births of the same creature
 AGE_MAX = 6000              # Death of old age (100 s). 0 = never
-POP_MAX = 400               # Computing cap per screen-sized area: at the cap births are blocked and counted (cap_blocked)
+POP_MAX = 400               # Computing cap for the whole world, whatever its size: at the cap births are blocked and counted (cap_blocked)
 SAMPLE_TICKS = 600          # One line of timeline.csv every SAMPLE_TICKS ticks
 
 # Configuration for the body gene: size (core/creature.py). Founders have size 1; a newborn gets the size of its
