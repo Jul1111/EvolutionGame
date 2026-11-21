@@ -1,0 +1,75 @@
+"""Legend panel: what the colours and shapes of the world mean."""
+import math
+
+import pygame
+
+import config
+from rendering.backend.glass import frost
+from rendering.ui.hud import VALUE
+from rendering.ui.overlay.widgets import PANEL
+from rendering.world.obstacles import PALETTES
+from rendering.world.scene import body_color
+
+
+class LegendMixin:
+    def _draw_legend(self, window):
+        u, f, w = self.u, self.fonts, self.area
+        label = self.scene.color_label()
+        key = ("legend", label)
+        if key not in self._cache:
+            row_h, pad, icon_w = round(24 * u), round(12 * u), round(40 * u)
+            entries = [("dot", config.FOOD_COLOR, "Nourriture : redonne de l'énergie"),
+                       ("diamond", config.POISON_COLOR, "Poison : retire de l'énergie")]
+            if hasattr(config, "OBSTACLE_COLOR"):
+                entries.append(("anemone", None, "Anémone : obstacle infranchissable"))
+            low, high = {"énergie": ("vide", "pleine"), "vitesse": ("à l'arrêt", "vitesse max"),
+                         "nourriture": ("rien mangé", "le plus mangé")}.get(label, ("bas", "haut"))
+            entries += [("gradient", None, f"Couleur d'une créature = {label}  ({low} → {high})")
+                        if label not in ("lignée", "espèce") else
+                        ("ring", (230, 236, 244), "Couleur d'une créature = sa " + label),
+                        ("cone", config.DEBUG_VISION_COLOR, "Cône de vision (touche D)"),
+                        ("ring", (255, 255, 255), "Créature sélectionnée")]
+            text_w = max(f["small"].size(t)[0] for _, _, t in entries)
+            surf = pygame.Surface((pad * 2 + icon_w + text_w, pad * 2 + row_h * len(entries) - round(4 * u)), pygame.SRCALPHA)
+            pygame.draw.rect(surf, (*PANEL, 50), surf.get_rect(), border_radius=round(10 * u))   # Over frosted glass
+            for i, (kind, color, text) in enumerate(entries):
+                cy = pad + i * row_h + row_h // 2 - round(2 * u)
+                cx = pad + icon_w // 2
+                if kind == "dot":
+                    pygame.draw.circle(surf, color, (cx, cy), round(5 * u))
+                elif kind == "diamond":
+                    r = round(6 * u)
+                    pygame.draw.polygon(surf, color, [(cx, cy - r), (cx + r, cy), (cx, cy + r), (cx - r, cy)])
+                elif kind == "anemone":
+                    mat, tent, tip = PALETTES[0]
+                    rad = round(9 * u)
+                    pygame.draw.circle(surf, mat, (cx, cy), rad)
+                    pygame.draw.circle(surf, tent, (cx, cy), rad, 1)
+                    for a in range(8):
+                        ang = a * math.pi / 4
+                        pygame.draw.line(surf, tip, (cx + math.cos(ang) * rad * 0.25, cy + math.sin(ang) * rad * 0.25),
+                                         (cx + math.cos(ang) * rad * 0.8, cy + math.sin(ang) * rad * 0.8), max(1, round(1.5 * u)))
+                elif kind == "gradient":
+                    gw = icon_w - round(4 * u)
+                    for k in range(gw):
+                        pygame.draw.line(surf, body_color(k / max(gw - 1, 1)), (cx - gw // 2 + k, cy - round(4 * u)),
+                                         (cx - gw // 2 + k, cy + round(4 * u)))
+                elif kind == "cone":
+                    r = round(11 * u)
+                    a = math.radians(40)
+                    o = (cx - r // 2, cy)
+                    pts = [(o[0] + r * math.cos(-a + 2 * a * j / 6), o[1] + r * math.sin(-a + 2 * a * j / 6)) for j in range(7)]
+                    pygame.draw.lines(surf, color, False, [pts[0], o, pts[-1]], 1)
+                    pygame.draw.lines(surf, color, False, pts, 1)
+                elif kind == "ring":
+                    pygame.draw.circle(surf, color, (cx, cy), round(7 * u), max(1, round(1.5 * u)))
+                    pygame.draw.circle(surf, (240, 200, 80), (cx, cy), round(3.5 * u))
+                img = f["small"].render(text, True, VALUE)
+                surf.blit(img, (pad + icon_w, cy - img.get_height() // 2))
+            self._cache[key] = surf
+        surf = self._cache[key]
+        bottom = self.minimap.rect.top if (self.minimap.enabled and self.minimap.rect) else w.bottom
+        rect = surf.get_rect(bottomleft=(w.x + round(12 * u), bottom - round(10 * u)))
+        frost(window, rect, round(10 * u))
+        window.blit(surf, rect.topleft)
+        self._rects["legend"] = rect

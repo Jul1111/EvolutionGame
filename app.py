@@ -18,7 +18,8 @@ from rendering.backend.display import Display
 from rendering.ui.hud import Hud, SERIES_BY_KEY
 from rendering.ui.layout import compute_layout
 from rendering.ui.menu import MenuBar, profile_label
-from rendering.ui.overlay import Overlay, PARAM_INFO
+from rendering.ui.overlay import Overlay
+from rendering.ui.overlay.texts import PARAM_INFO
 from rendering.ui.startmenu import StartMenu
 from rendering.world.scene import Scene, pick_creature
 from utils.presets import PresetBrowser

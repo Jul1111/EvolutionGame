@@ -3,7 +3,7 @@
 Frame:
 1. The world is drawn on `screen`, a target texture the size of the window (GpuCanvas, rendering/backend/canvas.py):
    background, sprites, lines and circles become textures drawn by the graphics card.
-2. The interface (panels, text, menus: rendering/ui/hud.py, overlay.py...) is still drawn by the processor, on `ui`,
+2. The interface (panels, text, menus: rendering/ui/hud.py, rendering/ui/overlay/...) is still drawn by the processor, on `ui`,
    a transparent Surface the size of the window. Only the parts that were drawn are sent to the graphics card
    (UILayer records them), then cleared.
 3. Frosted glass (rendering/backend/glass.py) is done here: what is already on `screen` under the panel is copied, shrunk
