@@ -2,7 +2,6 @@
 driver). They check that nothing raises and that the main on-screen states are reached, not what the pixels look like."""
 import pygame
 
-import config
 from brain.profiles import PROFILES
 
 PANEL_ACTIONS = ("legend", "help", "params_panel", "graph", "chart", "debug", "minimap", "effects", "panels")

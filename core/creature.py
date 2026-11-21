@@ -26,7 +26,7 @@ class Creature:
         self.lineage_gen = lineage_gen
         self.last_birth_age = None   # Age at its last birth (cooldown)
         self.children = 0
-        self.food_eaten = 0 
+        self.food_eaten = 0
         self.poison_hits = 0
         self.obstacle_ticks = 0   # Ticks spent pressed against an obstacle
         self.touching = False     # Pressed against an obstacle at the last tick (a sensor of some profiles)
@@ -116,4 +116,4 @@ class Creature:
             return
         self.energy = min(self.energy + amount, self.energy_max)  # The excess is lost
         self.food_eaten += 1
-        
+

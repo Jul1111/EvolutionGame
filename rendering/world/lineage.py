@@ -6,7 +6,6 @@ Creatures loaded from a save start new lineages (their ancestors are unknown).
 Never touches the simulation and draws no random number."""
 import colorsys
 
-import config
 
 
 def lineage_color(founder):

@@ -36,11 +36,11 @@ class ParamsMixin:
         avail = w.h - round(24 * u) - head_h - preset_h - desc_h - foot_h
         row_h = round(34 * u)
         sp_h = round(24 * u)
-        need = max(l[0] * row_h + l[1] * sec_h + l[2] * sp_h for l in (left, right))
+        need = max(n[0] * row_h + n[1] * sec_h + n[2] * sp_h for n in (left, right))
         if need > avail:   # Small window: everything gets tighter
             k = max(0.55, avail / need)
             row_h, sec_h, sp_h = round(row_h * k), round(sec_h * k), round(sp_h * k)
-            need = max(l[0] * row_h + l[1] * sec_h + l[2] * sp_h for l in (left, right))
+            need = max(n[0] * row_h + n[1] * sec_h + n[2] * sp_h for n in (left, right))
         pw = min(round(940 * u), w.w - round(24 * u))
         rect = pygame.Rect(0, 0, pw, head_h + preset_h + need + desc_h + foot_h)
         rect.center = w.center

@@ -23,7 +23,6 @@ if ROOT not in sys.path:
 
 def garden(source, density, seed, ticks, warmup, profile):
     import config
-    from brain.profiles import new_brain
     from evolution.continuous import ContinuousSimulation, load_population
     config.REPRO_THRESHOLD = float("inf")   # No births: the density stays what we set
     config.AGE_MAX = 0

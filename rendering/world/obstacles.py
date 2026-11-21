@@ -9,7 +9,6 @@ import random
 import numpy as np
 import pygame
 
-import config
 
 # (mat, tentacle, tip) colours. Cool hues on purpose: food is green, poison purple, creatures warm orange.
 PALETTES = [

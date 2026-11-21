@@ -46,8 +46,6 @@ class Hud:
         self.layout = layout
         self.u = layout.scale
         self.fonts = create_fonts(self.u)
-        small = self.fonts["small"]
-        hint_color = (110, 122, 128)
         self.hints = []   # No loose text over the world: the « ? » button and the Aide menu list the shortcuts
         self._compute_slots()
 
@@ -68,7 +66,9 @@ class Hud:
         cards_min = 2 * H_CONTENT * u * KY_MIN
         graph_h = chart_h = 0.0
         if self.show_graph:
-            left = lambda cards: (space - cards - net_h) / u - 12
+            def left(cards):
+                return (space - cards - net_h) / u - 12
+
             graph_h = left(cards_good)
             if graph_h < GRAPH_MIN:
                 graph_h = min(GRAPH_MIN, left(cards_min))   # Shrink the cards rather than the graph
@@ -276,7 +276,7 @@ class Hud:
     def _draw_network(self, world, selected):
         f, c = self.fonts, Ctx(self.u)   # No vertical stretch: the graph takes the room instead
         p = self.bg["net"].copy()
-        W, H, pad = p.get_width(), p.get_height(), c.x(14)
+        W, pad = p.get_width(), c.x(14)
         _text(p, f["title"], "Réseau de neurones", pad, c.x(8), VALUE)
         if selected is None or not selected.alive:
             note = "Sélectionne une créature vivante." if selected is None else "Créature morte."

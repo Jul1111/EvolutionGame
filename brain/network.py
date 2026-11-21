@@ -6,7 +6,7 @@ class NeuralNetwork:
         self.n_inputs = n_inputs
         self.n_hidden = n_hidden
         self.n_outputs = n_outputs
-        
+
         # Sans neurone caché (n_hidden = 0), les entrées vont directement aux sorties : tout est dans w1 et b1
         self.direct = n_hidden == 0
         self.w1 = np.zeros((n_outputs if self.direct else n_hidden, n_inputs))  # Poids de la couche d'entrée

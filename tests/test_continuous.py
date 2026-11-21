@@ -92,7 +92,6 @@ def test_follow_lineage_finds_a_living_descendant():
 
 def test_size_gene_modes():
     sim = _sim()
-    parent = sim.world.creatures[0]
     config.SIZE_MODE = "fixe"
     assert sim._child_size(1.3) == 1.0
     config.SIZE_MODE = "actif"

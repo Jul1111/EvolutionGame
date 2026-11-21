@@ -1,3 +1,26 @@
+[project]
+name = "evolution-game"
+version = "0.1.0"
+description = "Simulation de sélection naturelle : des créatures à réseau de neurones évoluent sur un monde torique."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { file = "LICENSE" }
+dependencies = ["numpy>=2.2", "pygame-ce>=2.5.8"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "ruff>=0.6"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q -p no:cacheprovider"
+
+[tool.ruff]
+line-length = 120
+extend-exclude = ["graphify-out"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W"]
+
+[tool.ruff.lint.per-file-ignores]
+# Texts shown to the player: one string per line, longer lines are easier to read than broken strings
+"rendering/ui/overlay/texts.py" = ["E501"]
