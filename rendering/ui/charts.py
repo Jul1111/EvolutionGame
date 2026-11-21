@@ -4,7 +4,8 @@ cursor that reads every value at the time under the mouse, and the list of serie
 import pygame
 
 from rendering.backend.glass import frost
-from rendering.ui.hud import SERIES, VALUE, LABEL, _clip
+from rendering.ui.draw import VALUE, LABEL, _clip
+from rendering.ui.series import SERIES
 from utils.timefmt import format_time
 
 DIM = (110, 122, 128)

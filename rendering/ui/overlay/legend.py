@@ -5,7 +5,7 @@ import pygame
 
 import config
 from rendering.backend.glass import frost
-from rendering.ui.hud import VALUE
+from rendering.ui.draw import VALUE
 from rendering.ui.overlay.widgets import PANEL
 from rendering.world.obstacles import PALETTES
 from rendering.world.scene import body_color

@@ -1,7 +1,8 @@
 import pygame
 
 from brain.profiles import PROFILES, n_params
-from rendering.ui.hud import VALUE, LABEL, MINT, SERIES, create_fonts
+from rendering.ui.draw import VALUE, LABEL, MINT, create_fonts
+from rendering.ui.series import SERIES
 from rendering.backend.glass import frost
 
 BAR_BG = (19, 23, 28)

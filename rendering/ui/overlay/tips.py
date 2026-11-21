@@ -6,7 +6,7 @@ import pygame
 import config
 from brain.profiles import PROFILES, input_labels, output_labels
 from rendering.backend.glass import frost
-from rendering.ui.hud import VALUE, LABEL
+from rendering.ui.draw import VALUE, LABEL
 from rendering.ui.overlay.texts import GEN_TIPS, CREATURE_TIPS, NET_TIPS
 from rendering.ui.overlay.widgets import DIM, wrap
 from rendering.world.scene import pick_creature

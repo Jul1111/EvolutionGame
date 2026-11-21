@@ -2,7 +2,8 @@
 import pygame
 
 from rendering.backend.glass import frost
-from rendering.ui.hud import VALUE, LABEL, MINT, AMBER, network_rows, _node, _edge
+from rendering.ui.draw import VALUE, LABEL, MINT, AMBER
+from rendering.ui.netview import network_rows, _node, _edge
 from rendering.ui.overlay.widgets import PANEL, DIM
 
 

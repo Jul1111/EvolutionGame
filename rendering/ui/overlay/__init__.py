@@ -7,7 +7,7 @@ import pygame
 
 from rendering.backend.glass import frost
 from rendering.ui.charts import ChartView
-from rendering.ui.hud import VALUE, LABEL, MINT, AMBER, create_fonts
+from rendering.ui.draw import VALUE, LABEL, MINT, AMBER, create_fonts
 from rendering.ui.minimap import MiniMap
 from rendering.ui.overlay.help import HelpMixin
 from rendering.ui.overlay.legend import LegendMixin

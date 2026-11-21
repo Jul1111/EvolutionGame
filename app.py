@@ -15,7 +15,8 @@ from brain.profiles import PROFILES
 from evolution.continuous import (ContinuousSimulation, success_key, save_population, load_population, snapshot_path,
                                   autosave_path, latest_snapshot, populations_dir)
 from rendering.backend.display import Display
-from rendering.ui.hud import Hud, SERIES_BY_KEY
+from rendering.ui.hud import Hud
+from rendering.ui.series import SERIES_BY_KEY
 from rendering.ui.layout import compute_layout
 from rendering.ui.menu import MenuBar, profile_label
 from rendering.ui.overlay import Overlay

@@ -4,7 +4,7 @@ import pygame
 import config
 from brain.profiles import PROFILES
 from rendering.backend.glass import frost
-from rendering.ui.hud import VALUE, LABEL, MINT, AMBER, _clip
+from rendering.ui.draw import VALUE, LABEL, MINT, AMBER, _clip
 from rendering.ui.overlay.texts import PARAM_COLUMNS
 from rendering.ui.overlay.widgets import HOVER, DIM, wrap, _button
 

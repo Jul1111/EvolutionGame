@@ -3,7 +3,7 @@ import math
 
 import pygame
 
-from rendering.ui.hud import VALUE
+from rendering.ui.draw import VALUE
 from rendering.world.scene import energy_color
 
 PANEL = (25, 31, 37)
