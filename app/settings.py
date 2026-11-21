@@ -1,9 +1,9 @@
 """Settings editable from the menu: which ones, how they cycle, when they apply, and their persistence."""
-from app.state import AppState
 import config
 from brain.profiles import PROFILES
 from utils.settings import save_settings
 from utils.timefmt import format_time
+from app.state import AppState
 
 
 # Settings editable from the menu: action → (config name, values it cycles through, text shown).

@@ -1,5 +1,4 @@
 """One frame: simulation ticks within the time budget, selection following, drawing, and the main loop."""
-from app.state import AppState
 import os
 import time
 
@@ -12,6 +11,7 @@ from rendering.ui.overlay.texts import PARAM_INFO
 from rendering.ui.series import SERIES_BY_KEY
 from utils.timefmt import format_time
 from app.settings import PARAMS
+from app.state import AppState
 
 
 class FrameMixin(AppState):

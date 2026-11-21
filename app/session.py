@@ -1,5 +1,4 @@
 """Life of a session: new simulation, resume, save and load of populations, start menu and setup screen."""
-from app.state import AppState
 import os
 import time
 
@@ -9,6 +8,7 @@ from evolution.continuous import (ContinuousSimulation, save_population, load_po
                                   autosave_path, populations_dir)
 from rendering.ui.startmenu import StartMenu
 from utils.timefmt import format_time
+from app.state import AppState
 
 
 class SessionMixin(AppState):

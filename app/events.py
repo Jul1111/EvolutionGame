@@ -1,10 +1,10 @@
 """Events: window layout, keyboard and mouse."""
-from app.state import AppState
 import pygame
 
 from rendering.ui.layout import compute_layout
 from rendering.world.scene import pick_creature
 from app.commands import KEYS
+from app.state import AppState
 
 
 class EventsMixin(AppState):

@@ -1,12 +1,12 @@
 """Commands: every action from the keyboard or from the menus goes through App.do(), a table of handlers."""
 from functools import partial
 
-from app.state import AppState
 import pygame
 
 import config
 from evolution.continuous import success_key
 from app.settings import PARAMS
+from app.state import AppState
 
 
 # Actions that do nothing while the setup screen is open: only its own buttons, the settings, the species and the view
