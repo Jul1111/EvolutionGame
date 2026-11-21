@@ -79,7 +79,8 @@ class NetworkMixin:
             surf.blit(val, (x + r + round(8 * u), y + lab.get_height() // 2 - round(1 * u)))
         cap = sm.render("Neurone : vert = activation positive, rouge = négative.  Lien : couleur = signe du signal, "
                         "épaisseur = force.  N : changer la taille.", True, DIM)
-        surf.blit(pygame.transform.smoothscale(cap, (min(cap.get_width(), pw - 2 * pad),
-                                                     round(cap.get_height() * min(1.0, (pw - 2 * pad) / cap.get_width()))))
-                  if cap.get_width() > pw - 2 * pad else cap, (pad, ph - bottom + round(10 * u)))
+        max_w = pw - 2 * pad
+        if cap.get_width() > max_w:   # Too wide for the panel: shrunk to fit
+            cap = pygame.transform.smoothscale(cap, (max_w, round(cap.get_height() * max_w / cap.get_width())))
+        surf.blit(cap, (pad, ph - bottom + round(10 * u)))
         window.blit(surf, rect.topleft)

@@ -1,5 +1,6 @@
 """Smoke tests of the interface: every panel, view and species is drawn for a few frames without a screen (SDL dummy
-driver). They check that nothing raises and that the main on-screen states are reached, not what the pixels look like."""
+driver). They check that nothing raises and that the main on-screen states are reached, not what the pixels look
+like."""
 import pygame
 
 from brain.profiles import PROFILES

@@ -9,7 +9,8 @@ import colorsys
 
 
 def lineage_color(founder):
-    """Stable colour of a lineage. Hues are spread with the golden ratio and the green band is skipped: green is food."""
+    """Stable colour of a lineage. Hues are spread with the golden ratio and the green band is skipped: green is
+    food."""
     h = (founder * 0.6180339887) % 1.0
     hue = (h * 0.75 + 0.47) % 1.0          # Uses 0.47 → 1.22: skips 0.22-0.47 (yellow-green to green-cyan)
     sat = 0.55 + 0.25 * ((founder * 0.381966) % 1.0)

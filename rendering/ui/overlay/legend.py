@@ -30,7 +30,8 @@ class LegendMixin:
                         ("cone", config.DEBUG_VISION_COLOR, "Cône de vision (touche D)"),
                         ("ring", (255, 255, 255), "Créature sélectionnée")]
             text_w = max(f["small"].size(t)[0] for _, _, t in entries)
-            surf = pygame.Surface((pad * 2 + icon_w + text_w, pad * 2 + row_h * len(entries) - round(4 * u)), pygame.SRCALPHA)
+            size = (pad * 2 + icon_w + text_w, pad * 2 + row_h * len(entries) - round(4 * u))
+            surf = pygame.Surface(size, pygame.SRCALPHA)
             pygame.draw.rect(surf, (*PANEL, 50), surf.get_rect(), border_radius=round(10 * u))   # Over frosted glass
             for i, (kind, color, text) in enumerate(entries):
                 cy = pad + i * row_h + row_h // 2 - round(2 * u)
@@ -48,7 +49,8 @@ class LegendMixin:
                     for a in range(8):
                         ang = a * math.pi / 4
                         pygame.draw.line(surf, tip, (cx + math.cos(ang) * rad * 0.25, cy + math.sin(ang) * rad * 0.25),
-                                         (cx + math.cos(ang) * rad * 0.8, cy + math.sin(ang) * rad * 0.8), max(1, round(1.5 * u)))
+                                         (cx + math.cos(ang) * rad * 0.8, cy + math.sin(ang) * rad * 0.8),
+                                         max(1, round(1.5 * u)))
                 elif kind == "gradient":
                     gw = icon_w - round(4 * u)
                     for k in range(gw):
@@ -58,7 +60,8 @@ class LegendMixin:
                     r = round(11 * u)
                     a = math.radians(40)
                     o = (cx - r // 2, cy)
-                    pts = [(o[0] + r * math.cos(-a + 2 * a * j / 6), o[1] + r * math.sin(-a + 2 * a * j / 6)) for j in range(7)]
+                    pts = [(o[0] + r * math.cos(-a + 2 * a * j / 6), o[1] + r * math.sin(-a + 2 * a * j / 6))
+                           for j in range(7)]
                     pygame.draw.lines(surf, color, False, [pts[0], o, pts[-1]], 1)
                     pygame.draw.lines(surf, color, False, pts, 1)
                 elif kind == "ring":

@@ -14,7 +14,7 @@ ENERGY_BUCKETS = 16   # Number of pre-rendered creature sprites (one per energy 
 FOOD_FRAMES = 12      # Number of pre-rendered food pulsation frames
 MIN_ZOOM_RATIO = 0.25   # Zooming out stops at a quarter of the zoom that fits the whole world
 COPY_VEIL_ALPHA = 120   # Darkening of the torus copies around the real map (0-255)
-COLOR_MODES = ("espèce", "énergie", "vitesse", "nourriture", "taille", "lignée")  # What the creature colour encodes (key C)
+COLOR_MODES = ("espèce", "énergie", "vitesse", "nourriture", "taille", "lignée")   # What the colour encodes (key C)
 TRAIL_COLOR = (255, 226, 140)
 TRAIL_FADE = (24, 30, 34)
 SUPERSAMPLE = 4       # Sprites are drawn 4x bigger then shrunk, for smooth edges
@@ -224,7 +224,8 @@ class Scene:
                            round(world.width * k), round(world.height * k))
         # Four bands around the real map
         inner = tile.clip(pygame.Rect((0, 0), (vw, vh)))
-        for band in (pygame.Rect(0, 0, vw, max(0, inner.top)), pygame.Rect(0, inner.bottom, vw, max(0, vh - inner.bottom)),
+        for band in (pygame.Rect(0, 0, vw, max(0, inner.top)),
+                     pygame.Rect(0, inner.bottom, vw, max(0, vh - inner.bottom)),
                      pygame.Rect(0, inner.top, max(0, inner.left), inner.h),
                      pygame.Rect(inner.right, inner.top, max(0, vw - inner.right), inner.h)):
             if band.w > 0 and band.h > 0:
@@ -320,7 +321,8 @@ class Scene:
         d = r * s
         diamond = [(c, c - d), (c + d, c), (c, c + d), (c - d, c)]
         pygame.draw.polygon(big, (*_lerp(config.POISON_COLOR, (10, 12, 16), 0.55), 255), diamond)
-        pygame.draw.polygon(big, (*_lerp(config.POISON_COLOR, (255, 255, 255), 0.4), 255), diamond, max(1, int(1.3 * k * s)))
+        pygame.draw.polygon(big, (*_lerp(config.POISON_COLOR, (255, 255, 255), 0.4), 255), diamond,
+                            max(1, int(1.3 * k * s)))
         return _shrink(big, size)
 
     # ---------- drawing (every frame) ----------

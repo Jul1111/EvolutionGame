@@ -88,7 +88,8 @@ class ParamsMixin:
             bw = f["small"].size(text)[0] + round(22 * u)
             r = pygame.Rect(x, py, bw, bh)
             if r.right <= rect.right - pad:
-                button(r, text, action, self.presets is not None and (action != "preset_apply" or bool(self.presets.files)))
+                usable = self.presets is not None and (action != "preset_apply" or bool(self.presets.files))
+                button(r, text, action, usable)
             x = r.right + round(8 * u)
 
         # Two columns of settings
@@ -106,8 +107,9 @@ class ParamsMixin:
                     continue
                 img = f["small"].render(sec_title.upper(), True, DIM)
                 window.blit(img, (x0, y + sec_h - img.get_height() - round(4 * u)))
-                pygame.draw.line(window, (70, 80, 92), (x0 + img.get_width() + round(8 * u), y + sec_h - img.get_height() // 2 - round(4 * u)),
-                                 (x0 + col_w, y + sec_h - img.get_height() // 2 - round(4 * u)))
+                line_y = y + sec_h - img.get_height() // 2 - round(4 * u)
+                pygame.draw.line(window, (70, 80, 92), (x0 + img.get_width() + round(8 * u), line_y),
+                                 (x0 + col_w, line_y))
                 y += sec_h
                 for key in keys:
                     _, label, desc, cur, pend = by_key[key]
@@ -122,7 +124,8 @@ class ParamsMixin:
                         hov = mouse is not None and r.collidepoint(mouse)
                         pygame.draw.rect(window, HOVER if hov else (34, 41, 48), r, border_radius=max(3, round(5 * u)))
                         cx, cy, s = r.centerx, r.centery, round(4 * u)
-                        pygame.draw.polygon(window, VALUE, [(cx - sign * s * 0.6, cy - s), (cx - sign * s * 0.6, cy + s),
+                        pygame.draw.polygon(window, VALUE, [(cx - sign * s * 0.6, cy - s),
+                                                            (cx - sign * s * 0.6, cy + s),
                                                             (cx + sign * s * 0.9, cy)])
                     self._hits.append((r_dec, f"param:dec:{key}"))
                     self._hits.append((r_inc, f"param:inc:{key}"))
@@ -138,21 +141,24 @@ class ParamsMixin:
             if ci == 1:
                 # Species: tick boxes (applied at the next start)
                 ticked = self.state.get("profiles", list(config.ACTIVE_PROFILES))
-                img = f["small"].render("ESPÈCES (AU PROCHAIN DÉPART)", True, AMBER if self.state.get("profiles_pending") else DIM)
+                head_color = AMBER if self.state.get("profiles_pending") else DIM
+                img = f["small"].render("ESPÈCES (AU PROCHAIN DÉPART)", True, head_color)
                 window.blit(img, (x0, y + sec_h - img.get_height() - round(4 * u)))
                 y += sec_h
                 for name in species:
                     row = pygame.Rect(x0 - round(6 * u), y, col_w + round(12 * u), sp_h)
                     if mouse and row.collidepoint(mouse):
                         pygame.draw.rect(window, (40, 48, 58), row, border_radius=round(6 * u))
-                        hovered_desc = (PROFILES[name]["title"], "Coche ou décoche cette espèce. Il en faut au moins une. "
-                                        "Le changement s'applique au prochain départ (« Lancer » ou « Repartir de zéro »).")
+                        hovered_desc = (PROFILES[name]["title"],
+                                        "Coche ou décoche cette espèce. Il en faut au moins une. Le changement "
+                                        "s'applique au prochain départ (« Lancer » ou « Repartir de zéro »).")
                     cb = pygame.Rect(x0, row.centery - round(7 * u), round(14 * u), round(14 * u))
                     if name in ticked:
                         pygame.draw.rect(window, MINT, cb, border_radius=3)
                     else:
                         pygame.draw.rect(window, DIM, cb, width=1, border_radius=3)
-                    pygame.draw.circle(window, PROFILES[name]["color"], (cb.right + round(14 * u), row.centery), max(3, round(5 * u)))
+                    pygame.draw.circle(window, PROFILES[name]["color"], (cb.right + round(14 * u), row.centery),
+                                       max(3, round(5 * u)))
                     img = f["small"].render(PROFILES[name]["title"], True, VALUE if name in ticked else DIM)
                     window.blit(img, (cb.right + round(26 * u), row.centery - img.get_height() // 2))
                     self._hits.append((row, f"profile:{name}"))
@@ -167,7 +173,8 @@ class ParamsMixin:
         else:
             lines = ["Survole un réglage pour lire sa description complète. Flèches : valeur précédente / suivante."]
         for i, t in enumerate(lines):
-            window.blit(f["small"].render(t, True, LABEL), (rect.x + pad, dy + round(4 * u) + i * (f["small"].get_height() + round(2 * u))))
+            line_h = f["small"].get_height() + round(2 * u)
+            window.blit(f["small"].render(t, True, LABEL), (rect.x + pad, dy + round(4 * u) + i * line_h))
 
         # Footer buttons, right to left
         by, bh = rect.bottom - foot_h + round(12 * u), round(30 * u)

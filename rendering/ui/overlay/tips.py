@@ -23,7 +23,8 @@ class TipsMixin:
             return None
         lx, ly = x - sb.x, y - sb.y
         u, ky = hud.u, hud.ky
-        fmt = dict(size_min=config.SIZE_MIN, size_max=config.SIZE_MAX, pop_max=config.POP_MAX, energy_max=config.ENERGY_MAX, speed_max=config.CREATURE_MAX_SPEED)
+        fmt = dict(size_min=config.SIZE_MIN, size_max=config.SIZE_MAX, pop_max=config.POP_MAX,
+                   energy_max=config.ENERGY_MAX, speed_max=config.CREATURE_MAX_SPEED)
         for name, rows in (("gen", GEN_TIPS), ("creature", CREATURE_TIPS)):
             slot = hud.slots.get(name)
             if slot and slot.collidepoint(lx, ly):
@@ -38,7 +39,10 @@ class TipsMixin:
         if slot and slot.collidepoint(lx, ly) and selected is not None and selected.alive:
             labels = input_labels(selected.profile) + output_labels(selected.profile)
             n_in = len(input_labels(selected.profile))
-            base = slot.y + (round(36 * u) if not hud.show_graph else round(32 * u) + round(hud.graph_h * u) + round(12 * u))
+            if hud.show_graph:
+                base = slot.y + round(32 * u) + round(hud.graph_h * u) + round(12 * u)
+            else:
+                base = slot.y + round(36 * u)
             for i, label in enumerate(labels):
                 top = base + round((i * 15 + (4 if i >= n_in else 0)) * u)
                 if top <= ly < top + round(15 * u):
@@ -47,7 +51,8 @@ class TipsMixin:
         return None
 
     def draw_tips(self, window, world, selected, menu_open):
-        """Hover tips, drawn last. Buttons and labels explain themselves after a short rest; a creature gets a summary."""
+        """Hover tips, drawn last. Buttons and labels explain themselves after a short rest; a creature gets a
+        summary."""
         if (self.mouse is None or menu_open or self.params_open or self.help_open or self.layout is None
                 or self.start is not None):
             return
@@ -71,9 +76,12 @@ class TipsMixin:
             c = pick_creature(world, wx, wy, self.scene.pick_radius())
             if c is not None:
                 t = int(c.age / config.TICKS_PER_SECOND)
-                lines = [(f"{PROFILES[c.profile]['title']}  ·  taille {c.size:.2f}  ·  gén. {c.lineage_gen}  ·  {c.children} petits" + ("" if c.alive else "  ·  morte"), "base", VALUE),
+                head = (f"{PROFILES[c.profile]['title']}  ·  taille {c.size:.2f}  ·  gén. {c.lineage_gen}  ·  "
+                        f"{c.children} petits" + ("" if c.alive else "  ·  morte"))
+                lines = [(head, "base", VALUE),
                          (f"Énergie {max(c.energy, 0):.0f}   Vitesse {c.speed:.1f}", "small", LABEL),
-                         (f"Âge {t // 60:02d}:{t % 60:02d}   Nourriture {c.food_eaten}   Poison {c.poison_hits}", "small", LABEL),
+                         (f"Âge {t // 60:02d}:{t % 60:02d}   Nourriture {c.food_eaten}   Poison {c.poison_hits}",
+                          "small", LABEL),
                          ("Clic : fiche complète", "small", DIM)]
         if lines is not None:
             self._draw_box(window, lines, x, y)

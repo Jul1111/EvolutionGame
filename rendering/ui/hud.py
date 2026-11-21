@@ -166,7 +166,8 @@ class Hud:
 
     def _draw_generation(self, world, fps, speed, info, debug_mode, paused, color_label):
         """Population card. info: births, deaths (since the start), extinct (bool), pop_max, setup.
-        Rates come from the last line of timeline.csv; lineages from the display tracker (rendering/world/lineage.py)."""
+        Rates come from the last line of timeline.csv; lineages from the display tracker
+        (rendering/world/lineage.py)."""
         f, c = self.fonts, Ctx(self.u, self.ky)
         p = self.bg["gen"].copy()
         W, pad = p.get_width(), c.x(14)
@@ -214,7 +215,8 @@ class Hud:
                 n_alive = sum(1 for cr in creatures if cr.alive and cr.profile == name)
                 img = _text(p, f["small"], str(n_alive), x, c.y(124), VALUE, right=True)
                 x -= img.get_width() + c.x(5)
-                pygame.draw.circle(p, PROFILES[name]["color"], (x - c.x(3), c.y(124) + img.get_height() // 2), max(3, c.x(4)))
+                pygame.draw.circle(p, PROFILES[name]["color"], (x - c.x(3), c.y(124) + img.get_height() // 2),
+                                   max(3, c.x(4)))
                 x -= c.x(14)
             area = pygame.Rect(pad, c.y(138), W - 2 * pad, max(c.x(10), c.y(16)))
             pygame.draw.rect(p, (255, 255, 255, 12), area, border_radius=max(2, c.x(4)))
@@ -239,7 +241,8 @@ class Hud:
 
         debug_label = ("off", "sélection", "toutes")[debug_mode]
         _text(p, f["small"], f"couleur : {color_label}  ·  debug : {debug_label}", pad, c.y(158), LABEL)
-        _text(p, f["small"], f"{fps:.0f} FPS · {getattr(self, 'renderer', 'CPU')}", W - pad, c.y(158), LABEL, right=True)
+        renderer = getattr(self, 'renderer', 'CPU')
+        _text(p, f["small"], f"{fps:.0f} FPS · {renderer}", W - pad, c.y(158), LABEL, right=True)
         return p
 
     def _draw_creature(self, world, selected):
@@ -253,7 +256,8 @@ class Hud:
             return p
         cr = selected
         img_title = _text(p, f["title"], "Créature", pad, c.y(8), VALUE)
-        pygame.draw.circle(p, PROFILES[selected.profile]["color"], (pad + img_title.get_width() + c.x(12), c.y(8) + img_title.get_height() // 2), max(3, c.x(4)))
+        dot = (pad + img_title.get_width() + c.x(12), c.y(8) + img_title.get_height() // 2)
+        pygame.draw.circle(p, PROFILES[selected.profile]["color"], dot, max(3, c.x(4)))
         _text(p, f["small"], PROFILES[selected.profile]["title"], pad + img_title.get_width() + c.x(20), c.y(13), LABEL)
         state, state_color = ("Vivante", MINT) if cr.alive else ("Morte", CORAL)
         img = _text(p, f["small"], state, W - pad, c.y(13), state_color, right=True)

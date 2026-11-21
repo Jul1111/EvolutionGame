@@ -84,7 +84,8 @@ class StartMenu:
         t = fonts["title"].render(title, True, VALUE if enabled else DIM)
         window.blit(t, (rect.x + pad, rect.y + round(9 * u)))
         if subtitle:
-            s = fonts["small"].render(_clip(fonts["small"], subtitle, rect.w - 2 * pad), True, LABEL if enabled else DIM)
+            s = fonts["small"].render(_clip(fonts["small"], subtitle, rect.w - 2 * pad), True,
+                                      LABEL if enabled else DIM)
             window.blit(s, (rect.x + pad, rect.y + round(12 * u) + t.get_height()))
         if enabled:
             self._hits.append((rect, action))
@@ -94,8 +95,8 @@ class StartMenu:
         h = pad * 2 + round(76 * u) + 3 * (bh + gap) + round(40 * u) + round(30 * u)
         card = self._card(window, w, h, u)
         title = fonts["title"].render("Evolution Simulator", True, VALUE)
-        window.blit(pygame.transform.smoothscale(title, (round(title.get_width() * 1.35), round(title.get_height() * 1.35))),
-                    (card.x + pad, card.y + pad))
+        big = (round(title.get_width() * 1.35), round(title.get_height() * 1.35))
+        window.blit(pygame.transform.smoothscale(title, big), (card.x + pad, card.y + pad))
         window.blit(fonts["small"].render("Sélection naturelle et évolution continue", True, LABEL),
                     (card.x + pad, card.y + pad + round(42 * u)))
         y = card.y + pad + round(76 * u)
@@ -113,7 +114,8 @@ class StartMenu:
                      "start_load_list", bool(self.snapshots), False, fonts, u, mouse)
         y += bh + gap
         self._choice(window, pygame.Rect(card.x + pad, y, w - 2 * pad, bh), "Nouvelle simulation",
-                     "Choisir les réglages, puis une population tirée au hasard", "start_new", True, a is None, fonts, u, mouse)
+                     "Choisir les réglages, puis une population tirée au hasard", "start_new", True, a is None,
+                     fonts, u, mouse)
         y += bh + gap + round(6 * u)
         qw = fonts["small"].size("Quitter")[0] + round(28 * u)
         q = pygame.Rect(card.right - pad - qw, y, qw, round(28 * u))
@@ -123,7 +125,8 @@ class StartMenu:
         window.blit(img, img.get_rect(center=q.center))
         self._hits.append((q, "quit"))
         hint = "Entrée : " + ("continuer" if a else "nouvelle simulation") + "   ·   Échap : quitter"
-        window.blit(fonts["small"].render(hint, True, DIM), (card.x + pad, q.centery - fonts["small"].get_height() // 2))
+        window.blit(fonts["small"].render(hint, True, DIM),
+                    (card.x + pad, q.centery - fonts["small"].get_height() // 2))
 
     def _draw_load(self, window, fonts, u, mouse):
         w, pad, rh, gap = round(560 * u), round(26 * u), round(50 * u), round(6 * u)
@@ -132,7 +135,8 @@ class StartMenu:
         card = self._card(window, w, h, u)
         window.blit(fonts["title"].render("Charger une population", True, VALUE), (card.x + pad, card.y + pad))
         note = (f"Les {MAX_LISTED} plus récentes sur {self.count}" if self.count > MAX_LISTED else
-                "Sauvegardées pendant les parties (touche S). Les créatures repartent à neuf, seuls les réseaux sont repris.")
+                "Sauvegardées pendant les parties (touche S). Les créatures repartent à neuf, seuls les réseaux "
+                "sont repris.")
         window.blit(fonts["small"].render(_clip(fonts["small"], note, w - 2 * pad), True, LABEL),
                     (card.x + pad, card.y + pad + round(32 * u)))
         y = card.y + pad + round(64 * u)

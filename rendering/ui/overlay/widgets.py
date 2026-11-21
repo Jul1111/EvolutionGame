@@ -68,7 +68,8 @@ def _icon(surf, name, rect, color, fonts, u):
     elif name == "target":
         pygame.draw.circle(surf, color, (cx, cy), round(s * 0.8), w)
         for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
-            pygame.draw.line(surf, color, (cx + dx * s * 0.8, cy + dy * s * 0.8), (cx + dx * s * 1.35, cy + dy * s * 1.35), w)
+            pygame.draw.line(surf, color, (cx + dx * s * 0.8, cy + dy * s * 0.8),
+                             (cx + dx * s * 1.35, cy + dy * s * 1.35), w)
     elif name == "net":
         a = [(cx - s, cy - s * 0.8), (cx - s, cy + s * 0.8)]
         b = [(cx, cy - s * 0.9), (cx, cy), (cx, cy + s * 0.9)]

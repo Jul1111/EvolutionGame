@@ -22,7 +22,8 @@ INPUT_FORMAT = {
 
 
 def network_rows(inputs, outputs, profile):
-    """Rows of the network panel: (label, text, value, signed bar?, colour), with the labels of the creature's profile."""
+    """Rows of the network panel: (label, text, value, signed bar?, colour), with the labels of the creature's
+    profile."""
     rows = []
     for label, value in zip(input_labels(profile), inputs):
         value = float(value)

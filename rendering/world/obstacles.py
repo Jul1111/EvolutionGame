@@ -17,9 +17,11 @@ PALETTES = [
     ((62, 56, 108), (142, 126, 204), (228, 218, 255)),    # lilac
 ]
 CORNER = {"square": 0.20, "triangle": 0.17}     # Corner rounding of the collision shape, in radii
-FRAMES = 12                                     # Frames of the sway loop (two neighbours are cross-faded: smooth at any speed)
+FRAMES = 12                                     # Frames of the sway loop (two neighbours are cross-faded: smooth
+                                                # at any speed)
 PERIOD_MS = 1500                                # Duration of one loop
-BUILDS_PER_TICK = 1                             # New frames built per game frame at most (a new generation never stalls)
+BUILDS_PER_TICK = 1                             # New frames built per game frame at most (a new generation never
+                                                # stalls)
 SS = 2                                          # Tentacles are drawn 2x bigger then shrunk, for smooth edges
 SHADOW_OFFSET = (0.04, 0.07)
 SHADOW_BLUR = 0.50
@@ -120,7 +122,8 @@ def _outline_angles(bound, n, th0, rng, jitter):
 
 
 def _make_tentacles(o, k, rng):
-    """Geometry of every tentacle (final pixels), fixed for the obstacle: (layer, angle, r0, r1, curl, wave phase, width).
+    """Geometry of every tentacle (final pixels), fixed for the obstacle: (layer, angle, r0, r1, curl, wave phase,
+    width).
     Each crown starts on a scaled copy of the outline and ends near the outline itself, so a triangular obstacle is a
     triangular anemone."""
     R = o.radius * k
@@ -186,7 +189,8 @@ def _draw_tentacle(layer_surf, spec, c, pal, phi):
         prev = (x, y)
     tip = tuple(int(min(255, v * (shade + (1 - shade) * 0.85))) for v in pal[2])
     pygame.draw.circle(layer_surf, tip, prev, max(1.0, w * 0.78 * SS))
-    pygame.draw.circle(layer_surf, (255, 255, 255), (prev[0] - w * 0.18 * SS, prev[1] - w * 0.18 * SS), max(1.0, w * 0.16 * SS))
+    pygame.draw.circle(layer_surf, (255, 255, 255), (prev[0] - w * 0.18 * SS, prev[1] - w * 0.18 * SS),
+                       max(1.0, w * 0.16 * SS))
 
 
 def _build_frame(entry, frame):
@@ -236,7 +240,8 @@ _latest = {}   # (shape, radius, rotation) → last entry with built frames, use
 
 
 def _bucket(k):
-    """Zoom levels the pictures are built at: steps of ×1.41, at or above the scale on screen (pictures are only shrunk).
+    """Zoom levels the pictures are built at: steps of ×1.41, at or above the scale on screen (pictures are only
+    shrunk).
     A wheel notch (×1.15) usually stays on the same level: it rescales the pictures instead of drawing them again."""
     return 2 ** (math.ceil(math.log2(max(k, 1e-3)) * 2 - 1e-6) / 2)
 
@@ -282,7 +287,8 @@ def draw_obstacle(screen, o, px, py, k):
         pos = now / PERIOD_MS * FRAMES + entry["offset"]
         a = int(pos) % FRAMES
         for idx in (a, (a + 1) % FRAMES):
-            if frames[idx] is None and ((first_time and all(f is None for f in frames)) or (settled and _can_build(now))):
+            if frames[idx] is None and (
+                    (first_time and all(f is None for f in frames)) or (settled and _can_build(now))):
                 frames[idx] = _build_frame(entry, idx)
                 _state["builds"] += 1
         if any(f is not None for f in frames):

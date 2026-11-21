@@ -1,5 +1,6 @@
 """Interface layer drawn on top of the world: tool bar, pause banner, legend, help, hover tips, settings panel and the
-large network view. Everything is drawn at the real resolution (sizes multiplied by the scale u), like the rest of the UI.
+large network view. Everything is drawn at the real resolution (sizes multiplied by the scale u), like the rest of
+the UI.
 This module never touches the simulation: it only reads the world and returns action names, app.py runs them."""
 import time
 
@@ -99,7 +100,8 @@ class Overlay(LegendMixin, HelpMixin, ParamsMixin, NetworkMixin, TipsMixin):
         f = self.fonts
         title = f["title"].render("PAUSE", True, AMBER)
         hint = f["small"].render("Espace : reprendre    →  : avancer d'un tick", True, LABEL)
-        bw, bh = max(title.get_width(), hint.get_width()) + round(36 * u), title.get_height() + hint.get_height() + round(18 * u)
+        bw = max(title.get_width(), hint.get_width()) + round(36 * u)
+        bh = title.get_height() + hint.get_height() + round(18 * u)
         banner = pygame.Surface((bw, bh), pygame.SRCALPHA)
         pygame.draw.rect(banner, (*PANEL, 90), banner.get_rect(), border_radius=round(10 * u))
         pygame.draw.rect(banner, (240, 196, 92, 110), banner.get_rect(), width=1, border_radius=round(10 * u))
@@ -178,7 +180,8 @@ class Overlay(LegendMixin, HelpMixin, ParamsMixin, NetworkMixin, TipsMixin):
         window.blit(self.bar_bg, self.bar_rect.topleft)
         active = {"pause": state["paused"], "debug": state["debug"] > 0, "legend": self.legend_open,
                   "follow": state["follow"], "graph": state["graph"] > 0, "params_panel": self.params_open,
-                  "help": self.help_open, "chart": state.get("chart", 0) > 0, "cam_follow": state.get("cam_follow", False)}
+                  "help": self.help_open, "chart": state.get("chart", 0) > 0,
+                  "cam_follow": state.get("cam_follow", False)}
         for rect, action, icon, _, _ in self.buttons:
             on = active.get(action, False)
             hov = self.mouse is not None and rect.collidepoint(self.mouse) and not self.any_modal()
@@ -188,7 +191,8 @@ class Overlay(LegendMixin, HelpMixin, ParamsMixin, NetworkMixin, TipsMixin):
             name = "play" if (action == "pause" and state["paused"]) else icon
             _icon(window, name, rect, (MINT if on else (VALUE if enabled else DIM)), f, u)
         for sx in self.seps:
-            pygame.draw.line(window, BORDER, (sx, self.bar_rect.y + round(8 * u)), (sx, self.bar_rect.bottom - round(8 * u)))
+            pygame.draw.line(window, BORDER, (sx, self.bar_rect.y + round(8 * u)),
+                             (sx, self.bar_rect.bottom - round(8 * u)))
         limited = state.get("real_speed", 0) and state["real_speed"] < state["speed"] * 0.95 and not state["paused"]
         sp = f["base"].render(f"x{state['real_speed']:.0f}" if limited else f"x{state['speed']}", True,
                               AMBER if limited else VALUE)   # Amber: the machine cannot keep the asked speed

@@ -71,8 +71,9 @@ class ChartView:
             last_txt = fmt(last) if last is not None else "-"
             lw = small.size(last_txt)[0]
             text = _clip(small, label, legend.w - round(24 * u) - lw - round(8 * u))
-            window.blit(small.render(text, True, VALUE if on else DIM), (box.right + round(8 * u), y + (line_h - small.get_height()) // 2))
-            window.blit(small.render(last_txt, True, VALUE if on else DIM), (legend.right - lw, y + (line_h - small.get_height()) // 2))
+            ty = y + (line_h - small.get_height()) // 2
+            window.blit(small.render(text, True, VALUE if on else DIM), (box.right + round(8 * u), ty))
+            window.blit(small.render(last_txt, True, VALUE if on else DIM), (legend.right - lw, ty))
             self._hits.append((pygame.Rect(legend.x, y, legend.w, line_h), key))
 
         # Plot (cached: it only changes with a new timeline line, the series or the size)
