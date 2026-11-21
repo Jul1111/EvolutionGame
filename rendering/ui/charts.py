@@ -3,8 +3,8 @@ Time axis with graduations, one curve per ticked series (each on its own scale, 
 cursor that reads every value at the time under the mouse, and the list of series as tick boxes on the right."""
 import pygame
 
-from rendering.glass import frost
-from rendering.hud import SERIES, VALUE, LABEL, _clip
+from rendering.backend.glass import frost
+from rendering.ui.hud import SERIES, VALUE, LABEL, _clip
 from utils.timefmt import format_time
 
 DIM = (110, 122, 128)

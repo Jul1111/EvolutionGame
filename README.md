@@ -80,7 +80,7 @@ brain/         Réseau de neurones et profils d'espèces
 evolution/     Naissances, morts, mutation
 experiments/   Runs multi-graines et analyses
 docs/          Documentation détaillée
-rendering/     Affichage et menus
+rendering/     Affichage : world/ (scène, sprites), ui/ (HUD, menus), backend/ (processeur, carte graphique)
 tests/         Tests pytest
 ```
 

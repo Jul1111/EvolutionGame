@@ -1,12 +1,12 @@
 """Drawing with the graphics card (SDL2 renderer of pygame-ce), same picture as the processor path.
 
 Frame:
-1. The world is drawn on `screen`, a target texture the size of the window (GpuCanvas, rendering/canvas.py):
+1. The world is drawn on `screen`, a target texture the size of the window (GpuCanvas, rendering/backend/canvas.py):
    background, sprites, lines and circles become textures drawn by the graphics card.
-2. The interface (panels, text, menus: rendering/hud.py, overlay.py...) is still drawn by the processor, on `ui`,
+2. The interface (panels, text, menus: rendering/ui/hud.py, overlay.py...) is still drawn by the processor, on `ui`,
    a transparent Surface the size of the window. Only the parts that were drawn are sent to the graphics card
    (UILayer records them), then cleared.
-3. Frosted glass (rendering/glass.py) is done here: what is already on `screen` under the panel is copied, shrunk
+3. Frosted glass (rendering/backend/glass.py) is done here: what is already on `screen` under the panel is copied, shrunk
    in three halvings (an average, like the processor's smoothscale), tinted, enlarged and given rounded corners.
    Before each glass, the interface drawn so far is sent: a menu over a panel blurs the panel, as before.
 4. `screen` is shown.
@@ -22,7 +22,7 @@ os.environ.setdefault("SDL_RENDER_SCALE_QUALITY", "1")
 import pygame
 from pygame._sdl2 import video
 
-from rendering.canvas import GpuCanvas
+from rendering.backend.canvas import GpuCanvas
 
 TEXTURE_CACHE = 1500   # Textures made from Surfaces kept at most (sprites of several zooms, anemone frames...)
 TARGET_CACHE = 48      # Scratch target textures (glass) kept at most, by size
@@ -76,7 +76,7 @@ class UILayer(pygame.Surface):
 class Gpu:
     def __init__(self, window, hardware_only=True):
         """hardware_only: fails (the caller falls back to the processor) when SDL has no hardware renderer: its
-        software renderer is slower than rendering/scene.py drawing with the processor."""
+        software renderer is slower than rendering/world/scene.py drawing with the processor."""
         self.window = window
         self.renderer = video.Renderer(window, accelerated=1 if hardware_only else -1, vsync=False,
                                        target_texture=True)
@@ -222,7 +222,7 @@ class Gpu:
                 ui.clear(rect)
 
     def glass(self, rect, radius, tint, alpha):
-        """Frosted glass on `rect` of the window: same steps as rendering/glass.py, by the graphics card."""
+        """Frosted glass on `rect` of the window: same steps as rendering/backend/glass.py, by the graphics card."""
         self.flush_ui()   # What is already drawn under the glass must be blurred with the world
         rect = pygame.Rect(rect).clip(pygame.Rect((0, 0), self.size))
         w, h = rect.size

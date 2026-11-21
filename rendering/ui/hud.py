@@ -3,10 +3,10 @@ import csv
 import pygame
 import config
 from brain.profiles import PROFILES, input_labels, output_labels
-from rendering.scene import energy_color
+from rendering.world.scene import energy_color
 from utils.timefmt import format_time  # noqa: F401  (main.py imports it from here)
 
-from rendering.glass import frost
+from rendering.backend.glass import frost
 
 VALUE = config.HUD_VALUE_COLOR
 LABEL = config.HUD_LABEL_COLOR
@@ -429,7 +429,7 @@ class Hud:
 
     def _draw_generation(self, world, fps, speed, info, debug_mode, paused, color_label):
         """Population card. info: births, deaths (since the start), extinct (bool), pop_max, setup.
-        Rates come from the last line of timeline.csv; lineages from the display tracker (rendering/lineage.py)."""
+        Rates come from the last line of timeline.csv; lineages from the display tracker (rendering/world/lineage.py)."""
         f, c = self.fonts, Ctx(self.u, self.ky)
         p = self.bg["gen"].copy()
         W, pad = p.get_width(), c.x(14)

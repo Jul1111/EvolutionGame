@@ -7,8 +7,8 @@ import time
 import numpy as np
 import pygame
 
-from rendering.glass import frost
-from rendering.hud import VALUE, LABEL, _clip
+from rendering.backend.glass import frost
+from rendering.ui.hud import VALUE, LABEL, _clip
 from utils.timefmt import format_time
 
 DIM = (110, 122, 128)

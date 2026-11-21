@@ -20,8 +20,8 @@
 
 ## Interface
 
-- **Style** : le monde occupe toute la fenêtre. Barre de menu, barre d'outils, panneaux et fenêtres flottent par-dessus en verre dépoli (`rendering/glass.py` : flou de ce qui est dessous, teinte, coins arrondis). Tab masque les panneaux. Surcoût mesuré sans écran : environ 0,5 ms par image en 1440×900, 2 ms en 2880×1800.
-- **Couleurs** : avec une seule espèce, la couleur montre l'énergie (corail → ambre → bleu ciel). Aucune couleur de créature n'est verte : le vert est réservé à la nourriture (l'espèce «Complet» est passée de menthe à saumon). Mode «lignée» : une couleur par fondateur, transmise aux descendants (calculée à l'affichage dans `rendering/lineage.py`, sans toucher à la simulation ; une population chargée repart avec une lignée par créature).
+- **Style** : le monde occupe toute la fenêtre. Barre de menu, barre d'outils, panneaux et fenêtres flottent par-dessus en verre dépoli (`rendering/backend/glass.py` : flou de ce qui est dessous, teinte, coins arrondis). Tab masque les panneaux. Surcoût mesuré sans écran : environ 0,5 ms par image en 1440×900, 2 ms en 2880×1800.
+- **Couleurs** : avec une seule espèce, la couleur montre l'énergie (corail → ambre → bleu ciel). Aucune couleur de créature n'est verte : le vert est réservé à la nourriture (l'espèce «Complet» est passée de menthe à saumon). Mode «lignée» : une couleur par fondateur, transmise aux descendants (calculée à l'affichage dans `rendering/world/lineage.py`, sans toucher à la simulation ; une population chargée repart avec une lignée par créature).
 - **Mini-carte** (M, en bas à gauche) : tout le monde, les créatures, les anémones et le cadre de la vue (coupé aux bords du tore). Un clic y déplace la vue (et coupe la caméra sur la sélection).
 - **Courbes en grand** (G, deuxième appui) : axe du temps gradué, curseur qui lit toutes les valeurs à l'instant survolé, cases à cocher pour chaque courbe. Chaque courbe garde sa propre échelle (de 0 à son maximum).
 - **Naissances et morts** (E) : un anneau clair s'ouvre à chaque naissance, une petite croix grise s'efface à chaque mort. 80 effets au plus à la fois.
@@ -42,12 +42,12 @@
 
 `RENDERER` dans `config.py` (ou la variable d'environnement `EVOLUTION_RENDERER`) :
 
-- `auto` (défaut) : la carte graphique dessine (`rendering/gpu.py`) si SDL trouve un moteur matériel (Metal sur Mac, OpenGL, Direct3D). Sinon, le processeur, comme avant.
+- `auto` (défaut) : la carte graphique dessine (`rendering/backend/gpu.py`) si SDL trouve un moteur matériel (Metal sur Mac, OpenGL, Direct3D). Sinon, le processeur, comme avant.
 - `gpu` : la carte graphique même sans moteur matériel (moteur logiciel de SDL : plus lent que le processeur).
 - `cpu` : le processeur.
 
 Le moteur utilisé s'affiche à côté des FPS (panneau Population : «GPU» ou «CPU»).
 
-Fonctionnement : le monde (fond, sprites, anémones, traits, cercles) est dessiné par la carte graphique (`rendering/canvas.py`, même code de dessin que le processeur). L'interface (panneaux, texte) est toujours dessinée par le processeur sur un calque transparent ; seules les zones dessinées sont envoyées à la carte graphique. Le verre dépoli est fait par la carte graphique : copie de la zone, trois réductions de moitié (moyenne), teinte, agrandissement, coins arrondis par masque. Avant chaque verre, l'interface déjà dessinée est envoyée : un menu par-dessus un panneau floute bien le panneau.
+Fonctionnement : le monde (fond, sprites, anémones, traits, cercles) est dessiné par la carte graphique (`rendering/backend/canvas.py`, même code de dessin que le processeur). L'interface (panneaux, texte) est toujours dessinée par le processeur sur un calque transparent ; seules les zones dessinées sont envoyées à la carte graphique. Le verre dépoli est fait par la carte graphique : copie de la zone, trois réductions de moitié (moyenne), teinte, agrandissement, coins arrondis par masque. Avant chaque verre, l'interface déjà dessinée est envoyée : un menu par-dessus un panneau floute bien le panneau.
 
 Comparer sur ta machine : lancer une fois normalement, une fois avec `EVOLUTION_RENDERER=cpu python main.py`, et lire les FPS à ×1 et la vitesse réelle à ×100.

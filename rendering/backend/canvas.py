@@ -1,5 +1,5 @@
-"""Drawing surfaces for the world: the same drawing code (rendering/scene.py, effects.py, obstacles.py) draws either
-on a pygame Surface (CpuCanvas, the processor does the pixels) or on the graphics card (GpuCanvas, rendering/gpu.py).
+"""Drawing surfaces for the world: the same drawing code (rendering/world/scene.py, effects.py, obstacles.py) draws either
+on a pygame Surface (CpuCanvas, the processor does the pixels) or on the graphics card (GpuCanvas, rendering/backend/gpu.py).
 
 The methods follow pygame's: blit / fblits of Surfaces (their set_alpha() is honoured), circles, lines, rectangles.
 Colours may carry an alpha as a 4th value."""
@@ -65,7 +65,7 @@ class CpuCanvas:
 
 
 class GpuCanvas:
-    """A target texture of the graphics card (see rendering/gpu.py). `offset`: where (0, 0) of this canvas falls on
+    """A target texture of the graphics card (see rendering/backend/gpu.py). `offset`: where (0, 0) of this canvas falls on
     the target, so the world area can be a part of the window."""
 
     def __init__(self, gpu, target, size, offset=(0, 0)):

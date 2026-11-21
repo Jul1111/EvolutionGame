@@ -3,9 +3,9 @@ import os
 import pygame
 
 import config
-from rendering import glass
-from rendering.canvas import CpuCanvas
-from rendering.layout import BASE_W, BASE_H
+from rendering.backend import glass
+from rendering.backend.canvas import CpuCanvas
+from rendering.ui.layout import BASE_W, BASE_H
 
 LOGICAL = (BASE_W, BASE_H)   # Size at scale 1 (menu bar included), used only to pick the first window size
 
@@ -25,7 +25,7 @@ class Display:
     pixels (2x the window size in points), so everything is sharp. With plain pygame (2.6) that mode does not
     exist and macOS doubles the image, which looks blurry: the game still runs, just less sharp.
 
-    Drawing happens directly at the surface's resolution (see rendering/layout.py), never rescaled."""
+    Drawing happens directly at the surface's resolution (see rendering/ui/layout.py), never rescaled."""
 
     def __init__(self, title):
         self.windowed_size = fit_window_size()
@@ -35,12 +35,12 @@ class Display:
         self.gpu = None
         if self.hidpi:
             self.window = pygame.Window(title, self.windowed_size, resizable=True, allow_high_dpi=True)
-            # Graphics card (rendering/gpu.py) unless RENDERER = "cpu" (config.py or the EVOLUTION_RENDERER
+            # Graphics card (rendering/backend/gpu.py) unless RENDERER = "cpu" (config.py or the EVOLUTION_RENDERER
             # variable). If it cannot start, the processor draws, as before
             choice = os.environ.get("EVOLUTION_RENDERER", config.RENDERER)
             if choice in ("auto", "gpu"):
                 try:
-                    from rendering.gpu import Gpu
+                    from rendering.backend.gpu import Gpu
                     self.gpu = Gpu(self.window, hardware_only=choice == "auto")
                     glass.gpu = self.gpu
                 except Exception as err:   # No usable renderer: processor path
@@ -53,7 +53,7 @@ class Display:
 
     def surface(self):
         """The surface to draw on (in real pixels). Ask again every frame: it follows the window size.
-        With the graphics card it is the interface layer (rendering/gpu.py); the world is drawn on canvas()."""
+        With the graphics card it is the interface layer (rendering/backend/gpu.py); the world is drawn on canvas()."""
         if self.gpu is not None:
             if self.gpu.resize():
                 self.generation += 1
@@ -61,7 +61,7 @@ class Display:
         return self.window.get_surface() if self.hidpi else pygame.display.get_surface()
 
     def canvas(self, rect):
-        """Where the world is drawn: the part `rect` of the window (rendering/canvas.py)."""
+        """Where the world is drawn: the part `rect` of the window (rendering/backend/canvas.py)."""
         if self.gpu is not None:
             return self.gpu.canvas(rect)
         return CpuCanvas(self.surface().subsurface(rect))

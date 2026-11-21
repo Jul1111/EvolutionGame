@@ -3,7 +3,7 @@ screen (light frame, cut in pieces when it crosses an edge of the torus). A clic
 import pygame
 
 import config
-from rendering.glass import frost
+from rendering.backend.glass import frost
 
 DOT = (226, 232, 240)
 ANEMONE = (96, 112, 190)

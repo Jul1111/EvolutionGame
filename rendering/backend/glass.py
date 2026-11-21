@@ -9,7 +9,7 @@ ALPHA = 150              # How dark the glass is (0 = clear, 255 = opaque)
 EDGE = (64, 72, 82)      # Thin light edge
 BLUR = 8                 # Shrink factor: higher = blurrier (and cheaper)
 _corner_masks = {}
-gpu = None               # Set by rendering/display.py when the graphics card draws (rendering/gpu.py)
+gpu = None               # Set by rendering/backend/display.py when the graphics card draws (rendering/backend/gpu.py)
 
 
 def _corner_mask(radius):
@@ -30,7 +30,7 @@ def frost(target, rect, radius=0, tint=TINT, alpha=ALPHA, edge=True):
     w, h = rect.size
     radius = min(radius, w // 2, h // 2)
     if gpu is not None:
-        # Graphics card: the blur is done on the picture already on screen (rendering/gpu.py); the content drawn
+        # Graphics card: the blur is done on the picture already on screen (rendering/backend/gpu.py); the content drawn
         # on top of the glass afterwards will be sent with this rectangle
         absolute = rect.move(target.get_abs_offset())
         gpu.glass(absolute, radius, tint, alpha)

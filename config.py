@@ -53,7 +53,7 @@ TICKS_PER_SECOND = 60
 
 # Configuration for simulation speed
 SPEED_STEPS = [1, 2, 5, 10, 20, 50, 100]
-RENDERER = "auto"          # "auto": the graphics card draws (rendering/gpu.py) if SDL finds a hardware renderer (Metal,
+RENDERER = "auto"          # "auto": the graphics card draws (rendering/backend/gpu.py) if SDL finds a hardware renderer (Metal,
                            # OpenGL, Direct3D), else the processor. "gpu": graphics card even without hardware (software
                            # renderer, slower). "cpu": the processor. Also the EVOLUTION_RENDERER environment variable
 MIN_FPS = 30               # At high speed the simulation only takes what drawing leaves of a frame at this rate

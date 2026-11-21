@@ -8,13 +8,13 @@ import pygame
 
 import config
 from brain.profiles import PROFILES, input_labels, output_labels
-from rendering.hud import (VALUE, LABEL, MINT, AMBER, CORAL, create_fonts, network_rows,
+from rendering.ui.hud import (VALUE, LABEL, MINT, AMBER, CORAL, create_fonts, network_rows,
                            _node, _edge, _clip)
-from rendering.obstacles import PALETTES
-from rendering.scene import energy_color, body_color, pick_creature
-from rendering.glass import frost
-from rendering.charts import ChartView
-from rendering.minimap import MiniMap
+from rendering.world.obstacles import PALETTES
+from rendering.world.scene import energy_color, body_color, pick_creature
+from rendering.backend.glass import frost
+from rendering.ui.charts import ChartView
+from rendering.ui.minimap import MiniMap
 
 PANEL = (25, 31, 37)
 BORDER = (62, 72, 82)

@@ -6,9 +6,9 @@ import pygame
 import config
 from core.physics import torus_delta
 from brain.profiles import PROFILES
-from rendering.obstacles import draw_obstacle
-from rendering.lineage import LineageTracker, lineage_color
-from rendering.effects import Effects
+from rendering.world.obstacles import draw_obstacle
+from rendering.world.lineage import LineageTracker, lineage_color
+from rendering.world.effects import Effects
 
 ENERGY_BUCKETS = 16   # Number of pre-rendered creature sprites (one per energy level)
 FOOD_FRAMES = 12      # Number of pre-rendered food pulsation frames

@@ -9,15 +9,15 @@ import config
 from evolution.continuous import (ContinuousSimulation, success_key, save_population, load_population, snapshot_path,
                                   autosave_path, latest_snapshot, populations_dir)
 from utils.timefmt import format_time
-from rendering.hud import Hud, SERIES_BY_KEY
-from rendering.menu import MenuBar, profile_label
+from rendering.ui.hud import Hud, SERIES_BY_KEY
+from rendering.ui.menu import MenuBar, profile_label
 from brain.profiles import PROFILES
-from rendering.overlay import Overlay, PARAM_INFO
+from rendering.ui.overlay import Overlay, PARAM_INFO
 from utils.presets import PresetBrowser
-from rendering.startmenu import StartMenu
-from rendering.scene import Scene, pick_creature
-from rendering.display import Display
-from rendering.layout import compute_layout
+from rendering.ui.startmenu import StartMenu
+from rendering.world.scene import Scene, pick_creature
+from rendering.backend.display import Display
+from rendering.ui.layout import compute_layout
 from utils.settings import load_settings, save_settings
 
 
@@ -531,7 +531,7 @@ def main():
             scene.center_on(selected.x, selected.y)
 
         # Draw the world, then the heads-up display (HUD)
-        display.begin()   # Graphics card: a new picture (rendering/gpu.py)
+        display.begin()   # Graphics card: a new picture (rendering/backend/gpu.py)
         scene.draw(display.canvas(layout.world), world, debug_mode, selected, trail)
         hud.draw(sidebar, strip_view, world, clock.get_fps(), speed,
                  {"births": sim.total_births, "deaths": sim.total_deaths, "extinct": sim.extinct, "pop_max": sim.pop_max,
