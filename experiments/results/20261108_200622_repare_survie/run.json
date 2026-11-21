@@ -1,0 +1,167 @@
+{
+  "name": "repare_survie",
+  "command": "/home/claude/eg/experiments/run.py --name repare_survie --set FITNESS=survie --seeds 1 2 3 4 --generations 25 --max-ticks 12000 --jobs 2",
+  "git": null,
+  "seeds": [
+    1,
+    2,
+    3,
+    4
+  ],
+  "generations": 25,
+  "max_ticks": 12000,
+  "profiles": [
+    "complet"
+  ],
+  "overrides": {
+    "FITNESS": "survie"
+  },
+  "config": {
+    "ACTIVE_PROFILES": [
+      "complet"
+    ],
+    "BACKGROUND_COLOR": [
+      18,
+      20,
+      26
+    ],
+    "BG_CENTER_COLOR": [
+      30,
+      40,
+      46
+    ],
+    "BG_EDGE_COLOR": [
+      9,
+      11,
+      15
+    ],
+    "CREATURE_ACCELERATION": 0.25,
+    "CREATURE_COLOR": [
+      240,
+      200,
+      80
+    ],
+    "CREATURE_MAX_SPEED": 4.0,
+    "CREATURE_MAX_TURN": 0.25,
+    "CREATURE_RADIUS": 8,
+    "DEAD_COLOR": [
+      90,
+      90,
+      90
+    ],
+    "DEBUG_LINK_COLOR": [
+      150,
+      235,
+      200
+    ],
+    "DEBUG_VISION_COLOR": [
+      70,
+      120,
+      130
+    ],
+    "ENERGY_BASE_COST": 0.04,
+    "ENERGY_HIGH_COLOR": [
+      120,
+      224,
+      176
+    ],
+    "ENERGY_INPUT_MAX": 200.0,
+    "ENERGY_LOW_COLOR": [
+      222,
+      96,
+      78
+    ],
+    "ENERGY_MAX": 200.0,
+    "ENERGY_MID_COLOR": [
+      240,
+      196,
+      92
+    ],
+    "ENERGY_MOVE_COST": 0.03,
+    "FITNESS": "survie",
+    "FOOD_COLOR": [
+      90,
+      200,
+      110
+    ],
+    "FOOD_COUNT": 10,
+    "FOOD_ENERGY": 30.0,
+    "FOOD_FIXED_POSITIONS": true,
+    "FOOD_MAX_EATS": 3,
+    "FOOD_RADIUS": 4,
+    "FOOD_RESPAWN_DELAY": 60,
+    "FPS": 60,
+    "GEN_MAX_TICKS": 36000,
+    "HUD_LABEL_COLOR": [
+      150,
+      165,
+      170
+    ],
+    "HUD_PANEL_COLOR": [
+      25,
+      31,
+      37,
+      255
+    ],
+    "HUD_VALUE_COLOR": [
+      235,
+      240,
+      240
+    ],
+    "INITIAL_ENERGY": 100.0,
+    "LOAD_ON_START": true,
+    "LOAD_SETTINGS": true,
+    "MUTATION_STD": 0.1,
+    "NN_INIT_STD": 0.5,
+    "OBSTACLE_COLOR": [
+      92,
+      102,
+      112
+    ],
+    "OBSTACLE_COUNT": 6,
+    "OBSTACLE_MIN_GAP": 30,
+    "OBSTACLE_RADIUS_MAX": 45,
+    "OBSTACLE_RADIUS_MIN": 20,
+    "OBSTACLE_SHAPES": [
+      "circle",
+      "square",
+      "triangle"
+    ],
+    "PANEL_WIDTH": 320,
+    "PARENTS_COUNT": 20,
+    "POISON_COLOR": [
+      176,
+      96,
+      214
+    ],
+    "POISON_COUNT": 5,
+    "POISON_ENERGY": 40.0,
+    "POPULATION_SIZE": 100,
+    "SCREEN_HEIGHT": 720,
+    "SCREEN_WIDTH": 1280,
+    "SEED": 42,
+    "SIDEBAR_BG_COLOR": [
+      15,
+      18,
+      22
+    ],
+    "SPEED_STEPS": [
+      1,
+      2,
+      5,
+      10,
+      20,
+      50,
+      100
+    ],
+    "TICKS_PER_SECOND": 60,
+    "TRAIL_LENGTH": 600,
+    "TURN_SPEED_PENALTY": 0.5,
+    "VISION_FOV_DEGREES": 120,
+    "VISION_RANGE": 200,
+    "WINDOW_WIDTH": 1600,
+    "WORLD_HEIGHT": 720,
+    "WORLD_SCALE": 1,
+    "WORLD_WIDTH": 1280
+  }
+}
