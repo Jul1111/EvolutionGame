@@ -25,15 +25,16 @@ def _group(cs, rows, near):
             "near": {k: (d2[rows], dx[rows], dy[rows]) for k, (d2, dx, dy) in near.items()}}
 
 
-_stacks = {}   # species → (ids of the brains, stacked weights): rebuilt only when the members change
+_stacks = {}   # species → (the brains, stacked weights): rebuilt only when the members change
 
 
 def _weights(name, cs):
-    key = tuple(map(id, (c.brain for c in cs)))
+    brains = tuple(c.brain for c in cs)
     cached = _stacks.get(name)
-    if cached is None or cached[0] != key:
-        brains = [c.brain for c in cs]
-        cached = (key, np.stack([b.w1 for b in brains]), np.stack([b.b1 for b in brains]),
+    # The cache keeps the brains themselves and compares them by identity: with bare id() a freed brain's id can be
+    # reused by a new one (another world), and stale weights would be served.
+    if cached is None or len(cached[0]) != len(brains) or any(a is not b for a, b in zip(cached[0], brains)):
+        cached = (brains, np.stack([b.w1 for b in brains]), np.stack([b.b1 for b in brains]),
                   np.stack([b.w2 for b in brains]), np.stack([b.b2 for b in brains]))
         _stacks[name] = cached
     return cached[1:]
