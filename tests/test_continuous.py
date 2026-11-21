@@ -163,3 +163,20 @@ def test_timeline_has_exploration_and_species_columns(tmp_path):
 
 def load_population_from(sim):
     return {p: [(c.brain.get_genome(), c.size) for c in sim.world.creatures if c.profile == p] for p in sim.species}
+
+
+def test_food_follows_the_population():
+    config.FOOD_COUNT, config.FOOD_COUNT_MIN, config.FOOD_PRESSURE_POP = 40, 15, 100
+    sim = _sim()
+    assert sim.food_goal() == 40   # Only founders: they do not count
+    for c in sim.world.creatures[:20]:
+        c.lineage_gen = 1
+    assert abs(sim.food_goal() - 35.0) < 1e-9   # 20 born out of 100: a fifth of the way down
+    for c in sim.world.creatures:
+        c.lineage_gen = 1
+    config.FOOD_PRESSURE_POP = 10
+    assert sim.food_goal() == 15
+    level = sim.food_level
+    sim.update_food(config.FOOD_ADAPT_TICKS // 2)   # Moves toward the goal, not at once
+    assert 15 < sim.food_level < level
+    assert len(sim.world.foods) == sim.world._count(sim.food_level)

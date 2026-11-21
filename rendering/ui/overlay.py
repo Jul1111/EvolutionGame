@@ -48,10 +48,10 @@ PARAM_INFO = {
     "repro": ("Seuil de reproduction", "Énergie qu'il faut atteindre pour faire un petit (le parent perd 60, le petit naît avec 50)."),
     "age_max": ("Âge maximal", "Mort de vieillesse. Sans elle, des immortels bloquent le renouvellement."),
     "fov": ("Champ de vision", "Ouverture du cône de vision. Tout autour = 360°."),
-    "food": ("Nourriture au départ", "Sources de nourriture par écran au début : beaucoup, pour que des créatures tirées au hasard passent le premier goulot."),
-    "food_target": ("Nourriture ensuite", "Sources par écran une fois la nourriture raréfiée : les créatures évoluées s'en sortent, et un grand monde ne remplit plus le plafond."),
-    "food_ramp_start": ("Abondance pendant", "Temps simulé pendant lequel la nourriture reste au niveau de départ, le temps que la population passe le premier goulot."),
-    "food_ramp": ("Raréfaction en", "Temps simulé pour passer de la nourriture au départ à la nourriture ensuite. «aussitôt» = directement la valeur d'ensuite."),
+    "food": ("Nourriture max", "Sources de nourriture par écran quand la population est petite, et au départ : beaucoup, pour que des créatures tirées au hasard passent le premier goulot."),
+    "food_min": ("Nourriture min", "Sources par écran quand la population est grande : la nourriture suit la population. Égale au max = la nourriture ne change jamais."),
+    "food_pressure": ("Population de rareté", "Créatures nées dans ce monde (pas les fondateurs) à partir desquelles la nourriture est au minimum. Entre 0 et ce nombre : baisse en ligne droite."),
+    "food_adapt": ("Réaction en", "Temps simulé pour que la nourriture suive un changement de population : progressif, pour éviter le yo-yo. «aussitôt» = immédiat."),
     "food_energy": ("Énergie d'une nourriture", "Énergie gagnée à chaque repas."),
     "respawn": ("Délai de réapparition", "Temps avant qu'une nourriture mangée soit de nouveau disponible."),
     "poison_count": ("Nombre de poisons", "Sources de poison dans le monde. 0 = aucun."),
@@ -106,7 +106,7 @@ HELP_KEYS = [
 # Columns and sections of the settings panel (keys = main.PARAMS). Unknown keys go to «Autres».
 PARAM_COLUMNS = (
     (("Évolution", ("mutation", "repro", "age_max", "size_mode")), ("Perception", ("fov",)),
-     ("Nourriture", ("food", "food_ramp_start", "food_target", "food_ramp", "food_energy", "respawn"))),
+     ("Nourriture", ("food", "food_min", "food_pressure", "food_adapt", "food_energy", "respawn"))),
     (("Dangers", ("poison_count", "poison_energy", "obstacle_count")), ("Monde", ("founders", "world_scale"))),
 )
 

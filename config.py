@@ -31,14 +31,13 @@ WORLD_HEIGHT = round(SCREEN_HEIGHT * WORLD_SCALE)
 
 # Configuration for food
 SEED = 42
-FOOD_COUNT = 40             # Food sources per screen AT THE START. Random founders need plenty to get through the first
-                            # bottleneck: at 25-30 they die out (09/11, 2×2 and 3×3, 2 seeds each)
-FOOD_COUNT_TARGET = 40      # ...then the food can become scarcer, down to this many per screen. Same value as FOOD_COUNT =
-                            # no change (default). Tested 09/11 (3×3, 60° vision, start 40, plenty 20 000 ticks, ramp
-                            # 30 000): 15 → still at POP_MAX; 12 → crash to 2 creatures or back to the cap; 10 → extinction.
-                            # 1×1, 120°, target 15: 1 extinction at the start out of 4, then 25-52 creatures and falling
-FOOD_RAMP_START = 20000     # Ticks of plenty first: food only starts to get scarcer once the first bottleneck is past
-FOOD_RAMP_TICKS = 30000     # Then ticks for the food to go from FOOD_COUNT to the target
+FOOD_COUNT = 40             # Food sources per screen when the population is small (and at the start: random founders need
+                            # plenty to get through the first bottleneck, at 25-30 they die out, 09/11)
+FOOD_COUNT_MIN = 15         # Food sources per screen when the population is large: food follows the population, no
+                            # calendar (evolution/continuous.py). Same value as FOOD_COUNT = food never changes
+FOOD_PRESSURE_POP = 300     # Living creatures (whole world) at which the food is down to FOOD_COUNT_MIN; in between,
+                            # straight line from FOOD_COUNT (0 creature) to FOOD_COUNT_MIN
+FOOD_ADAPT_TICKS = 3000     # The food moves toward that level over about this time (50 s), not at once: no yo-yo
 FOOD_RADIUS = 4
 FOOD_COLOR = (90, 200, 110)
 

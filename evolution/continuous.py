@@ -21,7 +21,7 @@ from brain.profiles import new_brain
 from core.world import World
 from evolution.mutation import mutate
 
-FOOD_UPDATE_TICKS = 60   # How often the number of food sources follows the scarcer-food schedule
+FOOD_UPDATE_TICKS = 60   # How often the food level follows the population (ContinuousSimulation.update_food)
 
 SAMPLE_HEADER = ["tick", "population", "births", "deaths_hunger", "deaths_age", "mean_age_at_death",
                  "mean_lineage_gen", "max_lineage_gen", "food_rate", "poison_rate", "mean_speed", "mean_energy",
@@ -40,6 +40,7 @@ class ContinuousSimulation:
         self.timeline_path = timeline_path
         self.world = World(rng)
         self.world.tick = start_tick
+        self.food_level = config.FOOD_COUNT   # Food per screen now (follows the population, see food_goal)
         self.next_uid = 0
         self.extinct = False
         self.total_births = 0
@@ -76,7 +77,7 @@ class ContinuousSimulation:
             return False
         world = self.world
         if world.tick % FOOD_UPDATE_TICKS == 0:
-            self.update_food()
+            self.update_food(FOOD_UPDATE_TICKS)
         world.update()
         living = [c for c in world.creatures if c.alive]
         self.life_ticks += len(living)
@@ -108,24 +109,31 @@ class ContinuousSimulation:
                 self._sample()   # Last line: the extinction itself
         return not self.extinct
 
-    def food_per_screen(self):
-        """Food sources per screen now: FOOD_COUNT until FOOD_RAMP_START, then down (or up) to FOOD_COUNT_TARGET in
-        FOOD_RAMP_TICKS. Based on the world's tick, so a resumed run goes on where it was."""
-        start, target = config.FOOD_COUNT, config.FOOD_COUNT_TARGET
-        elapsed = self.world.tick - config.FOOD_RAMP_START
-        if elapsed <= 0:
-            return start
-        if config.FOOD_RAMP_TICKS <= 0:
-            return target
-        t = min(1.0, elapsed / config.FOOD_RAMP_TICKS)
-        return start + (target - start) * t
+    def food_goal(self):
+        """Food per screen that the population calls for right now: FOOD_COUNT with no creature, FOOD_COUNT_MIN from
+        FOOD_PRESSURE_POP living creatures born in this world on, a straight line in between. Big, thriving population → scarce food;
+        collapse → food comes back."""
+        hi, lo = config.FOOD_COUNT, config.FOOD_COUNT_MIN
+        # Only creatures born in this world count: the founders (random, or loaded) mostly die in the first bottleneck,
+        # the food must not get scarce because of them
+        born = sum(1 for c in self.world.creatures if c.lineage_gen > 0)
+        pressure = min(1.0, born / max(1, config.FOOD_PRESSURE_POP))
+        return hi + (lo - hi) * pressure
 
-    def update_food(self):
-        """Adjusts the number of food sources to food_per_screen() (called every FOOD_UPDATE_TICKS, and when a
-        setting changes)."""
-        wanted = self.world._count(self.food_per_screen())
-        if wanted != len(self.world.foods):
-            self.world.resize_items(self.food_per_screen())
+    def food_per_screen(self):
+        """Current food per screen: follows food_goal() with a delay of about FOOD_ADAPT_TICKS (smoothed)."""
+        return self.food_level
+
+    def update_food(self, ticks=None):
+        """Moves the food level toward food_goal() (`ticks` since the last update; None = jump to the goal) and
+        adjusts the number of food sources. Called every FOOD_UPDATE_TICKS, and when a setting changes."""
+        goal = self.food_goal()
+        if ticks is None or config.FOOD_ADAPT_TICKS <= 0:
+            self.food_level = goal
+        else:
+            self.food_level += (goal - self.food_level) * min(1.0, ticks / config.FOOD_ADAPT_TICKS)
+        if self.world._count(self.food_level) != len(self.world.foods):
+            self.world.resize_items(self.food_level)
 
     @property
     def pop_max(self):
