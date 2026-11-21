@@ -4,7 +4,7 @@ import pygame
 import config
 from brain.profiles import PROFILES, input_labels, output_labels
 from rendering.world.scene import energy_color
-from utils.timefmt import format_time  # noqa: F401  (main.py imports it from here)
+from utils.timefmt import format_time
 
 from rendering.backend.glass import frost
 
@@ -297,10 +297,10 @@ class Hud:
         self.chart_keys = set(DEFAULT_SERIES)   # Curves shown (menu Courbes)
         self.layout = None
         self.profiles = list(config.ACTIVE_PROFILES)        # Species in the world
-        self.timeline_path = None   # timeline.csv of the running simulation (set by main.py)
+        self.timeline_path = None   # timeline.csv of the running simulation (set by app.py)
         self.rows = []
         self.visible = True    # Tab hides every panel (clean view of the world)
-        self.lineage = None    # LineageTracker of the scene (set by main.py)
+        self.lineage = None    # LineageTracker of the scene (set by app.py)
 
     # ---------- layout ----------
 

@@ -93,7 +93,7 @@ def profile_label(name):
 
 class MenuBar:
     """Horizontal menu bar with drop-down menus. Drawn straight on the window (the drop-downs cover the world and
-    the side bar). The bar does not change anything itself: click() returns the action name, main.py runs it."""
+    the side bar). The bar does not change anything itself: click() returns the action name, app.py runs it."""
 
     def __init__(self):
         self.open_index = None   # Menu whose list is open, or None
@@ -170,7 +170,7 @@ class MenuBar:
     # ---------- drawing ----------
 
     def draw(self, window, state):
-        """state: values shown by the labels and check boxes (see main.py)."""
+        """state: values shown by the labels and check boxes (see app.py)."""
         self.state = state
         f, u = self.fonts, self.u
         bar = self.layout.menu

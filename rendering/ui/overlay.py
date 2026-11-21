@@ -1,6 +1,6 @@
 """Interface layer drawn on top of the world: tool bar, pause banner, legend, help, hover tips, settings panel and the
 large network view. Everything is drawn at the real resolution (sizes multiplied by the scale u), like the rest of the UI.
-This module never touches the simulation: it only reads the world and returns action names, main.py runs them."""
+This module never touches the simulation: it only reads the world and returns action names, app.py runs them."""
 import math
 import time
 
@@ -235,18 +235,18 @@ class Overlay:
         self.params_open = False
         self.net_big = False
         self.toast_text, self.toast_until = None, 0.0   # Short message at the bottom of the world (toast())
-        self.setup = None   # Settings screen before a simulation (main.py): {"resume": bool, "cancel": bool} or None
+        self.setup = None   # Settings screen before a simulation (app.py): {"resume": bool, "cancel": bool} or None
         self.mouse = None
         self.mouse_since = 0.0
         self.state = {}
         self._hits = []           # (rect, action) of the settings panel, rebuilt at each draw
         self._rects = {}          # name → rect of the panels drawn last (for clicks)
         self._cache = {}
-        self.start = None             # rendering.startmenu.StartMenu at launch (set by main.py)
+        self.start = None             # rendering.startmenu.StartMenu at launch (set by app.py)
         self.chart_big = False        # Large curves view (key G, third press)
         self.charts = ChartView(hud)
         self.minimap = MiniMap()      # Key M
-        self.presets = None           # utils.presets.PresetBrowser (set by main.py)
+        self.presets = None           # utils.presets.PresetBrowser (set by app.py)
         self.net_pos = None           # Top-left of the large network, once moved
         self._drag = None             # Grab offset while the large network is dragged
 

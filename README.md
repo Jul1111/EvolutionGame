@@ -73,7 +73,8 @@ Toutes les constantes sont dans `config.py`. Règles détaillées, gène de tail
 ## Structure
 
 ```
-main.py        Boucle pygame et interface
+main.py        Point d'entrée
+app.py         Boucle pygame, commandes, réglages (classe App)
 config.py      Constantes (seule référence)
 core/          Monde, créatures, capteurs, physique
 brain/         Réseau de neurones et profils d'espèces
