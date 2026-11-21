@@ -92,7 +92,7 @@ def _legend(surf, fonts, entries, area, c, values):
 
 
 def build_chart(fonts, stats, width, height, u, wide, keys, species=None):
-    """Pre-render the per-generation curves for the series in `keys`. Each curve is scaled to its own range.
+    """Pre-render the curves of the timeline for the series in `keys`. Each curve is scaled to its own range.
     wide=False: plot on top, legend below (side bar). wide=True: plot on the left, legend on the right (strip)."""
     c = Ctx(u)
     surf = _panel(width, height, u)

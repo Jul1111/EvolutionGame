@@ -1,4 +1,4 @@
-"""Side bar (generation, selected creature, network, curves) and the strip under the world with the curves."""
+"""Side bar (population, selected creature, network, curves) and the strip under the world with the curves."""
 import pygame
 
 import config
@@ -11,21 +11,21 @@ from rendering.ui.series import SERIES_BY_KEY, DEFAULT_SERIES, build_chart, load
 from rendering.world.scene import energy_color
 from utils.timefmt import format_time
 
-# Natural height (logical pixels at scale 1) of the Génération and Créature panels. They are stretched vertically
+# Natural height (logical pixels at scale 1) of the Population and Créature panels. They are stretched vertically
 # (0.85x to 1.9x) to use the room left by the network panel and the curves.
 H_CONTENT = 176
 H_CHART = 130     # Curves panel in the side bar
 GRAPH_H = 120     # Network graph, when shown (natural height)
 GRAPH_MIN = 90    # Smallest graph height before the cards are squeezed to make room
 CHART_MIN = 100   # Smallest curves panel in the side bar (it disappears if even that does not fit)
-KY_MIN = 0.8      # Smallest vertical stretch of the Génération and Créature cards
+KY_MIN = 0.8      # Smallest vertical stretch of the Population and Créature cards
 KY_GOOD = 0.92    # Stretch the cards keep as long as the graph or the curves panel can still fit
 
 MAX_PANEL_W = 560    # Logical width cap, for very wide windows
 
 
 class Hud:
-    """Side bar (generation, selected creature, network, curves, key hints) and, when the window is tall,
+    """Side bar (population, selected creature, network, curves, key hints) and, when the window is tall,
     a strip under the world with the curves. Everything is drawn at the real resolution (see relayout)."""
 
     def __init__(self):
@@ -56,7 +56,7 @@ class Hud:
 
     def _fit(self, hints_h, chart):
         """Heights for one choice of hints and curves panel: (space, net_h, graph_h, chart_h), pixels except graph_h
-        (logical). The Génération and Créature cards keep a comfortable stretch (KY_GOOD); the graph or the curves panel
+        (logical). The Population and Créature cards keep a comfortable stretch (KY_GOOD); the graph or the curves panel
         take what is left, up to their natural height. If that is too little, the cards shrink down to KY_MIN."""
         layout, u = self.layout, self.u
         m, gap = round(12 * u), round(8 * u)
@@ -82,7 +82,7 @@ class Hud:
         return space, net_h, graph_h, chart_h
 
     def _compute_slots(self):
-        """Stack the panels in the side bar. The Génération and Créature cards stretch vertically (ky) to use the
+        """Stack the panels in the side bar. The Population and Créature cards stretch vertically (ky) to use the
         room left by the others. Call again when the curves or the graph are toggled."""
         layout, u = self.layout, self.u
         sb = layout.sidebar
@@ -164,7 +164,7 @@ class Hud:
 
     # ---------- panels ----------
 
-    def _draw_generation(self, world, fps, speed, info, debug_mode, paused, color_label):
+    def _draw_population(self, world, fps, speed, info, debug_mode, paused, color_label):
         """Population card. info: births, deaths (since the start), extinct (bool), pop_max, setup.
         Rates come from the last line of timeline.csv; lineages from the display tracker
         (rendering/world/lineage.py)."""
@@ -366,7 +366,7 @@ class Hud:
         for rect in self.slots.values():
             frost(sidebar, rect, radius)   # The panels float over the world in frosted glass
         panels = {
-            "gen": lambda: self._draw_generation(world, fps, speed, info, debug_mode, paused, color_label),
+            "gen": lambda: self._draw_population(world, fps, speed, info, debug_mode, paused, color_label),
             "creature": lambda: self._draw_creature(world, selected),
             "net": lambda: self._draw_network(world, selected),
             "chart": lambda: self.chart_side,

@@ -1,6 +1,6 @@
 """Obstacle sprites: sea anemones seen from above. A dark mat that follows the exact collision shape, three crowns of
 curling tentacles with light tips, and a mouth in the middle. The tentacles swim gently: a few frames are drawn per
-obstacle and played in a loop (built one at a time, so a new generation never stalls the game).
+obstacle and played in a loop (built one at a time, so a new world never stalls the game).
 Pure rendering. No simulation random number is drawn: each anemone has its own private generator, seeded from
 its own radius and rotation, so the picture is fixed for a given obstacle."""
 import math
@@ -20,7 +20,7 @@ CORNER = {"square": 0.20, "triangle": 0.17}     # Corner rounding of the collisi
 FRAMES = 12                                     # Frames of the sway loop (two neighbours are cross-faded: smooth
                                                 # at any speed)
 PERIOD_MS = 1500                                # Duration of one loop
-BUILDS_PER_TICK = 1                             # New frames built per game frame at most (a new generation never
+BUILDS_PER_TICK = 1                             # New frames built per game frame at most (a new world never
                                                 # stalls)
 SS = 2                                          # Tentacles are drawn 2x bigger then shrunk, for smooth edges
 SHADOW_OFFSET = (0.04, 0.07)

@@ -93,7 +93,7 @@ class App:
         self.layout = None
         self.sidebar = None
         self.strip_view = None
-        self.last_generation = None
+        self.last_surface_version = None
         self.last_size = None
         self.clock = pygame.time.Clock()
 
@@ -437,7 +437,7 @@ class App:
     def _update_layout(self):
         """Recomputes the layout when the window changed. Returns True when it did not change (drawing can go on)."""
         window = self.display.surface()
-        if self.display.generation != self.last_generation or window.get_size() != self.last_size:
+        if self.display.surface_version != self.last_surface_version or window.get_size() != self.last_size:
             self.layout = layout = compute_layout(*window.get_size())
             self.scene.resize(layout.scale, layout.world.size)
             self.hud.relayout(layout)
@@ -445,7 +445,7 @@ class App:
             self.overlay.relayout(layout)
             self.sidebar = window.subsurface(layout.sidebar)
             self.strip_view = window.subsurface(layout.strip) if layout.strip is not None else None
-            self.last_generation, self.last_size = self.display.generation, window.get_size()
+            self.last_surface_version, self.last_size = self.display.surface_version, window.get_size()
             return False
         return True
 
@@ -663,7 +663,8 @@ class App:
             frames += 1
             self._update_layout()
             self._handle_events()
-            if self.display.generation != self.last_generation or self.display.surface().get_size() != self.last_size:
+            surface = self.display.surface()
+            if self.display.surface_version != self.last_surface_version or surface.get_size() != self.last_size:
                 continue   # The window changed during the events (fullscreen): relayout before drawing
 
             speed = config.SPEED_STEPS[self.speed_index]

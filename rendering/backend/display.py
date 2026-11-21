@@ -30,7 +30,7 @@ class Display:
     def __init__(self, title):
         self.windowed_size = fit_window_size()
         self.fullscreen = False
-        self.generation = 0                      # +1 whenever the surface may have been replaced
+        self.surface_version = 0                 # +1 whenever the surface may have been replaced
         self.hidpi = hasattr(pygame, "Window")   # pygame-ce
         self.gpu = None
         if self.hidpi:
@@ -56,7 +56,7 @@ class Display:
         With the graphics card it is the interface layer (rendering/backend/gpu.py); the world is drawn on canvas()."""
         if self.gpu is not None:
             if self.gpu.resize():
-                self.generation += 1
+                self.surface_version += 1
             return self.gpu.ui
         return self.window.get_surface() if self.hidpi else pygame.display.get_surface()
 
@@ -105,4 +105,4 @@ class Display:
             self.windowed_size = pygame.display.get_surface().get_size()
             pygame.display.set_mode(pygame.display.get_desktop_sizes()[0], pygame.FULLSCREEN)
         self.fullscreen = not self.fullscreen
-        self.generation += 1
+        self.surface_version += 1

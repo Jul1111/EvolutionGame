@@ -141,7 +141,7 @@ POISON_ENERGY = 40.0        # Energy lost by the creature that touches a poison 
 POISON_COLOR = (176, 96, 214)
 
 # Configuration for obstacles
-OBSTACLE_COUNT = 6          # Solid obstacles, drawn at random at the start of each generation (0 = none)
+OBSTACLE_COUNT = 6          # Solid obstacles, drawn at random at the creation of each world (0 = none)
 OBSTACLE_SHAPES = ("circle", "square", "triangle")   # Shapes drawn at random (one entry = only that shape)
 OBSTACLE_RADIUS_MIN = 20    # Radius range of the circle around the shape (world units)
 OBSTACLE_RADIUS_MAX = 45
