@@ -15,12 +15,9 @@ import sys
 SCREEN_WIDTH = 1280
 SCREEN_HEIGHT = 720
 FPS = 60
-BACKGROUND_COLOR = (18, 20, 26)
 
 #Configuration for creatures
 CREATURE_RADIUS = 8
-CREATURE_COLOR = (240, 200, 80)
-DEAD_COLOR = (90, 90, 90)
 
 # Configuration for world
 WORLD_SCALE = 1             # Side of the world in screens (a screen = SCREEN_WIDTH x SCREEN_HEIGHT). 2 = 4 times the
@@ -39,7 +36,6 @@ FOOD_PRESSURE_POP = 300     # Living creatures (whole world) at which the food i
                             # straight line from FOOD_COUNT (0 creature) to FOOD_COUNT_MIN
 FOOD_ADAPT_TICKS = 3000     # The food moves toward that level over about this time (50 s), not at once: no yo-yo
 FOOD_RADIUS = 4
-FOOD_COLOR = (90, 200, 110)
 
 # Configuration for energy
 FOOD_ENERGY = 30.0
@@ -117,20 +113,8 @@ LOAD_ON_START = True        # The game resumes the population it had when it was
 LOAD_SETTINGS = True        # Reuse the settings changed from the menu (saves/settings.json). False = values of this
                             # file
 
-# Configuration for rendering (organic style)
-BG_CENTER_COLOR = (30, 40, 46)       # Centre of the "petri dish" background
-BG_EDGE_COLOR = (9, 11, 15)          # Darker vignette on the edges
-ENERGY_LOW_COLOR = (222, 96, 78)     # Creature colour when energy is near 0
-ENERGY_MID_COLOR = (240, 196, 92)
-ENERGY_HIGH_COLOR = (120, 224, 176)  # Creature colour when energy is at ENERGY_INPUT_MAX
-DEBUG_VISION_COLOR = (70, 120, 130)
-DEBUG_LINK_COLOR = (150, 235, 200)
-HUD_PANEL_COLOR = (25, 31, 37, 255)
-SIDEBAR_BG_COLOR = (15, 18, 22)
-PANEL_WIDTH = 320                    # Side bar on the right of the world view
+# Configuration for the interface (colours are in rendering/theme.py)
 TRAIL_LENGTH = 600                   # Ticks of trajectory kept for the selected creature
-HUD_LABEL_COLOR = (150, 165, 170)
-HUD_VALUE_COLOR = (235, 240, 240)
 
 # Configuration for food respawn
 FOOD_RESPAWN_DELAY = 60     # Ticks before an eaten food is available again, always at a new random place
@@ -138,7 +122,6 @@ HUNGER_SCALE = 600          # Sensor «faim»: ticks without seeing food for the
 SPAWN_CLEARANCE = 20        # Food and poison never reappear closer than this to the edge of a creature (never on one)
 POISON_COUNT = 5            # Poison sources in the world (0 = no poison). The network sees the nearest one
 POISON_ENERGY = 40.0        # Energy lost by the creature that touches a poison (starting value, to tune)
-POISON_COLOR = (176, 96, 214)
 
 # Configuration for obstacles
 OBSTACLE_COUNT = 6          # Solid obstacles, drawn at random at the creation of each world (0 = none)
@@ -146,7 +129,6 @@ OBSTACLE_SHAPES = ("circle", "square", "triangle")   # Shapes drawn at random (o
 OBSTACLE_RADIUS_MIN = 20    # Radius range of the circle around the shape (world units)
 OBSTACLE_RADIUS_MAX = 45
 OBSTACLE_MIN_GAP = 30       # Minimum free space between two obstacles (a creature is 16 wide: it can always pass)
-OBSTACLE_COLOR = (92, 102, 112)
 
 
 # Values derived from others (WORLD_WIDTH from WORLD_SCALE…). They are computed when read, so they can never be out of
@@ -155,7 +137,6 @@ DERIVED = {
     "WORLD_WIDTH": lambda c: round(c.SCREEN_WIDTH * c.WORLD_SCALE),
     "WORLD_HEIGHT": lambda c: round(c.SCREEN_HEIGHT * c.WORLD_SCALE),
     "ENERGY_INPUT_MAX": lambda c: c.ENERGY_MAX,   # Energy at which the network input saturates at 1.0 (= satiety)
-    "WINDOW_WIDTH": lambda c: c.SCREEN_WIDTH + c.PANEL_WIDTH,
 }
 
 

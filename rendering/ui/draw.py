@@ -1,10 +1,10 @@
 """Drawing primitives of the side bar and the other panels: colours, fonts, coordinates, bars and text."""
 import pygame
 
-import config
+from rendering import theme
 
-VALUE = config.HUD_VALUE_COLOR
-LABEL = config.HUD_LABEL_COLOR
+VALUE = theme.HUD_VALUE_COLOR
+LABEL = theme.HUD_LABEL_COLOR
 MINT = (120, 224, 176)
 AMBER = (240, 196, 92)
 CORAL = (222, 96, 78)
@@ -42,7 +42,7 @@ def _panel(width, height, u):
     surf = pygame.Surface((width, height), pygame.SRCALPHA)
     radius = max(4, round(12 * u))
     # Light tint only: the frosted glass under it (glass.frost, drawn by Hud.draw) gives the background and the edge
-    pygame.draw.rect(surf, (*config.HUD_PANEL_COLOR[:3], 55), surf.get_rect(), border_radius=radius)
+    pygame.draw.rect(surf, (*theme.HUD_PANEL_COLOR[:3], 55), surf.get_rect(), border_radius=radius)
     return surf
 
 

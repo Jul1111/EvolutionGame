@@ -4,6 +4,7 @@ import numpy as np
 import pygame
 
 import config
+from rendering import theme
 from core.physics import torus_delta
 from brain.profiles import PROFILES
 from rendering.world.obstacles import draw_obstacle
@@ -57,8 +58,8 @@ def _lerp(a, b, t):
 def energy_color(t):
     """Colour for an energy ratio t in [0, 1]: coral → amber → mint."""
     if t < 0.5:
-        return _lerp(config.ENERGY_LOW_COLOR, config.ENERGY_MID_COLOR, t * 2.0)
-    return _lerp(config.ENERGY_MID_COLOR, config.ENERGY_HIGH_COLOR, (t - 0.5) * 2.0)
+        return _lerp(theme.ENERGY_LOW_COLOR, theme.ENERGY_MID_COLOR, t * 2.0)
+    return _lerp(theme.ENERGY_MID_COLOR, theme.ENERGY_HIGH_COLOR, (t - 0.5) * 2.0)
 
 
 def _shrink(big, size):
@@ -252,8 +253,8 @@ class Scene:
         cx, cy = config.SCREEN_WIDTH / 2, config.SCREEN_HEIGHT / 2
         r = np.sqrt(((xs - cx) / cx) ** 2 * 0.8 + ((ys - cy) / cy) ** 2)   # Vignette: bright centre, dark edges
         t = np.clip(r / 1.15, 0.0, 1.0) ** 1.7
-        center = np.array(config.BG_CENTER_COLOR, dtype=np.float32)
-        edge = np.array(config.BG_EDGE_COLOR, dtype=np.float32)
+        center = np.array(theme.BG_CENTER_COLOR, dtype=np.float32)
+        edge = np.array(theme.BG_EDGE_COLOR, dtype=np.float32)
         img = center * (1.0 - t[..., None]) + edge * t[..., None]
         for bx, by, br, boost in BLOBS:
             g = np.exp(-(((xs - bx) ** 2 + (ys - by) ** 2) / (2.0 * (br / 2.0) ** 2)))
@@ -284,8 +285,8 @@ class Scene:
         r = config.CREATURE_RADIUS * k
         size, s, big = self._sprite_canvas(r + 3 * k)
         c = size * s / 2
-        pygame.draw.circle(big, (*config.DEAD_COLOR, 70), (c, c), r * s)
-        pygame.draw.circle(big, (*config.DEAD_COLOR, 110), (c, c), r * s, max(1, int(k * s)))
+        pygame.draw.circle(big, (*theme.DEAD_COLOR, 70), (c, c), r * s)
+        pygame.draw.circle(big, (*theme.DEAD_COLOR, 110), (c, c), r * s, max(1, int(k * s)))
         return _shrink(big, size)
 
     def _build_food(self, frame):
@@ -299,9 +300,9 @@ class Scene:
         for i in range(steps):  # concentric discs, alpha growing towards the centre
             radius = halo * s * (1.0 - i / steps)
             alpha = int(70 * pulse * ((i + 1) / steps) ** 1.5)
-            pygame.draw.circle(big, (*config.FOOD_COLOR, alpha), (c, c), radius)
-        core = _lerp(config.FOOD_COLOR, (255, 255, 255), 0.35)
-        pygame.draw.circle(big, (*config.FOOD_COLOR, 255), (c, c), r * s)
+            pygame.draw.circle(big, (*theme.FOOD_COLOR, alpha), (c, c), radius)
+        core = _lerp(theme.FOOD_COLOR, (255, 255, 255), 0.35)
+        pygame.draw.circle(big, (*theme.FOOD_COLOR, 255), (c, c), r * s)
         pygame.draw.circle(big, (*core, 255), (c - r * 0.25 * s, c - r * 0.25 * s), r * 0.5 * s)
         return _shrink(big, size)
 
@@ -317,11 +318,11 @@ class Scene:
         for i in range(steps):
             radius = halo * s * (1.0 - i / steps)
             alpha = int(80 * pulse * ((i + 1) / steps) ** 1.5)
-            pygame.draw.circle(big, (*config.POISON_COLOR, alpha), (c, c), radius)
+            pygame.draw.circle(big, (*theme.POISON_COLOR, alpha), (c, c), radius)
         d = r * s
         diamond = [(c, c - d), (c + d, c), (c, c + d), (c - d, c)]
-        pygame.draw.polygon(big, (*_lerp(config.POISON_COLOR, (10, 12, 16), 0.55), 255), diamond)
-        pygame.draw.polygon(big, (*_lerp(config.POISON_COLOR, (255, 255, 255), 0.4), 255), diamond,
+        pygame.draw.polygon(big, (*_lerp(theme.POISON_COLOR, (10, 12, 16), 0.55), 255), diamond)
+        pygame.draw.polygon(big, (*_lerp(theme.POISON_COLOR, (255, 255, 255), 0.4), 255), diamond,
                             max(1, int(1.3 * k * s)))
         return _shrink(big, size)
 
@@ -522,7 +523,7 @@ class Scene:
             targets = [selected]
         else:
             targets = [max(alive, key=lambda c: (c.age, c.energy))]
-        vision_color = config.DEBUG_VISION_COLOR if mode == 1 else _lerp(config.DEBUG_VISION_COLOR, (0, 0, 0), 0.6)
+        vision_color = theme.DEBUG_VISION_COLOR if mode == 1 else _lerp(theme.DEBUG_VISION_COLOR, (0, 0, 0), 0.6)
         radius = round(config.VISION_RANGE * k)
         half_fov = math.radians(config.VISION_FOV_DEGREES) / 2.0
         for c in targets:
@@ -539,8 +540,8 @@ class Scene:
                 screen.lines(vision_color, False, [arc[0], center, arc[-1]], 1)
                 screen.lines(vision_color, False, arc, 1)
             # Same rule as World.sense (the world's own method): nearest available item in view
-            for items, color in ((world.foods, config.DEBUG_LINK_COLOR), (world.poisons, config.POISON_COLOR),
-                                 (world.obstacles, config.OBSTACLE_COLOR)):
+            for items, color in ((world.foods, theme.DEBUG_LINK_COLOR), (world.poisons, theme.POISON_COLOR),
+                                 (world.obstacles, theme.OBSTACLE_COLOR)):
                 best, _ = world.nearest(c, items)
                 if best is not None:
                     _, dx, dy = best
@@ -555,5 +556,5 @@ BODY_HIGH = (120, 196, 255)   # Full end of the creature scale: sky blue, never 
 def body_color(t):
     """Creature colour for a ratio t in [0, 1]: coral → amber → sky blue."""
     if t < 0.5:
-        return _lerp(config.ENERGY_LOW_COLOR, config.ENERGY_MID_COLOR, t * 2.0)
-    return _lerp(config.ENERGY_MID_COLOR, BODY_HIGH, (t - 0.5) * 2.0)
+        return _lerp(theme.ENERGY_LOW_COLOR, theme.ENERGY_MID_COLOR, t * 2.0)
+    return _lerp(theme.ENERGY_MID_COLOR, BODY_HIGH, (t - 0.5) * 2.0)

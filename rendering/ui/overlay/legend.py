@@ -4,6 +4,7 @@ import math
 import pygame
 
 import config
+from rendering import theme
 from rendering.backend.glass import frost
 from rendering.ui.draw import VALUE
 from rendering.ui.overlay.widgets import PANEL
@@ -18,8 +19,8 @@ class LegendMixin:
         key = ("legend", label)
         if key not in self._cache:
             row_h, pad, icon_w = round(24 * u), round(12 * u), round(40 * u)
-            entries = [("dot", config.FOOD_COLOR, "Nourriture : redonne de l'énergie"),
-                       ("diamond", config.POISON_COLOR, "Poison : retire de l'énergie")]
+            entries = [("dot", theme.FOOD_COLOR, "Nourriture : redonne de l'énergie"),
+                       ("diamond", theme.POISON_COLOR, "Poison : retire de l'énergie")]
             if hasattr(config, "OBSTACLE_COLOR"):
                 entries.append(("anemone", None, "Anémone : obstacle infranchissable"))
             low, high = {"énergie": ("vide", "pleine"), "vitesse": ("à l'arrêt", "vitesse max"),
@@ -27,7 +28,7 @@ class LegendMixin:
             entries += [("gradient", None, f"Couleur d'une créature = {label}  ({low} → {high})")
                         if label not in ("lignée", "espèce") else
                         ("ring", (230, 236, 244), "Couleur d'une créature = sa " + label),
-                        ("cone", config.DEBUG_VISION_COLOR, "Cône de vision (touche D)"),
+                        ("cone", theme.DEBUG_VISION_COLOR, "Cône de vision (touche D)"),
                         ("ring", (255, 255, 255), "Créature sélectionnée")]
             text_w = max(f["small"].size(t)[0] for _, _, t in entries)
             size = (pad * 2 + icon_w + text_w, pad * 2 + row_h * len(entries) - round(4 * u))

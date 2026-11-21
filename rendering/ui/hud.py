@@ -2,6 +2,7 @@
 import pygame
 
 import config
+from rendering import theme
 from brain.profiles import PROFILES, input_labels, output_labels
 from rendering.backend.glass import frost
 from rendering.ui.draw import VALUE, LABEL, MINT, AMBER, CORAL, BLUE, Ctx, create_fonts, _panel, _bar, _signed_bar, \
@@ -381,7 +382,7 @@ class Hud:
             hy += img.get_height() + 2
 
         if strip is not None:
-            strip.fill(config.SIDEBAR_BG_COLOR)
+            strip.fill(theme.SIDEBAR_BG_COLOR)
             pygame.draw.line(strip, (48, 54, 60), (0, 0), (strip.get_width(), 0))
             if self.show_chart and self.chart is not None:
                 strip.blit(self.chart, self.strip_slot.topleft)

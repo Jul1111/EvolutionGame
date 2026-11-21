@@ -1,10 +1,12 @@
 import pygame
 
 import config
+from rendering import theme
 
 MENU_H = 32       # Logical height of the menu bar at the top
 SIDE_W = 320      # Logical width of the column of floating panels on the right
-BASE_W, BASE_H = config.WINDOW_WIDTH, config.SCREEN_HEIGHT + MENU_H   # Reference size at scale 1 (1600 x 752)
+# Reference size at scale 1 (1600 x 752)
+BASE_W, BASE_H = config.SCREEN_WIDTH + theme.PANEL_WIDTH, config.SCREEN_HEIGHT + MENU_H
 
 
 class Layout:
