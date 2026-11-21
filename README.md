@@ -30,7 +30,7 @@ pip install -r requirements-dev.txt
 
 ```bash
 python main.py          # lancer la simulation
-python -m pytest        # tests (< 10 s)
+python -m pytest        # tests (~ 20 s)
 ```
 
 Lancer une expérience sans affichage :

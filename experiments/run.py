@@ -39,27 +39,30 @@ def parse_value(text):
         return text   # A bare word: a string
 
 
-def apply_overrides(overrides):
+def build_settings(overrides, **extra):
+    """The settings of a run: config.py with the --set overrides (and `extra`, e.g. the seed). The config module is
+    not touched: every run, in this process or another, has its own copy."""
     import config
+    values = {}
+    known = config.Settings().__dict__
     for name, value in overrides.items():
-        if not hasattr(config, name):
+        if name not in known:
             raise SystemExit(f"Constante inconnue dans config.py : {name}")
         default = getattr(config, name)
         if isinstance(default, float) and isinstance(value, int) and not isinstance(value, bool):
             value = float(value)
-        setattr(config, name, value)
+        values[name] = value
+    return config.Settings(**values, **extra)
 
 
 def run_seed(seed, out_dir, overrides, ticks, profiles, population_file):
-    """One seed, in its own process (config is a module: one process = one set of settings)."""
-    import config
+    """One seed (run in its own process by main, to use every core)."""
     from evolution.continuous import ContinuousSimulation, save_population, load_population
-    apply_overrides(overrides)
-    config.SEED = seed
-    config.ACTIVE_PROFILES = list(profiles)
+    cfg = build_settings(overrides, SEED=seed, ACTIVE_PROFILES=list(profiles))
     seed_dir = os.path.join(out_dir, f"seed_{seed}")
     founders = load_population(population_file.format(seed=seed)) if population_file else None
-    sim = ContinuousSimulation(random.Random(seed), os.path.join(seed_dir, "timeline.csv"), founders=founders)
+    sim = ContinuousSimulation(random.Random(seed), os.path.join(seed_dir, "timeline.csv"), founders=founders,
+                              cfg=cfg)
     start = time.time()
     played = sim.run(ticks)
     if not sim.extinct:
@@ -97,8 +100,8 @@ def main(argv=None):
     for item in args.set:
         name, _, value = item.partition("=")
         overrides[name.strip().upper()] = parse_value(value)
-    apply_overrides(overrides)   # In this process too: run.json records the real values, and typos stop here
-    profiles = args.profiles or config.ACTIVE_PROFILES
+    cfg = build_settings(overrides)   # Here too: run.json records the real values, and typos stop here
+    profiles = args.profiles or cfg.ACTIVE_PROFILES
     from brain.profiles import PROFILES
     unknown = [p for p in profiles if p not in PROFILES]
     if unknown:
@@ -109,8 +112,8 @@ def main(argv=None):
     meta = {"name": args.name, "ticks": args.ticks, "from_population": args.from_population,
             "command": " ".join(sys.argv), "git": git_state(), "seeds": args.seeds, "profiles": list(profiles),
             "overrides": overrides,
-            "config": {n: getattr(config, n) for n in [*dir(config), *config.DERIVED] if n.isupper() and n != "SAVE_DIR"
-                       and isinstance(getattr(config, n), (int, float, str, bool, list, tuple))}}
+            "config": {n: getattr(cfg, n) for n in [*cfg.__dict__, *config.DERIVED] if n.isupper() and n != "SAVE_DIR"
+                       and isinstance(getattr(cfg, n), (int, float, str, bool, list, tuple))}}
     with open(os.path.join(out_dir, "run.json"), "w", encoding="utf-8") as f:
         json.dump(meta, f, indent=2, ensure_ascii=False)
     print(f"{args.name} : {len(args.seeds)} graines × {args.ticks} ticks, profils {', '.join(profiles)} "

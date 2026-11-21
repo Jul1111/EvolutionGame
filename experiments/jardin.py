@@ -24,18 +24,17 @@ if ROOT not in sys.path:
 def garden(source, density, seed, ticks, warmup, profile):
     import config
     from evolution.continuous import ContinuousSimulation, load_population
-    config.REPRO_THRESHOLD = float("inf")   # No births: the density stays what we set
-    config.AGE_MAX = 0
+    settings = {"REPRO_THRESHOLD": float("inf"),   # No births: the density stays what we set
+                "AGE_MAX": 0}
     rng = random.Random(seed)
     if source == "aleatoire":
         founders = None
-        config.ACTIVE_PROFILES = [profile]
-        config.INITIAL_POPULATION = density
+        settings.update(ACTIVE_PROFILES=[profile], INITIAL_POPULATION=density)
     else:
         pool = [f for fs in load_population(source).values() for f in fs]   # (genome, size)
         name = next(iter(load_population(source)))
         founders = {name: [pool[rng.randrange(len(pool))] for _ in range(density)]}
-    sim = ContinuousSimulation(rng, founders=founders)
+    sim = ContinuousSimulation(rng, founders=founders, cfg=config.Settings(**settings))
     speed, alive_ticks, meals0 = 0.0, 0, None
     for t in range(ticks):
         if not sim.step():

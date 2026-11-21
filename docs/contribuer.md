@@ -16,13 +16,21 @@ Règle : un mécanisme à la fois, puis une expérience sur 4 graines au moins a
 
 ## Réglages (`config`)
 
-`World` et `ContinuousSimulation` lisent leurs réglages dans `self.cfg` (aussi `Creature`, les capteurs et le calcul par lot, via `world.cfg`), jamais dans le module `config`. Par défaut `cfg` est le module vivant, donc le jeu et les expériences n'ont rien changé. Pour simuler avec d'autres réglages, sans toucher au module : `ContinuousSimulation(rng, cfg=config.Settings(WORLD_SCALE=2, FOOD_COUNT=20))`. Dans le nouveau code de simulation, écrire `self.cfg.X` et non `config.X`.
+Tout ce qui lit un réglage le reçoit en paramètre `cfg` : `World`, `ContinuousSimulation` (et, via `world.cfg`, `Creature`, les capteurs, le calcul par lot), `App`, `Scene`, `Hud`, `MiniMap`, `Display`, `PresetBrowser`, `load_settings` / `save_settings` et les chemins de sauvegarde. Par défaut `cfg` est le module `config` : le jeu et les scripts se comportent comme avant. Pour d'autres réglages, sans toucher au module :
 
-Encore lus directement dans le module `config` : `rendering/`, `app/`, `utils/`, `experiments/`, et les chemins de sauvegarde de `evolution/continuous.py`.
+```python
+cfg = config.Settings(WORLD_SCALE=2, FOOD_COUNT=20)   # Copie, avec surcharges
+sim = ContinuousSimulation(rng, cfg=cfg)
+app = App(cfg)
+```
+
+`experiments/run.py` et `experiments/jardin.py` font ainsi : chaque graine a ses réglages, rien n'est partagé entre deux runs d'un même processus. Dans le code de simulation ou d'interface, écrire `self.cfg.X` (ou `world.cfg.X`), jamais `config.X`.
+
+Les couleurs et la largeur du panneau latéral ne sont pas des réglages : elles sont dans `rendering/theme.py`. `layout.py` lit encore `SCREEN_WIDTH` et `SCREEN_HEIGHT` dans `config` : c'est l'unité fixe de la maquette de l'interface.
 
 ## Conventions
 
 - **Langue.** Le code est en anglais : noms, commentaires, docstrings, messages d'erreur. Le français est pour ce que le joueur ou le lecteur voit : textes de l'interface (`rendering/ui/overlay/texts.py`, menus, bulles d'aide), documentation (`README.md`, `docs/`) et messages de commit.
 - **Style.** `ruff check .` doit passer (lignes de 120 colonnes au plus). La CI le lance avant les tests. Pas de reformatage automatique du code existant.
-- **Tests.** `python -m pytest` (moins de 10 s). Le rendu est testé sans écran (`SDL_VIDEODRIVER=dummy`, déjà réglé dans `tests/conftest.py`) : `tests/test_rendering.py` dessine tous les panneaux, vues et espèces. Un nouveau panneau ou une nouvelle vue s'y ajoute en quelques lignes.
+- **Tests.** `python -m pytest` (environ 20 s). Le rendu est testé sans écran (`SDL_VIDEODRIVER=dummy`, déjà réglé dans `tests/conftest.py`) : `tests/test_rendering.py` dessine tous les panneaux, vues et espèces. Un nouveau panneau ou une nouvelle vue s'y ajoute en quelques lignes.
 - **Commits.** Un commit par modification, pour que l'historique se lise comme le journal du projet.
