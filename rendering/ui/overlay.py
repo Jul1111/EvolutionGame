@@ -742,7 +742,7 @@ class Overlay:
         xs = (area.x, area.centerx, area.right)
 
         def column(x, n):
-            step = area.h / n
+            step = area.h / max(n, 1)   # No hidden neuron (n = 0): an empty column
             return [(x, int(area.y + step * (k + 0.5))) for k in range(n)]
 
         pin, ph_, pout = column(xs[0], n_in), column(xs[1], n_h), column(xs[2], n_out)
