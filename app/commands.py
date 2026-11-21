@@ -3,7 +3,6 @@ from functools import partial
 
 import pygame
 
-import config
 from evolution.continuous import success_key
 from app.settings import PARAMS
 from app.state import AppState
@@ -126,7 +125,7 @@ class CommandsMixin(AppState):
         return False
 
     def _change_speed(self, step):
-        self.speed_index = max(0, min(self.speed_index + step, len(config.SPEED_STEPS) - 1))
+        self.speed_index = max(0, min(self.speed_index + step, len(self.cfg.SPEED_STEPS) - 1))
 
     def _pause(self):
         self.paused = not self.paused

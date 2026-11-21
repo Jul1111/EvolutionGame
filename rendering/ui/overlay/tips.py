@@ -9,6 +9,7 @@ from rendering.ui.draw import VALUE, LABEL
 from rendering.ui.overlay.texts import GEN_TIPS, CREATURE_TIPS, NET_TIPS
 from rendering.ui.overlay.widgets import DIM, wrap
 from rendering.world.scene import pick_creature
+from utils.timefmt import TICKS_PER_SECOND
 
 
 class TipsMixin:
@@ -47,7 +48,7 @@ class TipsMixin:
                 if top <= ly < top + round(15 * u):
                     tip = NET_TIPS.get(label)
                     cfg = self.hud.cfg
-                    return tip.format(hunger=cfg.HUNGER_SCALE // cfg.TICKS_PER_SECOND) if tip else None
+                    return tip.format(hunger=cfg.HUNGER_SCALE // TICKS_PER_SECOND) if tip else None
         return None
 
     def draw_tips(self, window, world, selected, menu_open):
@@ -75,7 +76,7 @@ class TipsMixin:
             wx, wy = self.scene.screen_to_world(x - self.layout.world.x, y - self.layout.world.y)
             c = pick_creature(world, wx, wy, self.scene.pick_radius())
             if c is not None:
-                t = int(c.age / self.hud.cfg.TICKS_PER_SECOND)
+                t = int(c.age / TICKS_PER_SECOND)
                 head = (f"{PROFILES[c.profile]['title']}  ·  taille {c.size:.2f}  ·  gén. {c.lineage_gen}  ·  "
                         f"{c.children} petits" + ("" if c.alive else "  ·  morte"))
                 lines = [(head, "base", VALUE),

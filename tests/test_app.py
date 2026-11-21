@@ -73,3 +73,32 @@ def test_setup_screen_blocks_run_commands(make_app):
     ticks = app.world.tick
     app.run(max_frames=3)
     assert app.world.tick == ticks
+
+
+def test_app_with_its_own_settings_leaves_the_config_module_alone(monkeypatch, tmp_path, renderer):
+    """App(cfg=Settings(...)): menu changes, restarts and saves all go through cfg, never through the module."""
+    import config
+    from app import App
+    own = config.Settings(SAVE_DIR=str(tmp_path / "mine"), LOAD_SETTINGS=False, LOAD_ON_START=False,
+                          INITIAL_POPULATION=25, WORLD_SCALE=1)
+    before = {name: getattr(config, name) for name in ("MUTATION_STD", "WORLD_SCALE", "ACTIVE_PROFILES", "SAVE_DIR")}
+    app = App(own)
+    try:
+        assert app.cfg is own and app.sim.cfg is own and app.scene.cfg is own and app.hud.cfg is own
+        app.do("start_new")
+        app.do("setup_launch")
+        app.do("mutation")                              # A setting of the menu: applied to own, not to the module
+        app.do("world_scale")                           # Restart-only: pending, then applied at the restart
+        app.do("restart_now")
+        app.run(max_frames=3)
+        assert own.MUTATION_STD != before["MUTATION_STD"] and own.WORLD_SCALE != before["WORLD_SCALE"]
+        assert app.world.width == own.WORLD_WIDTH
+        app.do("save_pop")
+        assert (tmp_path / "mine" / "populations").is_dir() or (tmp_path / "mine").is_dir()
+    finally:
+        import gc
+        import pygame
+        del app
+        gc.collect()
+        pygame.quit()
+    assert {name: getattr(config, name) for name in before} == before

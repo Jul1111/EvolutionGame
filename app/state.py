@@ -16,6 +16,8 @@ from utils.presets import PresetBrowser
 
 
 class AppState:
+    cfg: object                    # Settings in force: the live config module, or a config.Settings copy
+
     # Window and drawing
     display: Display               # The window (processor or graphics card)
     clock: pygame.time.Clock

@@ -44,9 +44,6 @@ ENERGY_MAX = 200.0          # Satiety: a creature only eats if the whole meal fi
                             # Starting value, to tune
 
 
-# Configuration for time display
-TICKS_PER_SECOND = 60
-
 # Configuration for simulation speed
 SPEED_STEPS = [1, 2, 5, 10, 20, 50, 100]
 RENDERER = "auto"          # "auto": the graphics card draws (rendering/backend/gpu.py) if SDL finds a hardware

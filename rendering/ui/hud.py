@@ -10,7 +10,7 @@ from rendering.ui.draw import VALUE, LABEL, MINT, AMBER, CORAL, BLUE, Ctx, creat
 from rendering.ui.netview import network_rows, _node, _edge
 from rendering.ui.series import SERIES_BY_KEY, DEFAULT_SERIES, build_chart, load_timeline
 from rendering.world.scene import energy_color
-from utils.timefmt import format_time
+from utils.timefmt import TICKS_PER_SECOND, format_time
 
 # Natural height (logical pixels at scale 1) of the Population and Créature panels. They are stretched vertically
 # (0.85x to 1.9x) to use the room left by the network panel and the curves.
@@ -196,7 +196,7 @@ class Hud:
         _bar(p, pad, c.y(59), W - 2 * pad, bar_h, n / cap if cap else 0, (204, 172, 132))
         _row(p, f, c, 68, "Temps simulé", format_time(world.tick))
         last = self.rows[-1] if self.rows else None
-        per_min = 60 * self.cfg.TICKS_PER_SECOND / self.cfg.SAMPLE_TICKS   # Lines of timeline.csv per simulated minute
+        per_min = 60 * TICKS_PER_SECOND / self.cfg.SAMPLE_TICKS   # Lines of timeline.csv per simulated minute
         if last is not None:
             born = (last.get("births") or 0) * per_min
             dead = ((last.get("deaths_hunger") or 0) + (last.get("deaths_age") or 0)) * per_min

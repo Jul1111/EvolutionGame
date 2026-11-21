@@ -303,23 +303,23 @@ def load_population(path, with_tick=False):
     return (founders, tick) if with_tick else founders
 
 
-def populations_dir():
-    return os.path.join(config.SAVE_DIR, "populations")
+def populations_dir(cfg=config):
+    return os.path.join(cfg.SAVE_DIR, "populations")
 
 
-def snapshot_path(label):
+def snapshot_path(label, cfg=config):
     """saves/populations/<date>_<label>.npz: where the game keeps the populations saved by hand."""
-    return os.path.join(populations_dir(), time.strftime("%Y%m%d_%H%M%S") + f"_{label}.npz")
+    return os.path.join(populations_dir(cfg), time.strftime("%Y%m%d_%H%M%S") + f"_{label}.npz")
 
 
-def autosave_path():
+def autosave_path(cfg=config):
     """Population written when the game quits, reloaded at the next launch (config.LOAD_ON_START)."""
-    return os.path.join(config.SAVE_DIR, "autosave.npz")
+    return os.path.join(cfg.SAVE_DIR, "autosave.npz")
 
 
-def latest_snapshot():
+def latest_snapshot(cfg=config):
     """Most recent population saved by hand, or None."""
-    folder = populations_dir()
+    folder = populations_dir(cfg)
     if not os.path.isdir(folder):
         return None
     files = sorted(f for f in os.listdir(folder) if f.endswith(".npz"))

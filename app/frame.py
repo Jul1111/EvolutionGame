@@ -3,7 +3,6 @@ import os
 import time
 
 
-import config
 from brain.profiles import PROFILES
 from evolution.continuous import success_key
 from rendering.ui.menu import profile_label
@@ -41,7 +40,7 @@ class FrameMixin(AppState):
         Time budget: at high speed the simulation only gets what the drawing leaves of a frame at MIN_FPS (the drawing
         time is measured every frame: bigger window, more panels → less simulation, same fluidity). The real speed
         (ticks per frame actually run) is shown next to the asked one."""
-        sim_budget = max(config.SIM_MIN_BUDGET_MS, 1000 / config.MIN_FPS - self.draw_ms)
+        sim_budget = max(self.cfg.SIM_MIN_BUDGET_MS, 1000 / self.cfg.MIN_FPS - self.draw_ms)
         deadline = time.perf_counter() + sim_budget / 1000
         ran = 0
         for _ in range(ticks_to_run):
@@ -73,7 +72,7 @@ class FrameMixin(AppState):
             "legend": overlay.legend_open, "follow": self.follow,
             "fullscreen": self.display.fullscreen,
             **{"s_" + key: key in hud.chart_keys for key in SERIES_BY_KEY},
-            **{a: fmt(pending.get(a, getattr(config, name))) + ("  *" if a in pending else "")
+            **{a: fmt(pending.get(a, getattr(self.cfg, name))) + ("  *" if a in pending else "")
                for a, (name, _, fmt) in PARAMS.items()},
             "cam_follow": self.cam_follow, "minimap": overlay.minimap.enabled, "effects": scene.effects.enabled,
             "panels": hud.visible,
@@ -81,7 +80,7 @@ class FrameMixin(AppState):
                          else "Charger une population (aucune)"),
             **{"p_" + n: n in shown for n in PROFILES},
             **{"pl_" + n: profile_label(n) + ("  *" if pending_profiles is not None
-                                              and (n in pending_profiles) != (n in config.ACTIVE_PROFILES) else "")
+                                              and (n in pending_profiles) != (n in self.cfg.ACTIVE_PROFILES) else "")
                for n in PROFILES},
             "reset": "Nouvelle simulation...",
         }
@@ -101,7 +100,7 @@ class FrameMixin(AppState):
                  self.debug_mode, self.paused, self.selected, scene.color_label())
         net_state = 2 if overlay.net_big else (1 if hud.show_graph else 0)
         chart_state = 2 if overlay.chart_big else (1 if hud.show_chart else 0)
-        params_info = [(a, *PARAM_INFO.get(a, (a, "")), fmt(getattr(config, name)),
+        params_info = [(a, *PARAM_INFO.get(a, (a, "")), fmt(getattr(self.cfg, name)),
                         fmt(self.pending[a]) if a in self.pending else None)
                        for a, (name, _, fmt) in PARAMS.items()] if overlay.params_open else []
         self.real_speed = 0.9 * self.real_speed + 0.1 * ran if ticks_to_run else 0.0   # Smoothed ticks per frame
@@ -126,7 +125,7 @@ class FrameMixin(AppState):
             if self.display.surface_version != self.last_surface_version or surface.get_size() != self.last_size:
                 continue   # The window changed during the events (fullscreen): relayout before drawing
 
-            speed = config.SPEED_STEPS[self.speed_index]
+            speed = self.cfg.SPEED_STEPS[self.speed_index]
             # Run several simulation ticks per frame, according to the chosen speed
             ticks_to_run = 0 if self.setup is not None else (1 if self.step_request else (0 if self.paused else speed))
             ran = self._run_ticks(ticks_to_run)
@@ -134,4 +133,4 @@ class FrameMixin(AppState):
             draw_start = time.perf_counter()   # From here to the flip: drawing (measured for the simulation budget)
             self._draw(speed, ran, ticks_to_run)
             self.draw_ms = 0.8 * self.draw_ms + 0.2 * (time.perf_counter() - draw_start) * 1000   # Smoothed
-            self.clock.tick(config.FPS)
+            self.clock.tick(self.cfg.FPS)

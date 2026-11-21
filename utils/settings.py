@@ -12,17 +12,18 @@ DEFAULTS = {name: getattr(config, name) for name in dir(config) if name.isupper(
 ALLOWED = {"SIZE_MODE": ("fixe", "neutre", "actif")}
 
 
-def _path():
-    return os.path.join(config.SAVE_DIR, "settings.json")
+def _path(cfg):
+    return os.path.join(cfg.SAVE_DIR, "settings.json")
 
 
-def load_settings(names):
-    """Applies the settings saved from the menu to `config`. Only the constants in `names` are read, and a value
-    of the wrong type is ignored. Returns {name: (value in config.py, saved value)} for those that differ."""
-    if not config.LOAD_SETTINGS:
+def load_settings(names, cfg=config):
+    """Applies the settings saved from the menu to `cfg` (the live module by default). Only the constants in `names`
+    are read, and a value of the wrong type is ignored. Returns {name: (value in config.py, saved value)} for those
+    that differ."""
+    if not cfg.LOAD_SETTINGS:
         return {}
     try:
-        with open(_path(), encoding="utf-8") as f:
+        with open(_path(cfg), encoding="utf-8") as f:
             data = json.load(f)
     except (OSError, ValueError):
         return {}
@@ -32,7 +33,7 @@ def load_settings(names):
     for name in names:
         if name not in data:
             continue
-        default, value = getattr(config, name), data[name]
+        default, value = getattr(cfg, name), data[name]
         if isinstance(default, bool):
             if not isinstance(value, bool):
                 continue
@@ -52,7 +53,7 @@ def load_settings(names):
             value = type(default)(value)
         if value != default:
             changed[name] = (default, value)
-            setattr(config, name, value)
+            setattr(cfg, name, value)
     return changed
 
 
@@ -66,11 +67,11 @@ def _plain(value):
     return list(value) if isinstance(value, tuple) else value
 
 
-def save_settings(values):
+def save_settings(values, cfg=config):
     """Writes the values of {config name: value} that differ from config.py to saves/settings.json
     (temporary file then replace: never half written). Nothing differs: an empty {}."""
-    os.makedirs(config.SAVE_DIR, exist_ok=True)
-    tmp = _path() + ".tmp"
+    os.makedirs(cfg.SAVE_DIR, exist_ok=True)
+    tmp = _path(cfg) + ".tmp"
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(overrides(values), f, indent=2, ensure_ascii=False)
-    os.replace(tmp, _path())
+    os.replace(tmp, _path(cfg))

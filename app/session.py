@@ -3,7 +3,6 @@ import os
 import time
 
 
-import config
 from evolution.continuous import (ContinuousSimulation, save_population, load_population, snapshot_path,
                                   autosave_path, populations_dir)
 from rendering.ui.startmenu import StartMenu
@@ -13,7 +12,13 @@ from app.state import AppState
 
 class SessionMixin(AppState):
     def _new_sim(self, founders=None, start_tick=0, append=False):
-        return ContinuousSimulation(self.rng, self.timeline, founders=founders, start_tick=start_tick, append=append)
+        return ContinuousSimulation(self.rng, self.timeline, founders=founders, start_tick=start_tick, append=append,
+                                    cfg=self.cfg)
+
+    def _start_menu(self):
+        """The start menu at launch: Continuer (if there is an autosave and LOAD_ON_START), Charger, Nouvelle."""
+        autosave = autosave_path(self.cfg) if self.cfg.LOAD_ON_START else None
+        return StartMenu(autosave, populations_dir(self.cfg))
 
     def _archive_timeline(self):
         """A new population starts a new timeline: the old one is set aside (timestamped), not deleted."""
@@ -30,16 +35,16 @@ class SessionMixin(AppState):
 
     def restart(self, founders=None):
         """New population: random founders of the ticked species, or a saved population (founders)."""
-        old_scale = config.WORLD_SCALE
+        old_scale = self.cfg.WORLD_SCALE
         self._apply_pending()
-        if config.WORLD_SCALE != old_scale:
+        if self.cfg.WORLD_SCALE != old_scale:
             self.scene.world_changed()
         self._archive_timeline()
-        self._begin(self._new_sim(founders), list(founders) if founders else config.ACTIVE_PROFILES)
+        self._begin(self._new_sim(founders), list(founders) if founders else self.cfg.ACTIVE_PROFILES)
 
     def _resume_autosave(self):
         """Start from the population kept when the game was last closed, with its timeline."""
-        founders, tick = load_population(autosave_path(), with_tick=True)
+        founders, tick = load_population(autosave_path(self.cfg), with_tick=True)
         if not founders:
             return False
         self._apply_pending()
@@ -66,7 +71,7 @@ class SessionMixin(AppState):
 
     def _save_population(self):
         if self.world.creatures:
-            self.last_saved = snapshot_path("manuelle")
+            self.last_saved = snapshot_path("manuelle", self.cfg)
             save_population(self.sim, self.last_saved)
             self.overlay.toast(f"Population sauvegardée : saves/populations/{os.path.basename(self.last_saved)}")
 
@@ -91,7 +96,7 @@ class SessionMixin(AppState):
         overlay = self.overlay
         overlay.params_open = False   # Back from the settings of a new simulation, or from the load list
         if overlay.start is None:
-            overlay.start = StartMenu(autosave_path() if config.LOAD_ON_START else None, populations_dir())
+            overlay.start = self._start_menu()
         overlay.start.view = "main"
 
     def _start_new(self):
@@ -132,7 +137,7 @@ class SessionMixin(AppState):
         if self.setup is not None and not self.setup["cancel"]:
             return
         if self.sim.extinct or not self.world.creatures:
-            if os.path.exists(autosave_path()):
-                os.remove(autosave_path())
+            if os.path.exists(autosave_path(self.cfg)):
+                os.remove(autosave_path(self.cfg))
         else:
-            save_population(self.sim, autosave_path())
+            save_population(self.sim, autosave_path(self.cfg))
