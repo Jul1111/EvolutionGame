@@ -85,19 +85,20 @@ class Scene:
     """Draws the world (background, food, creatures, debug overlay) at the window's real resolution.
     Read-only on the simulation. Call resize() whenever the layout changes."""
 
-    def __init__(self):
+    def __init__(self, cfg=config):
+        self.cfg = cfg   # Settings in force (see config.Settings)
         self.scale = None          # Pixels per world unit used for positions (exact): interface scale x zoom
         self.base_scale = None     # Interface scale (pixels per logical unit), from the layout
         self.sprite_scale = None   # Scale the sprites were built for (rebuilt only on a >1% change)
         self.size = None
         # Camera: centre in world units, zoom = logical units per world unit (1 = native, below 1 = zoomed out)
-        self.cam_x = config.WORLD_WIDTH / 2
-        self.cam_y = config.WORLD_HEIGHT / 2
+        self.cam_x = self.cfg.WORLD_WIDTH / 2
+        self.cam_y = self.cfg.WORLD_HEIGHT / 2
         self.max_zoom = 4.0
         self._fit_world()
         self.zoom = 1.0  # Starts at the scale of one screen (the whole world when it is 1×1)
         # One species: its colour says nothing, so energy is shown (several species: one colour each)
-        self.color_mode = 0 if len(config.ACTIVE_PROFILES) > 1 else COLOR_MODES.index("énergie")
+        self.color_mode = 0 if len(self.cfg.ACTIVE_PROFILES) > 1 else COLOR_MODES.index("énergie")
         self._shade_cache = {}   # Body colour → (tail colour, heading-dot colour)
         self.bucket_colors = [body_color(i / (ENERGY_BUCKETS - 1)) for i in range(ENERGY_BUCKETS)]
         self.lineage = LineageTracker()   # Founder of each creature: colour mode «lignée», Population panel
@@ -150,7 +151,8 @@ class Scene:
     def _fit_world(self):
         """Zoom that shows the whole world (fit_zoom), and how far one can zoom out beyond it (MIN_ZOOM_RATIO):
         below fit_zoom the torus is shown repeated around the real map, darker."""
-        self.fit_zoom = min(1.0, config.SCREEN_WIDTH / config.WORLD_WIDTH, config.SCREEN_HEIGHT / config.WORLD_HEIGHT)
+        cfg = self.cfg
+        self.fit_zoom = min(1.0, cfg.SCREEN_WIDTH / cfg.WORLD_WIDTH, cfg.SCREEN_HEIGHT / cfg.WORLD_HEIGHT)
         self.min_zoom = self.fit_zoom * MIN_ZOOM_RATIO
 
     def world_changed(self):
@@ -167,12 +169,12 @@ class Scene:
 
     def view_screen(self):
         """Scale of one screen (1×1): creatures look the same whatever the world size. Centred on the world."""
-        self.cam_x, self.cam_y = config.WORLD_WIDTH / 2, config.WORLD_HEIGHT / 2
+        self.cam_x, self.cam_y = self.cfg.WORLD_WIDTH / 2, self.cfg.WORLD_HEIGHT / 2
         self.set_zoom(1.0)
 
     def view_all(self):
         """The whole world in view."""
-        self.cam_x, self.cam_y = config.WORLD_WIDTH / 2, config.WORLD_HEIGHT / 2
+        self.cam_x, self.cam_y = self.cfg.WORLD_WIDTH / 2, self.cfg.WORLD_HEIGHT / 2
         self.set_zoom(self.fit_zoom)
 
     def pan_pixels(self, dx, dy):
@@ -186,14 +188,14 @@ class Scene:
         self._wrap_camera()
 
     def _wrap_camera(self):
-        self.cam_x %= config.WORLD_WIDTH
-        self.cam_y %= config.WORLD_HEIGHT
+        self.cam_x %= self.cfg.WORLD_WIDTH
+        self.cam_y %= self.cfg.WORLD_HEIGHT
 
     def screen_to_world(self, px, py):
         """World point under a pixel of the world area."""
         vw, vh = self.size
-        return ((self.cam_x + (px - vw / 2) / self.scale) % config.WORLD_WIDTH,
-                (self.cam_y + (py - vh / 2) / self.scale) % config.WORLD_HEIGHT)
+        return ((self.cam_x + (px - vw / 2) / self.scale) % self.cfg.WORLD_WIDTH,
+                (self.cam_y + (py - vh / 2) / self.scale) % self.cfg.WORLD_HEIGHT)
 
     def pick_radius(self):
         """Click tolerance in world units: at least 14, and at least about 9 pixels on screen."""
@@ -243,14 +245,13 @@ class Scene:
 
     # ---------- construction (on resize) ----------
 
-    @staticmethod
-    def _build_background(size):
+    def _build_background(self, size):
         w, h = size
         # Computed on a small grid then enlarged: the background is smooth, so nothing is lost
         gw, gh = max(16, min(w, 640)), max(9, min(h, 360))
-        xs = (np.arange(gw, dtype=np.float32) * (config.SCREEN_WIDTH / gw))[:, None]
-        ys = (np.arange(gh, dtype=np.float32) * (config.SCREEN_HEIGHT / gh))[None, :]
-        cx, cy = config.SCREEN_WIDTH / 2, config.SCREEN_HEIGHT / 2
+        xs = (np.arange(gw, dtype=np.float32) * (self.cfg.SCREEN_WIDTH / gw))[:, None]
+        ys = (np.arange(gh, dtype=np.float32) * (self.cfg.SCREEN_HEIGHT / gh))[None, :]
+        cx, cy = self.cfg.SCREEN_WIDTH / 2, self.cfg.SCREEN_HEIGHT / 2
         r = np.sqrt(((xs - cx) / cx) ** 2 * 0.8 + ((ys - cy) / cy) ** 2)   # Vignette: bright centre, dark edges
         t = np.clip(r / 1.15, 0.0, 1.0) ** 1.7
         center = np.array(theme.BG_CENTER_COLOR, dtype=np.float32)
@@ -269,7 +270,7 @@ class Scene:
 
     def _build_body(self, color):
         k = self.sprite_scale
-        r = config.CREATURE_RADIUS * k
+        r = self.cfg.CREATURE_RADIUS * k
         size, s, big = self._sprite_canvas(r + 3 * k)
         c = size * s / 2
         dark = _lerp(color, (10, 12, 16), 0.55)
@@ -282,7 +283,7 @@ class Scene:
 
     def _build_dead(self):
         k = self.sprite_scale
-        r = config.CREATURE_RADIUS * k
+        r = self.cfg.CREATURE_RADIUS * k
         size, s, big = self._sprite_canvas(r + 3 * k)
         c = size * s / 2
         pygame.draw.circle(big, (*theme.DEAD_COLOR, 70), (c, c), r * s)
@@ -291,7 +292,7 @@ class Scene:
 
     def _build_food(self, frame):
         k = self.sprite_scale
-        r = config.FOOD_RADIUS * k
+        r = self.cfg.FOOD_RADIUS * k
         halo = r * 4
         size, s, big = self._sprite_canvas(halo + k)
         c = size * s / 2
@@ -309,7 +310,7 @@ class Scene:
     def _build_poison(self, frame):
         """Poison: purple halo and a dark diamond with a light edge. A different shape from food, not only a colour."""
         k = self.sprite_scale
-        r = config.FOOD_RADIUS * 1.25 * k
+        r = self.cfg.FOOD_RADIUS * 1.25 * k
         halo = r * 3.6
         size, s, big = self._sprite_canvas(halo + k)
         c = size * s / 2
@@ -423,7 +424,7 @@ class Scene:
         if trail is not None:
             self._draw_trail(screen, trail, world)
 
-        r0 = config.CREATURE_RADIUS * k
+        r0 = self.cfg.CREATURE_RADIUS * k
         nub_radius = max(1, round(2 * k))
         max_food = max([c.food_eaten for c in world.creatures if c.alive] + [1])
         mode = COLOR_MODES[self.color_mode]
@@ -446,9 +447,9 @@ class Scene:
                 if mode == "énergie":
                     ratio = c.energy / c.energy_max
                 elif mode == "taille":
-                    ratio = (c.size - config.SIZE_MIN) / (config.SIZE_MAX - config.SIZE_MIN)
+                    ratio = (c.size - self.cfg.SIZE_MIN) / (self.cfg.SIZE_MAX - self.cfg.SIZE_MIN)
                 elif mode == "vitesse":
-                    ratio = c.speed / config.CREATURE_MAX_SPEED
+                    ratio = c.speed / self.cfg.CREATURE_MAX_SPEED
                 else:
                     ratio = c.food_eaten / max_food
                 ratio = max(0.0, min(ratio, 1.0))
@@ -524,16 +525,16 @@ class Scene:
         else:
             targets = [max(alive, key=lambda c: (c.age, c.energy))]
         vision_color = theme.DEBUG_VISION_COLOR if mode == 1 else _lerp(theme.DEBUG_VISION_COLOR, (0, 0, 0), 0.6)
-        radius = round(config.VISION_RANGE * k)
-        half_fov = math.radians(config.VISION_FOV_DEGREES) / 2.0
+        radius = round(self.cfg.VISION_RANGE * k)
+        half_fov = math.radians(self.cfg.VISION_FOV_DEGREES) / 2.0
         for c in targets:
             cx, cy = self._project(world, c.x, c.y)
             center = (round(cx), round(cy))
-            if config.VISION_FOV_DEGREES >= 360:
+            if self.cfg.VISION_FOV_DEGREES >= 360:
                 screen.circle(vision_color, center, radius, 1)
             else:
                 # Field of view: the two edges and the arc between them, centred on the heading
-                n = max(8, round(config.VISION_FOV_DEGREES / 5))
+                n = max(8, round(self.cfg.VISION_FOV_DEGREES / 5))
                 arc = [(center[0] + math.cos(c.angle - half_fov + 2 * half_fov * i / n) * radius,
                         center[1] + math.sin(c.angle - half_fov + 2 * half_fov * i / n) * radius)
                        for i in range(n + 1)]

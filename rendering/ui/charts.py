@@ -138,7 +138,7 @@ class ChartView:
             seen = [v for v in vals if v is not None]
             if not seen:
                 continue
-            vmax = (fixed_max() if fixed_max else None) or (max(seen) * 1.05)
+            vmax = (fixed_max(self.hud.cfg) if fixed_max else None) or (max(seen) * 1.05)
             vmax = vmax if vmax > 1e-9 else 1.0
             pts = [((ticks[i] - t0) / span * w, plot_h - max(0.0, min(v / vmax, 1.0)) * (plot_h - round(4 * u)))
                    for i, v in enumerate(vals) if v is not None]

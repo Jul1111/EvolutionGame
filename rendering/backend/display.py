@@ -27,7 +27,7 @@ class Display:
 
     Drawing happens directly at the surface's resolution (see rendering/ui/layout.py), never rescaled."""
 
-    def __init__(self, title):
+    def __init__(self, title, cfg=config):
         self.windowed_size = fit_window_size()
         self.fullscreen = False
         self.surface_version = 0                 # +1 whenever the surface may have been replaced
@@ -38,7 +38,7 @@ class Display:
             self.window = pygame.Window(title, self.windowed_size, resizable=True, allow_high_dpi=True)
             # Graphics card (rendering/backend/gpu.py) unless RENDERER = "cpu" (config.py or the EVOLUTION_RENDERER
             # variable). If it cannot start, the processor draws, as before
-            choice = os.environ.get("EVOLUTION_RENDERER", config.RENDERER)
+            choice = os.environ.get("EVOLUTION_RENDERER", cfg.RENDERER)
             if choice in ("auto", "gpu"):
                 try:
                     from rendering.backend.gpu import Gpu

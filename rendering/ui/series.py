@@ -3,7 +3,6 @@ import csv
 
 import pygame
 
-import config
 from rendering.ui.draw import VALUE, LABEL, MINT, AMBER, CORAL, BLUE, Ctx, _panel, _text, _clip
 from utils.timefmt import format_time
 
@@ -39,20 +38,20 @@ SERIES = [
     ("deaths_age", "Morts de vieillesse (par relevé)", (150, 164, 178), _col("deaths_age"), None, lambda v: f"{v:.0f}"),
     ("food_rate", "Repas / 1000 ticks de vie", (90, 200, 110), _col("food_rate"), None, lambda v: f"{v:.2f}"),
     ("poison_rate", "Poisons / 1000 ticks de vie", (176, 96, 214), _col("poison_rate"), None, lambda v: f"{v:.2f}"),
-    ("mean_speed", "Vitesse moy.", BLUE, _col("mean_speed"), lambda: config.CREATURE_MAX_SPEED, lambda v: f"{v:.2f}"),
+    ("mean_speed", "Vitesse moy.", BLUE, _col("mean_speed"), lambda cfg: cfg.CREATURE_MAX_SPEED, lambda v: f"{v:.2f}"),
     ("mean_energy", "Énergie moy.", AMBER, _col("mean_energy"), None, lambda v: f"{v:.0f}"),
     ("mean_lineage_gen", "Génération de lignée moy.", (160, 190, 255), _col("mean_lineage_gen"), None,
      lambda v: f"{v:.1f}"),
     ("mean_age_at_death", "Âge moyen à la mort", (236, 142, 72), _col("mean_age_at_death"),
-     lambda: config.AGE_MAX or None, format_time),
+     lambda cfg: cfg.AGE_MAX or None, format_time),
     ("food_sources", "Sources de nourriture", (120, 210, 150), _col("food_sources"), None, lambda v: f"{v:.0f}"),
     ("food_available", "Nourritures disponibles", (178, 224, 120), _col("food_available"), None, lambda v: f"{v:.0f}"),
-    ("mean_size", "Taille moy.", (236, 200, 120), _col("mean_size"), lambda: config.SIZE_MAX, lambda v: f"{v:.2f}"),
+    ("mean_size", "Taille moy.", (236, 200, 120), _col("mean_size"), lambda cfg: cfg.SIZE_MAX, lambda v: f"{v:.2f}"),
     ("size_std", "Écart de taille", (200, 170, 110), _col("size_std"), None, lambda v: f"{v:.2f}"),
     ("blind_frac", "Part du temps sans nourriture en vue", CORAL, _col("blind_frac"), lambda: 1.0,
      lambda v: f"{v:.0%}"),
     ("blind_speed", "Vitesse sans nourriture en vue", (132, 132, 236), _col("blind_speed"),
-     lambda: config.CREATURE_MAX_SPEED, lambda v: f"{v:.2f}"),
+     lambda cfg: cfg.CREATURE_MAX_SPEED, lambda v: f"{v:.2f}"),
     ("blind_turn", "Virage sans nourriture en vue", (236, 142, 72), _col("blind_turn"), lambda: 1.0,
      lambda v: f"{v:.2f}"),
     ("cap_blocked", "Naissances bloquées (plafond)", (230, 122, 182), _col("cap_blocked"), None, lambda v: f"{v:.0f}"),
@@ -91,7 +90,7 @@ def _legend(surf, fonts, entries, area, c, values):
               area.y + (k % per_col) * line_h, LABEL)
 
 
-def build_chart(fonts, stats, width, height, u, wide, keys, species=None):
+def build_chart(fonts, stats, width, height, u, wide, keys, cfg, species=None):
     """Pre-render the curves of the timeline for the series in `keys`. Each curve is scaled to its own range.
     wide=False: plot on top, legend below (side bar). wide=True: plot on the left, legend on the right (strip)."""
     c = Ctx(u)
@@ -124,7 +123,7 @@ def build_chart(fonts, stats, width, height, u, wide, keys, species=None):
     for key, label, color, value, fixed_max, fmt in selected:
         values = [value(r) for r in stats]
         seen = [v for v in values if v is not None]
-        vmax = (fixed_max() if fixed_max else None) or (max(seen) * 1.05 if seen else 1.0)
+        vmax = (fixed_max(cfg) if fixed_max else None) or (max(seen) * 1.05 if seen else 1.0)
         vmax = vmax if vmax > 1e-9 else 1.0
         pts = []
         for j, v in enumerate(values):

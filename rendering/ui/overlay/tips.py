@@ -3,7 +3,6 @@ import time
 
 import pygame
 
-import config
 from brain.profiles import PROFILES, input_labels, output_labels
 from rendering.backend.glass import frost
 from rendering.ui.draw import VALUE, LABEL
@@ -23,8 +22,8 @@ class TipsMixin:
             return None
         lx, ly = x - sb.x, y - sb.y
         u, ky = hud.u, hud.ky
-        fmt = dict(size_min=config.SIZE_MIN, size_max=config.SIZE_MAX, pop_max=config.POP_MAX,
-                   energy_max=config.ENERGY_MAX, speed_max=config.CREATURE_MAX_SPEED)
+        fmt = dict(size_min=self.hud.cfg.SIZE_MIN, size_max=self.hud.cfg.SIZE_MAX, pop_max=self.hud.cfg.POP_MAX,
+                   energy_max=self.hud.cfg.ENERGY_MAX, speed_max=self.hud.cfg.CREATURE_MAX_SPEED)
         for name, rows in (("gen", GEN_TIPS), ("creature", CREATURE_TIPS)):
             slot = hud.slots.get(name)
             if slot and slot.collidepoint(lx, ly):
@@ -47,7 +46,8 @@ class TipsMixin:
                 top = base + round((i * 15 + (4 if i >= n_in else 0)) * u)
                 if top <= ly < top + round(15 * u):
                     tip = NET_TIPS.get(label)
-                    return tip.format(hunger=config.HUNGER_SCALE // config.TICKS_PER_SECOND) if tip else None
+                    cfg = self.hud.cfg
+                    return tip.format(hunger=cfg.HUNGER_SCALE // cfg.TICKS_PER_SECOND) if tip else None
         return None
 
     def draw_tips(self, window, world, selected, menu_open):
@@ -75,7 +75,7 @@ class TipsMixin:
             wx, wy = self.scene.screen_to_world(x - self.layout.world.x, y - self.layout.world.y)
             c = pick_creature(world, wx, wy, self.scene.pick_radius())
             if c is not None:
-                t = int(c.age / config.TICKS_PER_SECOND)
+                t = int(c.age / self.hud.cfg.TICKS_PER_SECOND)
                 head = (f"{PROFILES[c.profile]['title']}  ·  taille {c.size:.2f}  ·  gén. {c.lineage_gen}  ·  "
                         f"{c.children} petits" + ("" if c.alive else "  ·  morte"))
                 lines = [(head, "base", VALUE),

@@ -130,3 +130,24 @@ def test_run_to_a_birth_and_a_death_with_effects(make_app):
     app.do("speed_up")
     _frames(app, 40)
     assert app.sim.total_births > 0
+
+
+def test_legend_lists_every_kind_of_thing_in_the_world():
+    from rendering.ui.overlay.legend import legend_entries
+    kinds = {kind for kind, _, _ in legend_entries("énergie")}
+    assert {"dot", "diamond", "anemone", "gradient", "cone"} <= kinds      # Food, poison, obstacle, colour, vision
+    assert "gradient" not in {kind for kind, _, _ in legend_entries("lignée")}
+
+
+def test_scene_and_hud_use_their_own_settings(make_app):
+    """The world view and the HUD read their settings from cfg, not from the live module."""
+    import config
+    from rendering.ui.hud import Hud
+    from rendering.world.scene import Scene
+    own = config.Settings(WORLD_SCALE=2)
+    scene, hud = Scene(own), Hud(own)
+    assert scene.cfg is own and hud.cfg is own
+    scene.world_changed()                       # Zoom limits from the 2x2 world, though the module says 1x1
+    assert scene.fit_zoom == min(1.0, config.SCREEN_WIDTH / (2 * config.SCREEN_WIDTH),
+                                 config.SCREEN_HEIGHT / (2 * config.SCREEN_HEIGHT))
+    assert config.WORLD_SCALE == 1

@@ -1,7 +1,6 @@
 """Settings panel and setup screen."""
 import pygame
 
-import config
 from brain.profiles import PROFILES
 from rendering.backend.glass import frost
 from rendering.ui.draw import VALUE, LABEL, MINT, AMBER, _clip
@@ -140,7 +139,7 @@ class ParamsMixin:
                     y += row_h
             if ci == 1:
                 # Species: tick boxes (applied at the next start)
-                ticked = self.state.get("profiles", list(config.ACTIVE_PROFILES))
+                ticked = self.state.get("profiles", list(self.hud.cfg.ACTIVE_PROFILES))
                 head_color = AMBER if self.state.get("profiles_pending") else DIM
                 img = f["small"].render("ESPÈCES (AU PROCHAIN DÉPART)", True, head_color)
                 window.blit(img, (x0, y + sec_h - img.get_height() - round(4 * u)))

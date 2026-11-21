@@ -11,26 +11,27 @@ FRAME = (240, 196, 92)
 
 
 class MiniMap:
-    def __init__(self):
+    def __init__(self, cfg=config):
+        self.cfg = cfg   # Settings in force (see config.Settings)
         self.enabled = True
         self.rect = None
 
     def place(self, area, u):
         """Bottom-left corner of the free area. Width 210 (logical), height from the world's proportions."""
         w = round(210 * u)
-        h = max(round(60 * u), round(w * config.WORLD_HEIGHT / config.WORLD_WIDTH))
+        h = max(round(60 * u), round(w * self.cfg.WORLD_HEIGHT / self.cfg.WORLD_WIDTH))
         m = round(12 * u)
         self.rect = pygame.Rect(area.x + m, area.bottom - m - h, w, h)
         return self.rect
 
     def to_world(self, x, y):
         r = self.rect
-        return ((x - r.x) / r.w * config.WORLD_WIDTH, (y - r.y) / r.h * config.WORLD_HEIGHT)
+        return ((x - r.x) / r.w * self.cfg.WORLD_WIDTH, (y - r.y) / r.h * self.cfg.WORLD_HEIGHT)
 
     def draw(self, window, world, scene, u):
         r = self.rect
         frost(window, r, max(4, round(8 * u)), alpha=165)
-        kx, ky = r.w / config.WORLD_WIDTH, r.h / config.WORLD_HEIGHT
+        kx, ky = r.w / self.cfg.WORLD_WIDTH, r.h / self.cfg.WORLD_HEIGHT
         clip = window.get_clip()
         window.set_clip(r.inflate(-2, -2))
         for o in world.obstacles:
@@ -42,7 +43,7 @@ class MiniMap:
         # Part of the world on screen: one frame, cut at the edges of the map (the torus repetition is not shown)
         if scene.size is not None and scene.scale:
             vw, vh = scene.size[0] / scene.scale, scene.size[1] / scene.scale
-            if vw < config.WORLD_WIDTH or vh < config.WORLD_HEIGHT:
+            if vw < self.cfg.WORLD_WIDTH or vh < self.cfg.WORLD_HEIGHT:
                 frame = pygame.Rect(round(r.x + (scene.cam_x - vw / 2) * kx), round(r.y + (scene.cam_y - vh / 2) * ky),
                                     max(4, round(vw * kx)), max(4, round(vh * ky))).clip(r)
                 if frame.w > 1 and frame.h > 1:

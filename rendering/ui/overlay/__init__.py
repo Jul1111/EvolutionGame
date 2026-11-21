@@ -38,7 +38,7 @@ class Overlay(LegendMixin, HelpMixin, ParamsMixin, NetworkMixin, TipsMixin):
         self.start = None             # rendering.startmenu.StartMenu at launch (set by app/)
         self.chart_big = False        # Large curves view (key G, third press)
         self.charts = ChartView(hud)
-        self.minimap = MiniMap()      # Key M
+        self.minimap = MiniMap(hud.cfg)   # Key M
         self.presets = None           # utils.presets.PresetBrowser (set by app/)
         self.net_pos = None           # Top-left of the large network, once moved
         self._drag = None             # Grab offset while the large network is dragged

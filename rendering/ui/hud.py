@@ -29,12 +29,13 @@ class Hud:
     """Side bar (population, selected creature, network, curves, key hints) and, when the window is tall,
     a strip under the world with the curves. Everything is drawn at the real resolution (see relayout)."""
 
-    def __init__(self):
+    def __init__(self, cfg=config):
+        self.cfg = cfg   # Settings in force (see config.Settings)
         self.show_chart = True    # Curves (in the strip when there is one, else in the side bar)
         self.show_graph = False   # Network drawn as a graph above the bars
         self.chart_keys = set(DEFAULT_SERIES)   # Curves shown (menu Courbes)
         self.layout = None
-        self.profiles = list(config.ACTIVE_PROFILES)        # Species in the world
+        self.profiles = list(self.cfg.ACTIVE_PROFILES)        # Species in the world
         self.timeline_path = None   # timeline.csv of the running simulation (set by app/)
         self.rows = []
         self.visible = True    # Tab hides every panel (clean view of the world)
@@ -136,7 +137,7 @@ class Hud:
 
     def _chart(self, r, wide):
         """Curves of the whole population, one point per line of timeline.csv."""
-        return build_chart(self.fonts, self.rows, r.w, r.h, self.u, wide, self.chart_keys)
+        return build_chart(self.fonts, self.rows, r.w, r.h, self.u, wide, self.chart_keys, self.cfg)
 
     def toggle_chart(self):
         self.show_chart = not self.show_chart
@@ -190,12 +191,12 @@ class Hud:
                            max(3, c.x(4)))
 
         bar_h = max(3, c.x(5))
-        cap = info.get("pop_max", config.POP_MAX)
+        cap = info.get("pop_max", self.cfg.POP_MAX)
         _row(p, f, c, 38, "Vivantes / plafond", f"{n}/{cap}")
         _bar(p, pad, c.y(59), W - 2 * pad, bar_h, n / cap if cap else 0, (204, 172, 132))
         _row(p, f, c, 68, "Temps simulé", format_time(world.tick))
         last = self.rows[-1] if self.rows else None
-        per_min = 60 * config.TICKS_PER_SECOND / config.SAMPLE_TICKS   # Lines of timeline.csv per simulated minute
+        per_min = 60 * self.cfg.TICKS_PER_SECOND / self.cfg.SAMPLE_TICKS   # Lines of timeline.csv per simulated minute
         if last is not None:
             born = (last.get("births") or 0) * per_min
             dead = ((last.get("deaths_hunger") or 0) + (last.get("deaths_age") or 0)) * per_min
@@ -270,7 +271,7 @@ class Hud:
         _row(p, f, c, 36, "Énergie", f"{max(cr.energy, 0):.1f}")
         _bar(p, pad, c.y(57), W - 2 * pad, bar_h, energy_ratio, energy_color(max(0.0, min(energy_ratio, 1.0))))
         _row(p, f, c, 66, "Vitesse", f"{cr.speed:.2f}")
-        _bar(p, pad, c.y(87), W - 2 * pad, bar_h, cr.speed / config.CREATURE_MAX_SPEED, BLUE)
+        _bar(p, pad, c.y(87), W - 2 * pad, bar_h, cr.speed / self.cfg.CREATURE_MAX_SPEED, BLUE)
         _row(p, f, c, 96, "Âge", format_time(cr.age))
         _row(p, f, c, 114, "Nourriture / poison", f"{cr.food_eaten} / {cr.poison_hits}")
         blind_share = cr.blind_ticks / cr.age if cr.age else 0.0
