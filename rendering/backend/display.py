@@ -33,6 +33,7 @@ class Display:
         self.surface_version = 0                 # +1 whenever the surface may have been replaced
         self.hidpi = hasattr(pygame, "Window")   # pygame-ce
         self.gpu = None
+        glass.gpu = None   # The glass module draws with the graphics card only while one is running
         if self.hidpi:
             self.window = pygame.Window(title, self.windowed_size, resizable=True, allow_high_dpi=True)
             # Graphics card (rendering/backend/gpu.py) unless RENDERER = "cpu" (config.py or the EVOLUTION_RENDERER
