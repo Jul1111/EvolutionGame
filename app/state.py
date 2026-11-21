@@ -1,70 +1,81 @@
-"""The state of a session, declared once. Every mixin of App inherits it, so a reader of any app/ module sees what
-`self` holds. The values are set in App.__init__ (and by the session and command handlers); nothing is assigned here."""
+"""The two small bundles of state that several parts of the app share: how the run goes, and what is selected.
+They hold values and a few one-line helpers, no behaviour of their own: the parts that use them receive them in their
+constructor, so what each one reads and writes is visible in its signature."""
 from collections import deque
-from random import Random
 
-import pygame
-
-from evolution.continuous import ContinuousSimulation
-from rendering.backend.display import Display
-from rendering.ui.hud import Hud
-from rendering.ui.layout import Layout
-from rendering.ui.menu import MenuBar
-from rendering.ui.overlay import Overlay
-from rendering.world.scene import Scene
-from utils.presets import PresetBrowser
+from evolution.continuous import success_key
 
 
-class AppState:
-    cfg: object                    # Settings in force: the live config module, or a config.Settings copy
+class RunState:
+    """How the run goes: loop, pause, speed, setup screen."""
 
-    # Window and drawing
-    display: Display               # The window (processor or graphics card)
-    clock: pygame.time.Clock
-    layout: Layout                 # Where the world, the side bar and the curves strip are (see rendering/ui/layout.py)
-    sidebar: pygame.Surface        # The parts of the window the HUD draws on (sub-surfaces, rebuilt with the layout)
-    strip_view: pygame.Surface
-    last_surface_version: int      # Display.surface_version and window size at the last layout: a change = relayout
-    last_size: tuple
-    scene: Scene                   # The world: background, food, creatures, camera
-    hud: Hud                       # Side bar and curves
-    menu: MenuBar
-    overlay: Overlay               # Tool bar, legend, help, hover tips, settings panel, large network
-    presets: PresetBrowser         # Saved settings (saves/presets/)
+    def __init__(self):
+        self.running = True            # False ends the main loop
+        self.paused = False
+        self.step_request = False      # One tick asked while paused
+        self.speed_index = 0           # Index in cfg.SPEED_STEPS
+        self.real_speed = 0.0          # Ticks per frame actually run (time budget), smoothed
+        self.draw_ms = 10.0            # Drawing time of a frame, smoothed, for the simulation budget
+        self.setup = None              # Setup screen: {"resume": bool, "cancel": bool, ...}, None while running
 
-    # Simulation
-    rng: Random
-    sim: ContinuousSimulation      # The running simulation (or the preview world behind the setup screen)
-    timeline: str                  # Path of timeline.csv, which feeds the curves
 
-    # Selection and camera
-    selected: object               # Creature picked with a click, or None
-    trail: deque                   # Recent positions of the selected creature, one per tick
-    cam_follow: bool               # The camera stays on the selected creature
-    follow: bool                   # At its death, the selection moves to its youngest living descendant (key T)
-    auto_best: bool                # At its death, the selection moves to the new best creature (key B)
-    debug_mode: int                # 0 = off, 1 = selected (else oldest living) creature, 2 = all living creatures
-    drag_start: tuple              # Mouse position of a left press in the world, or None
-    dragging: bool                 # The press became a drag: the view moves, nothing is selected
+class Selection:
+    """The creature picked by the player, and how the view follows it."""
 
-    # Run state
-    running: bool                  # False ends the main loop
-    paused: bool
-    step_request: bool             # One tick asked while paused
-    speed_index: int               # Index in config.SPEED_STEPS
-    real_speed: float              # Ticks per frame actually run (time budget), smoothed
-    draw_ms: float                 # Drawing time of a frame, smoothed, for the simulation budget
-    setup: dict                    # Setup screen: {"resume": bool, "cancel": bool, ...}, or None while running
+    def __init__(self, cfg):
+        self.selected = None           # Creature picked with a click, or None
+        self.trail = deque(maxlen=cfg.TRAIL_LENGTH)   # Recent positions of the selected creature, one per tick
+        self.cam_follow = False        # The camera stays on the selected creature
+        self.follow = False            # At its death, the selection moves to its youngest living descendant (key T)
+        self.auto_best = False         # At its death, the selection moves to the new best creature (key B)
+        self.debug_mode = 0            # 0 = off, 1 = selected (else oldest living) creature, 2 = all living creatures
+        self.drag_start = None         # Mouse position of a left press in the world, or None
+        self.dragging = False          # The press became a drag: the view moves, nothing is selected
 
-    # Settings
-    pending: dict                  # Setting action → value waiting for the next restart (RESTART_PARAMS only)
-    pending_profiles: list         # Species ticked in the menu, applied at the next restart from zero, or None
-    last_saved: str                # Path of the last saved population, or None
+    def clear(self):
+        self.selected = None
+        self.trail.clear()
 
-    # Commands (see app/commands.py)
-    _commands: dict                # Action name → handler
-    _prefixed: dict                # Action prefix → handler taking the rest of the name
+    def pick(self, creature):
+        """A creature chosen by hand (or None): no automatic switch (except T, lineage), the camera follows it."""
+        self.selected = creature
+        self.auto_best = False
+        self.trail.clear()
+        self.cam_follow = creature is not None
 
-    @property
-    def world(self):
-        return self.sim.world
+    def select_best(self, world):
+        self.selected = max(world.creatures, key=success_key)
+        self.trail.clear()
+        self.cam_follow = True
+
+    def best(self, world):
+        if world.creatures:
+            self.select_best(world)
+            self.auto_best = True   # Stays on «the best»: at its death, the new best one
+
+    def toggle_follow(self, world):
+        self.follow = not self.follow
+        if self.follow and self.selected is None and world.creatures:
+            self.select_best(world)
+
+    def after_tick(self, sim, overlay):
+        """After a tick: records the trail, and when the selected creature died, moves to its heir (T) or to the new
+        best one (B)."""
+        selected = self.selected
+        if selected is None:
+            return
+        world = sim.world
+        if selected.alive:
+            self.trail.append((selected.x, selected.y))
+        elif self.follow or self.auto_best:
+            # T: the lineage goes on through its youngest living descendant; if the lineage is extinct,
+            # or after B: the new best one (most children)
+            heir = sim.descendant_of(selected) if self.follow else None
+            if heir is None and world.creatures:
+                heir = max((c for c in world.creatures if c.alive), key=success_key, default=None)
+                if heir is not None:
+                    overlay.toast(f"Morte. Nouvelle meilleure : {heir.children} petits, "
+                                  f"génération {heir.lineage_gen}", 2.5)
+            if heir is not None:
+                self.selected = heir
+                self.trail.clear()

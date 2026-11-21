@@ -1,11 +1,9 @@
-"""Commands: every action from the keyboard or from the menus goes through App.do(), a table of handlers."""
+"""Commands: every action from the keyboard or from the menus goes through Commands.do(), a table of handlers."""
 from functools import partial
 
 import pygame
 
-from evolution.continuous import success_key
 from app.settings import PARAMS
-from app.state import AppState
 
 
 # Actions that do nothing while the setup screen is open: only its own buttons, the settings, the species and the view
@@ -22,7 +20,12 @@ KEYS = {pygame.K_UP: "speed_up", pygame.K_DOWN: "speed_down", pygame.K_d: "debug
         pygame.K_TAB: "panels", pygame.K_m: "minimap", pygame.K_e: "effects"}
 
 
-class CommandsMixin(AppState):
+class Commands:
+    def __init__(self, cfg, display, scene, hud, overlay, state, selection, session, settings):
+        self.cfg, self.display, self.scene, self.hud, self.overlay = cfg, display, scene, hud, overlay
+        self.state, self.selection, self.session, self.settings = state, selection, session, settings
+        self._build()
+
     def _cycle_panel(self, big_attr, shown_attr, toggle):
         """Hidden → small (side bar) → large (over the world) → hidden, for the curves and the network view."""
         if getattr(self.overlay, big_attr):
@@ -33,13 +36,9 @@ class CommandsMixin(AppState):
         else:
             toggle()
 
-    def _select_best(self):
-        self.selected = max(self.world.creatures, key=success_key)
-        self.trail.clear()
-        self.cam_follow = True
-
-    def _build_commands(self):
+    def _build(self):
         hud, overlay, scene, display = self.hud, self.overlay, self.scene, self.display
+        state, selection, session, settings = self.state, self.selection, self.session, self.settings
         toggle, keep_open = self._toggle, self._keep_open
         self._commands = {
             # Speed and view
@@ -52,8 +51,8 @@ class CommandsMixin(AppState):
             "zoom_out": partial(self._zoom, 0.8),
             "view_fit": scene.view_all,
             "view_screen": scene.view_screen,
-            "cam_follow": partial(toggle, self, "cam_follow"),
-            "cam_follow_off": partial(setattr, self, "cam_follow", False),   # The mini-map moved the view by hand
+            "cam_follow": partial(toggle, selection, "cam_follow"),
+            "cam_follow_off": partial(setattr, selection, "cam_follow", False),   # The mini-map moved the view by hand
             # What is shown
             "debug": self._cycle_debug,
             "color": scene.cycle_color_mode,
@@ -71,35 +70,40 @@ class CommandsMixin(AppState):
             # Settings panel and presets
             "params_panel": partial(toggle, overlay, "params_open"),
             "params_close": partial(setattr, overlay, "params_open", False),
-            "params_cancel": self._params_cancel,
-            "preset_prev": keep_open(partial(self._move_preset, -1)),
-            "preset_next": keep_open(partial(self._move_preset, +1)),
-            "preset_save": keep_open(self._save_preset),
-            "preset_apply": keep_open(self._apply_preset),
+            "params_cancel": settings.params_cancel,
+            "preset_prev": keep_open(partial(settings.move_preset, -1)),
+            "preset_next": keep_open(partial(settings.move_preset, +1)),
+            "preset_save": keep_open(settings.save_preset),
+            "preset_apply": keep_open(settings.apply_preset),
             # Populations
-            "restart_now": self._restart_random,
-            "save_pop": self._save_population,
-            "load_pop": self._load_last_population,
+            "restart_now": session.restart_random,
+            "save_pop": session.save_population,
+            "load_pop": session.load_last_population,
             # Start menu and setup screen
-            "start_continue": self._start_continue,
-            "start_load_list": self._open_load_list,
-            "start_back": self._start_back,
-            "start_new": self._start_new,
-            "reset": partial(self._open_setup, can_cancel=True),
-            "setup_launch": self._setup_launch,
-            "setup_resume": self._setup_resume,
-            "setup_cancel": self._setup_cancel,
-            "quit": partial(setattr, self, "running", False),
+            "start_continue": session.start_continue,
+            "start_load_list": session.open_load_list,
+            "start_back": session.start_back,
+            "start_new": session.start_new,
+            "reset": partial(session.open_setup, can_cancel=True),
+            "setup_launch": session.setup_launch,
+            "setup_resume": session.setup_resume,
+            "setup_cancel": session.setup_cancel,
+            "quit": partial(setattr, state, "running", False),
             # A setting of the menu: next preset value (now, or at the next restart)
-            **{key: keep_open(partial(self._cycle_param, key)) for key in PARAMS},
+            **{key: keep_open(partial(settings.cycle_param, key)) for key in PARAMS},
         }
         # Commands with an argument after the prefix ("profile:complet")
         self._prefixed = {
-            "profile:": keep_open(self._toggle_profile),
-            "param:": keep_open(self._step_param),
+            "profile:": keep_open(settings.toggle_profile),
+            "param:": keep_open(settings.step_param),
             "series:": keep_open(hud.toggle_series),
-            "start_load:": self._start_load,
+            "start_load:": session.start_load,
         }
+
+    @property
+    def names(self):
+        """Every action name that runs a command (without the prefixed ones)."""
+        return set(self._commands)
 
     @staticmethod
     def _toggle(obj, attr):
@@ -114,7 +118,7 @@ class CommandsMixin(AppState):
 
     def do(self, action):
         """Runs a command. Returns True to keep the menu open."""
-        if self.setup is not None and action in SETUP_BLOCKED:
+        if self.state.setup is not None and action in SETUP_BLOCKED:
             return False   # Setup screen: only its own buttons, the settings, the species and the view
         handler = self._commands.get(action)
         if handler is not None:
@@ -125,27 +129,23 @@ class CommandsMixin(AppState):
         return False
 
     def _change_speed(self, step):
-        self.speed_index = max(0, min(self.speed_index + step, len(self.cfg.SPEED_STEPS) - 1))
+        self.state.speed_index = max(0, min(self.state.speed_index + step, len(self.cfg.SPEED_STEPS) - 1))
 
     def _pause(self):
-        self.paused = not self.paused
+        self.state.paused = not self.state.paused
 
     def _step(self):
-        self.step_request = self.paused
+        self.state.step_request = self.state.paused
 
     def _cycle_debug(self):
-        self.debug_mode = (self.debug_mode + 1) % 3
+        self.selection.debug_mode = (self.selection.debug_mode + 1) % 3
 
     def _zoom(self, factor):
         vw, vh = self.scene.size
         self.scene.zoom_by(factor, (vw / 2, vh / 2))
 
     def _best(self):
-        if self.world.creatures:
-            self._select_best()
-            self.auto_best = True   # Stays on «the best»: at its death, the new best one
+        self.selection.best(self.session.world)
 
     def _follow(self):
-        self.follow = not self.follow
-        if self.follow and self.selected is None and self.world.creatures:
-            self._select_best()
+        self.selection.toggle_follow(self.session.world)

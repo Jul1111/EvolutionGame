@@ -20,7 +20,7 @@ def test_every_panel_opens_and_draws(make_app):
         for _ in range(3):              # Every state of the cycle (hidden, small, large...), then back
             app.do(action)
             _frames(app)
-    assert app.selected is not None
+    assert app.selection.selected is not None
 
 
 def test_every_color_mode_draws(make_app):
@@ -49,7 +49,7 @@ def test_every_species_network_and_card_draw(make_app):
         if creature.profile in seen:
             continue
         seen.add(creature.profile)
-        app.selected = creature
+        app.selection.selected = creature
         _frames(app)
     assert seen == set(PROFILES)
 
@@ -93,13 +93,13 @@ def test_window_changes_relayout(make_app):
     app.do("fullscreen")
     pygame.event.post(pygame.event.Event(pygame.WINDOWSIZECHANGED, x=900, y=500, window=None))
     _frames(app, 3)
-    assert app.layout is not None
+    assert app.screen.layout is not None
 
 
 def test_mouse_interaction(make_app):
     app = make_app()
     _frames(app, 3)
-    world = app.layout.world
+    world = app.screen.layout.world
     center = world.center
     for ev in (pygame.event.Event(pygame.MOUSEMOTION, pos=center, rel=(0, 0), buttons=(0, 0, 0)),
                pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=center, button=1),
@@ -119,7 +119,7 @@ def test_extinction_is_reported(make_app):
     for creature in app.world.creatures:
         creature.energy = 0
     _frames(app, 5)
-    assert app.sim.extinct and app.paused
+    assert app.sim.extinct and app.state.paused
 
 
 def test_run_to_a_birth_and_a_death_with_effects(make_app):

@@ -2,7 +2,6 @@
 from brain.profiles import PROFILES
 from utils.settings import save_settings
 from utils.timefmt import format_time
-from app.state import AppState
 
 
 # Settings editable from the menu: action → (config name, values it cycles through, text shown).
@@ -47,36 +46,47 @@ def prev_step(steps, current):
     return next((v for v in reversed(steps) if v < current - 1e-9), steps[-1])
 
 
-class SettingsMixin(AppState):
-    def _apply_param(self, key, value):
+class MenuSettings:
+    """The settings as the menu edits them: pending ones (waiting for a restart), species ticked, presets."""
+
+    def __init__(self, cfg, state, presets, toast):
+        self.cfg = cfg
+        self.state = state          # RunState: while the setup screen is open every setting waits for the launch
+        self.presets = presets      # PresetBrowser
+        self.toast = toast          # Shows a message to the player
+        self.on_live_change = None  # Called after a setting that applies now (the session resizes food and poison)
+        self.pending = {}           # Setting action → value waiting for the next restart (RESTART_PARAMS only)
+        self.pending_profiles = None   # Species ticked in the menu (list), applied at the next restart from zero
+
+    def apply_param(self, key, value):
         """Setting changed in the menu: now, or at the next restart for RESTART_PARAMS (or for every setting while
         the setup screen is open: nothing runs yet)."""
         name = PARAMS[key][0]
-        if key in RESTART_PARAMS or self.setup is not None:
+        if key in RESTART_PARAMS or self.state.setup is not None:
             if value == getattr(self.cfg, name):
                 self.pending.pop(key, None)
             else:
                 self.pending[key] = value
         else:
             setattr(self.cfg, name, value)
-            self.sim.update_food(0)   # Food and poison counts or energies take effect now (level kept, sources resized)
-            self.world.resize_items(self.sim.food_per_screen())
-        self._persist_settings()
+            if self.on_live_change:
+                self.on_live_change()   # Food and poison counts or energies take effect now
+        self.persist()
 
-    def _settings_values(self):
+    def values(self):
         """The settings as they will be after the next restart (pending ones included)."""
         values = {name: self.pending.get(action, getattr(self.cfg, name)) for action, (name, _, _) in PARAMS.items()}
-        values["ACTIVE_PROFILES"] = list(self._profiles_shown())
+        values["ACTIVE_PROFILES"] = list(self.profiles_shown())
         return values
 
-    def _profiles_shown(self):
+    def profiles_shown(self):
         return self.cfg.ACTIVE_PROFILES if self.pending_profiles is None else self.pending_profiles
 
-    def _persist_settings(self):
+    def persist(self):
         """Keeps the settings chosen in the menu (pending ones included) for the next launch."""
-        save_settings(self._settings_values(), self.cfg)
+        save_settings(self.values(), self.cfg)
 
-    def _apply_pending(self):
+    def apply_pending(self):
         for action, value in self.pending.items():
             setattr(self.cfg, PARAMS[action][0], value)
         self.pending.clear()
@@ -84,9 +94,15 @@ class SettingsMixin(AppState):
             self.cfg.ACTIVE_PROFILES = list(self.pending_profiles)
             self.pending_profiles = None
 
-    def _toggle_profile(self, name):
+    def discard_pending(self):
+        """Cancels what waits for the next restart (species included)."""
+        self.pending.clear()
+        self.pending_profiles = None
+        self.persist()
+
+    def toggle_profile(self, name):
         """Tick or untick a species. At least one must stay. Back to the active list = nothing pending."""
-        current = list(self._profiles_shown())
+        current = list(self.profiles_shown())
         if name in current:
             if len(current) > 1:
                 current.remove(name)
@@ -94,41 +110,41 @@ class SettingsMixin(AppState):
             current.append(name)
         current = [p for p in PROFILES if p in current]
         self.pending_profiles = None if current == self.cfg.ACTIVE_PROFILES else current
-        self._persist_settings()
+        self.persist()
 
-    def _apply_preset(self):
+    def apply_preset(self):
         values = self.presets.load()
         if not values:
             return
         for action, (name, _, _) in PARAMS.items():
             if name in values:
-                self._apply_param(action, values[name])
+                self.apply_param(action, values[name])
         if values.get("ACTIVE_PROFILES"):
             wanted = [p for p in PROFILES if p in values["ACTIVE_PROFILES"]]
             self.pending_profiles = None if wanted == self.cfg.ACTIVE_PROFILES else wanted
-            self._persist_settings()
-        self.overlay.toast("Préréglage appliqué")
+            self.persist()
+        self.toast("Préréglage appliqué")
 
-    def _params_cancel(self):
+    def params_cancel(self):
         self.pending.clear()
-        self._persist_settings()
+        self.persist()
 
-    def _move_preset(self, step):
+    def move_preset(self, step):
         self.presets.refresh()
         self.presets.move(step)
 
-    def _save_preset(self):
-        self.overlay.toast(f"Préréglage enregistré : saves/presets/{self.presets.save(self._settings_values())}")
+    def save_preset(self):
+        self.toast(f"Préréglage enregistré : saves/presets/{self.presets.save(self.values())}")
 
-    def _cycle_param(self, key):
+    def cycle_param(self, key):
         """Menu click: next preset value (now, or at the next restart)."""
         name, steps, _ = PARAMS[key]
-        self._apply_param(key, next_step(steps, self.pending.get(key, getattr(self.cfg, name))))
+        self.apply_param(key, next_step(steps, self.pending.get(key, getattr(self.cfg, name))))
 
-    def _step_param(self, arg):
+    def step_param(self, arg):
         """Arrows of the settings panel ("dec:<key>" / "inc:<key>"): previous / next preset. Back to the value in force
         = nothing pending."""
         direction, key = arg.split(":")
         name, steps, _ = PARAMS[key]
         current = self.pending.get(key, getattr(self.cfg, name))
-        self._apply_param(key, prev_step(steps, current) if direction == "dec" else next_step(steps, current))
+        self.apply_param(key, prev_step(steps, current) if direction == "dec" else next_step(steps, current))
