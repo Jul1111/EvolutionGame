@@ -180,3 +180,32 @@ def test_food_follows_the_population():
     sim.update_food(config.FOOD_ADAPT_TICKS // 2)   # Moves toward the goal, not at once
     assert 15 < sim.food_level < level
     assert len(sim.world.foods) == sim.world._count(sim.food_level)
+
+
+def test_simulation_uses_its_own_settings_not_the_live_module():
+    """cfg=Settings(...) is honoured by the world, the creatures, the sensors and the batch computation, and later
+    changes of the config module do not reach a simulation that has its own settings."""
+    own = config.Settings(WORLD_SCALE=2, INITIAL_POPULATION=20, SIZE_MODE="fixe", POISON_COUNT=0)
+    sim = ContinuousSimulation(random.Random(3), cfg=own)
+    assert config.WORLD_SCALE == 1 and sim.world.width == 2 * config.SCREEN_WIDTH
+    assert all(c.body == 1.0 for c in sim.world.creatures) and len(sim.world.creatures) == 20
+    config.CREATURE_MAX_SPEED = 0.0   # Would freeze every creature if the module were read
+    config.POISON_COUNT = 50
+    for _ in range(30):
+        sim.step()
+    assert any(c.speed > 0 for c in sim.world.creatures) and not sim.world.poisons
+
+
+def test_two_simulations_with_different_settings_in_one_process():
+    a = ContinuousSimulation(random.Random(1), cfg=config.Settings(INITIAL_POPULATION=10, FOOD_COUNT=5))
+    b = ContinuousSimulation(random.Random(1), cfg=config.Settings(INITIAL_POPULATION=30, FOOD_COUNT=40))
+    assert len(a.world.creatures) == 10 and len(b.world.creatures) == 30
+    assert len(a.world.foods) < len(b.world.foods)
+
+
+def test_settings_rejects_unknown_names_and_derives_from_itself():
+    import pytest
+    with pytest.raises(AttributeError):
+        config.Settings(NOT_A_SETTING=1)
+    s = config.Settings(WORLD_SCALE=3)
+    assert s.WORLD_WIDTH == 3 * config.SCREEN_WIDTH and config.WORLD_WIDTH == config.SCREEN_WIDTH

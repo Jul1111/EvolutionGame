@@ -6,7 +6,8 @@ from brain.profiles import PROFILES
 
 class Creature:
     def __init__(self, x, y, angle, energy, brain, profile, uid=0, parent_id=None, birth_tick=0, lineage_gen=0,
-                 size=1.0):
+                 size=1.0, cfg=config):
+        self.cfg = cfg   # Settings in force (see self.cfg.Settings)
         self.x = float(x)
         self.y = float(y)
         self.angle = angle
@@ -44,11 +45,11 @@ class Creature:
         """Body gene. `body` is the size that acts (1 unless SIZE_MODE is "actif"); everything the body changes is
         computed here once: contact radius, energy reserve, base and moving costs."""
         self.size = size
-        self.body = size if config.SIZE_MODE == "actif" else 1.0
-        self.radius = config.CREATURE_RADIUS * self.body
-        self.energy_max = config.ENERGY_MAX * self.body
-        self.base_cost = config.ENERGY_BASE_COST * self.body ** config.SIZE_BASE_EXPONENT
-        self.move_cost = config.ENERGY_MOVE_COST * self.body
+        self.body = size if self.cfg.SIZE_MODE == "actif" else 1.0
+        self.radius = self.cfg.CREATURE_RADIUS * self.body
+        self.energy_max = self.cfg.ENERGY_MAX * self.body
+        self.base_cost = self.cfg.ENERGY_BASE_COST * self.body ** self.cfg.SIZE_BASE_EXPONENT
+        self.move_cost = self.cfg.ENERGY_MOVE_COST * self.body
 
     def update(self, inputs, world_width, world_height):
         if not self.alive:
@@ -71,12 +72,12 @@ class Creature:
             self.memory = [float(v) for v in outputs[first_memory:]]
 
         # Inertia: the network asks for a target speed, the speed moves toward it with limited acceleration
-        target_speed = (speed_command + 1.0) / 2.0 * config.CREATURE_MAX_SPEED
-        change = max(-config.CREATURE_ACCELERATION, min(config.CREATURE_ACCELERATION, target_speed - self.speed))
+        target_speed = (speed_command + 1.0) / 2.0 * self.cfg.CREATURE_MAX_SPEED
+        change = max(-self.cfg.CREATURE_ACCELERATION, min(self.cfg.CREATURE_ACCELERATION, target_speed - self.speed))
         self.speed += change
 
         # The faster the creature goes, the less it can turn
-        max_turn = config.CREATURE_MAX_TURN * (1.0 - config.TURN_SPEED_PENALTY * self.speed / config.CREATURE_MAX_SPEED)
+        max_turn = self.cfg.CREATURE_MAX_TURN * (1.0 - self.cfg.TURN_SPEED_PENALTY * self.speed / self.cfg.CREATURE_MAX_SPEED)
         self.angle = normalize_angle(self.angle + turn * max_turn)
 
         # Blind = no available food in view (food that was eaten is somewhere else when it comes back)

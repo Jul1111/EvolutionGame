@@ -10,6 +10,7 @@ the cone of vision and the obstacles. The hardened world (×2, 5 foods, 20 poiso
 ended every generation at ~2500 ticks with parents nearly still: see the README, section «Expériences».
 """
 import os
+import sys
 
 SCREEN_WIDTH = 1280
 SCREEN_HEIGHT = 720
@@ -141,14 +142,37 @@ OBSTACLE_COLOR = (92, 102, 112)
 # Values derived from others (WORLD_WIDTH from WORLD_SCALE…). They are computed when read, so they can never be out of
 # date after a setting changed: nothing to refresh. They are not module attributes, so they cannot be set or saved.
 DERIVED = {
-    "WORLD_WIDTH": lambda: round(SCREEN_WIDTH * WORLD_SCALE),
-    "WORLD_HEIGHT": lambda: round(SCREEN_HEIGHT * WORLD_SCALE),
-    "ENERGY_INPUT_MAX": lambda: ENERGY_MAX,   # Energy at which the network input saturates at 1.0 (= satiety)
-    "WINDOW_WIDTH": lambda: SCREEN_WIDTH + PANEL_WIDTH,
+    "WORLD_WIDTH": lambda c: round(c.SCREEN_WIDTH * c.WORLD_SCALE),
+    "WORLD_HEIGHT": lambda c: round(c.SCREEN_HEIGHT * c.WORLD_SCALE),
+    "ENERGY_INPUT_MAX": lambda c: c.ENERGY_MAX,   # Energy at which the network input saturates at 1.0 (= satiety)
+    "WINDOW_WIDTH": lambda c: c.SCREEN_WIDTH + c.PANEL_WIDTH,
 }
 
 
 def __getattr__(name):
     if name in DERIVED:
-        return DERIVED[name]()
+        return DERIVED[name](sys.modules[__name__])
     raise AttributeError(f"module 'config' has no attribute {name!r}")
+
+
+class Settings:
+    """A copy of the settings, with optional overrides: `Settings(FOOD_COUNT=3, WORLD_SCALE=2)`.
+
+    World and ContinuousSimulation take it as `cfg` (default: this module, the live settings): two simulations with
+    different settings can live in the same process, and a simulation is not affected by later changes of the module.
+    Anything with the same attribute names works as `cfg`."""
+
+    def __init__(self, **overrides):
+        module = sys.modules[__name__]
+        for name in dir(module):
+            if name.isupper() and name != "DERIVED":
+                setattr(self, name, getattr(module, name))
+        for name, value in overrides.items():
+            if name not in self.__dict__:
+                raise AttributeError(f"Unknown setting: {name}")
+            setattr(self, name, value)
+
+    def __getattr__(self, name):   # Only reached for names that are not attributes: the derived values
+        if name in DERIVED:
+            return DERIVED[name](self)
+        raise AttributeError(name)

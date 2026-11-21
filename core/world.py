@@ -12,19 +12,20 @@ from core.sensors import SENSORS
 from core.batch import decide_and_move
 
 class World:
-    def __init__(self, rng):
+    def __init__(self, rng, cfg=config):
         self.rng = rng
-        self.width = config.WORLD_WIDTH
-        self.height = config.WORLD_HEIGHT
+        self.cfg = cfg   # Settings in force (see self.cfg.Settings)
+        self.width = self.cfg.WORLD_WIDTH
+        self.height = self.cfg.WORLD_HEIGHT
         self.creatures = []
         # FOOD_COUNT, POISON_COUNT and OBSTACLE_COUNT are given per screen-sized area: a bigger world holds more
-        self.area_factor = self.width * self.height / (config.SCREEN_WIDTH * config.SCREEN_HEIGHT)
+        self.area_factor = self.width * self.height / (self.cfg.SCREEN_WIDTH * self.cfg.SCREEN_HEIGHT)
         # Obstacles first: food, poison and creatures are never placed inside one
         self.obstacles = self._make_obstacles()
-        reach = config.CREATURE_RADIUS + config.FOOD_RADIUS   # Far enough from an obstacle for a creature to touch it
-        self.foods = [Food(*self._free_position(reach), config.FOOD_ENERGY) for _ in range(self._count(config.FOOD_COUNT))]
+        reach = self.cfg.CREATURE_RADIUS + self.cfg.FOOD_RADIUS   # Far enough from an obstacle for a creature to touch it
+        self.foods = [Food(*self._free_position(reach), self.cfg.FOOD_ENERGY) for _ in range(self._count(self.cfg.FOOD_COUNT))]
         # Poison: same kind of object as food, but its `energy` is the damage. Seen through its own two inputs
-        self.poisons = [Food(*self._free_position(reach), config.POISON_ENERGY) for _ in range(self._count(config.POISON_COUNT))]
+        self.poisons = [Food(*self._free_position(reach), self.cfg.POISON_ENERGY) for _ in range(self._count(self.cfg.POISON_COUNT))]
         self.tick = 0
         self.blind_ticks = 0       # Ticks of life with no available food in view, speed and |turn| then (core/batch.py)
         self.blind_speed = 0.0
@@ -41,13 +42,13 @@ class World:
     def _make_obstacles(self):
         """Random obstacles (shapes from OBSTACLE_SHAPES), kept apart so that there is always room to pass between two."""
         obstacles = []
-        for _ in range(self._count(config.OBSTACLE_COUNT)):
+        for _ in range(self._count(self.cfg.OBSTACLE_COUNT)):
             for _attempt in range(100):
-                radius = self.rng.uniform(config.OBSTACLE_RADIUS_MIN, config.OBSTACLE_RADIUS_MAX)
+                radius = self.rng.uniform(self.cfg.OBSTACLE_RADIUS_MIN, self.cfg.OBSTACLE_RADIUS_MAX)
                 x, y = self.rng.uniform(0, self.width), self.rng.uniform(0, self.height)
                 if all(math.hypot(torus_delta(x, o.x, self.width), torus_delta(y, o.y, self.height))
-                       >= radius + o.radius + config.OBSTACLE_MIN_GAP for o in obstacles):
-                    shape = self.rng.choice(config.OBSTACLE_SHAPES)
+                       >= radius + o.radius + self.cfg.OBSTACLE_MIN_GAP for o in obstacles):
+                    shape = self.rng.choice(self.cfg.OBSTACLE_SHAPES)
                     obstacles.append(Obstacle(x, y, radius, shape, self.rng.uniform(0, 2 * math.pi)))
                     break   # No room found after 100 tries: this obstacle is skipped
         return obstacles
@@ -74,14 +75,14 @@ class World:
         """Where a food or a poison reappears: a random place outside the obstacles and at least SPAWN_CLEARANCE from
         the edge of every living creature (never on one, never right next to one). Returns False when no such place
         was found in 100 tries (crowded world): the item then waits one more tick and tries again."""
-        reach = config.CREATURE_RADIUS + config.FOOD_RADIUS
+        reach = self.cfg.CREATURE_RADIUS + self.cfg.FOOD_RADIUS
         living = [c for c in self.creatures if c.alive]
         n = len(living)
         if n:
             cx = np.fromiter((c.x for c in living), float, n)
             cy = np.fromiter((c.y for c in living), float, n)
-            keep = (np.fromiter((c.radius for c in living), float, n) + config.FOOD_RADIUS
-                    + config.SPAWN_CLEARANCE) ** 2
+            keep = (np.fromiter((c.radius for c in living), float, n) + self.cfg.FOOD_RADIUS
+                    + self.cfg.SPAWN_CLEARANCE) ** 2
         for _ in range(100):
             x, y = self.rng.uniform(0, self.width), self.rng.uniform(0, self.height)
             if self._blocked(x, y, reach):
@@ -159,7 +160,7 @@ class World:
         if m == 0:
             return
         radius, emax = body
-        reach2 = (radius + config.FOOD_RADIUS) ** 2   # One value per creature
+        reach2 = (radius + self.cfg.FOOD_RADIUS) ** 2   # One value per creature
         ix = np.fromiter((i.x for i in items), float, m)
         iy = np.fromiter((i.y for i in items), float, m)
         dx = (ix[:, None] - X[None, :] + self.width / 2) % self.width - self.width / 2
@@ -184,12 +185,12 @@ class World:
     def _eat(self, food, creature):
         creature.eat_food(food.energy)
         self.eaten += 1
-        food.cooldown = max(1, config.FOOD_RESPAWN_DELAY)   # Placed elsewhere when it comes back (_item_returns)
+        food.cooldown = max(1, self.cfg.FOOD_RESPAWN_DELAY)   # Placed elsewhere when it comes back (_item_returns)
 
     def _poisoned(self, poison, creature):
         creature.hit_by_poison(poison.energy)
         self.poisoned += 1
-        poison.cooldown = max(1, config.FOOD_RESPAWN_DELAY)   # Placed elsewhere when it comes back (_item_returns)
+        poison.cooldown = max(1, self.cfg.FOOD_RESPAWN_DELAY)   # Placed elsewhere when it comes back (_item_returns)
 
     def _collide_all(self, alive, X, Y):
         """Obstacle collisions: a numpy test finds, for each creature, the obstacles whose bounding circle it
@@ -230,10 +231,10 @@ class World:
         cx = np.fromiter((c.x for c in alive), float, n)
         cy = np.fromiter((c.y for c in alive), float, n)
         heading = np.fromiter((c.angle for c in alive), float, n)
-        range_ = config.VISION_RANGE
+        range_ = self.cfg.VISION_RANGE
         range2 = range_ ** 2
-        all_around = config.VISION_FOV_DEGREES >= 360
-        half_fov = math.radians(config.VISION_FOV_DEGREES) / 2.0
+        all_around = self.cfg.VISION_FOV_DEGREES >= 360
+        half_fov = math.radians(self.cfg.VISION_FOV_DEGREES) / 2.0
         rows = np.arange(n)
         food_seen = np.zeros(n, dtype=bool)
         for key in sorted(needed):
@@ -299,14 +300,14 @@ class World:
                 dx = torus_delta(creature.x, food.x, self.width)
                 dy = torus_delta(creature.y, food.y, self.height)
                 distance = math.hypot(dx, dy)
-                if distance < creature.radius + config.FOOD_RADIUS and distance - creature.radius < best_gap:
+                if distance < creature.radius + self.cfg.FOOD_RADIUS and distance - creature.radius < best_gap:
                     best_gap = distance - creature.radius
                     best = creature
 
             if best is not None:
                 best.eat_food(food.energy)
                 # The food comes back after a delay, at a new random place away from the creatures
-                food.cooldown = max(1, config.FOOD_RESPAWN_DELAY)
+                food.cooldown = max(1, self.cfg.FOOD_RESPAWN_DELAY)
 
         # Phase 3: poison. The closest creature touching it is hurt; the poison then moves to a new random place
         for poison in self.poisons:
@@ -321,12 +322,12 @@ class World:
                 dx = torus_delta(creature.x, poison.x, self.width)
                 dy = torus_delta(creature.y, poison.y, self.height)
                 distance = math.hypot(dx, dy)
-                if distance < creature.radius + config.FOOD_RADIUS and distance - creature.radius < best_gap:
+                if distance < creature.radius + self.cfg.FOOD_RADIUS and distance - creature.radius < best_gap:
                     best_gap = distance - creature.radius
                     victim = creature
             if victim is not None:
                 victim.hit_by_poison(poison.energy)
-                poison.cooldown = max(1, config.FOOD_RESPAWN_DELAY)
+                poison.cooldown = max(1, self.cfg.FOOD_RESPAWN_DELAY)
 
         self.tick += 1
 
@@ -334,10 +335,10 @@ class World:
         """Applies the food and poison counts (per screen) during the run: new items at free places, or the last ones
         removed. `food_per_screen`: the count of this moment (scarcer food, evolution/continuous.py), else FOOD_COUNT.
         Obstacles are only drawn when the world is created."""
-        reach = config.CREATURE_RADIUS + config.FOOD_RADIUS
-        food = config.FOOD_COUNT if food_per_screen is None else food_per_screen
-        for items, count, energy in ((self.foods, food, config.FOOD_ENERGY),
-                                     (self.poisons, config.POISON_COUNT, config.POISON_ENERGY)):
+        reach = self.cfg.CREATURE_RADIUS + self.cfg.FOOD_RADIUS
+        food = self.cfg.FOOD_COUNT if food_per_screen is None else food_per_screen
+        for items, count, energy in ((self.foods, food, self.cfg.FOOD_ENERGY),
+                                     (self.poisons, self.cfg.POISON_COUNT, self.cfg.POISON_ENERGY)):
             target = self._count(count)
             del items[target:]
             while len(items) < target:
@@ -351,17 +352,17 @@ class World:
     def add_creature(self, brain, profile, energy=None, near=None, **lineage):
         """Adds a creature at a random free place, or close to `near` = (x, y) (a newborn next to its parent).
         `lineage`: uid, parent_id, birth_tick, lineage_gen, size (see Creature)."""
-        margin = config.CREATURE_RADIUS * lineage.get("size", 1.0)
+        margin = self.cfg.CREATURE_RADIUS * lineage.get("size", 1.0)
         x, y = self._free_position(margin) if near is None else self._free_near(*near, margin)
         angle = self.rng.uniform(-math.pi, math.pi)
-        creature = Creature(x, y, angle, config.INITIAL_ENERGY if energy is None else energy, brain, profile,
-                            **lineage)
+        creature = Creature(x, y, angle, self.cfg.INITIAL_ENERGY if energy is None else energy, brain, profile,
+                            cfg=self.cfg, **lineage)
         self.creatures.append(creature)
         return creature
 
     def _free_near(self, x, y, margin=None):
         """Free position a few radii from (x, y); a random free place if the surroundings are blocked."""
-        margin = config.CREATURE_RADIUS if margin is None else margin
+        margin = self.cfg.CREATURE_RADIUS if margin is None else margin
         for _ in range(20):
             a = self.rng.uniform(-math.pi, math.pi)
             d = self.rng.uniform(2, 4) * margin
@@ -374,7 +375,7 @@ class World:
         """`count` creatures of the profile with random networks."""
         for _ in range(count):
             brain = new_brain(profile)
-            brain.randomize(self.rng, config.NN_INIT_STD)
+            brain.randomize(self.rng, self.cfg.NN_INIT_STD)
             self.add_creature(brain, profile)
 
     def nearest(self, creature, items):
@@ -382,11 +383,11 @@ class World:
         In view = within the vision range AND within VISION_FOV_DEGREES centred on the heading.
         in_view says whether an available item is in view. Also used by the debug overlay."""
         best = None
-        range2 = config.VISION_RANGE ** 2
+        range2 = self.cfg.VISION_RANGE ** 2
         best_distance2 = range2
         in_view = False
-        all_around = config.VISION_FOV_DEGREES >= 360
-        half_fov = math.radians(config.VISION_FOV_DEGREES) / 2.0
+        all_around = self.cfg.VISION_FOV_DEGREES >= 360
+        half_fov = math.radians(self.cfg.VISION_FOV_DEGREES) / 2.0
         for item in items:
             dx = torus_delta(creature.x, item.x, self.width)
             dy = torus_delta(creature.y, item.y, self.height)
@@ -415,7 +416,7 @@ class World:
         if found is None:
             return [1.0, 0.0]
         distance2, dx, dy = found
-        distance = math.sqrt(distance2) / config.VISION_RANGE
+        distance = math.sqrt(distance2) / self.cfg.VISION_RANGE
         angle = normalize_angle(math.atan2(dy, dx) - creature.angle) / math.pi
         return [distance, angle]
 

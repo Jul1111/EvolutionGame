@@ -15,7 +15,6 @@ from collections import namedtuple
 
 import numpy as np
 
-import config
 
 Sensor = namedtuple("Sensor", ["labels", "fn", "needs", "vec"])
 
@@ -30,7 +29,7 @@ def nearest_of(kind):
     def vec(world, g):
         d2, dx, dy = g["near"][kind]
         seen = np.isfinite(d2)
-        distance = np.where(seen, np.sqrt(np.where(seen, d2, 0.0)) / config.VISION_RANGE, 1.0)
+        distance = np.where(seen, np.sqrt(np.where(seen, d2, 0.0)) / world.cfg.VISION_RANGE, 1.0)
         rel = (np.arctan2(dy, dx) - g["angle"] + math.pi) % (2 * math.pi) - math.pi
         return np.stack([distance, np.where(seen, rel / math.pi, 0.0)], axis=1)
     return fn, vec
@@ -45,20 +44,20 @@ def _energy_v(world, g):
 
 
 def _speed(world, c, ctx):
-    return [c.speed / config.CREATURE_MAX_SPEED]
+    return [c.speed / world.cfg.CREATURE_MAX_SPEED]
 
 
 def _speed_v(world, g):
-    return (g["speed"] / config.CREATURE_MAX_SPEED)[:, None]
+    return (g["speed"] / world.cfg.CREATURE_MAX_SPEED)[:, None]
 
 
 def _can_eat(world, c, ctx):
     # 1.0 if a meal would fit (same rule as the food phase), else 0.0
-    return [1.0 if c.energy + config.FOOD_ENERGY <= c.energy_max else 0.0]
+    return [1.0 if c.energy + world.cfg.FOOD_ENERGY <= c.energy_max else 0.0]
 
 
 def _can_eat_v(world, g):
-    return (g["energy"] + config.FOOD_ENERGY <= g["energy_max"]).astype(float)[:, None]
+    return (g["energy"] + world.cfg.FOOD_ENERGY <= g["energy_max"]).astype(float)[:, None]
 
 
 def _compass(world, c, ctx):
@@ -80,11 +79,11 @@ def _touch_v(world, g):
 def _hunger(world, c, ctx):
     # Time since it last saw an available food, 0 → 1 over HUNGER_SCALE ticks. The only input that keeps changing
     # when nothing is in view: lets evolution find «the longer I see nothing, the more I move»
-    return [min(1.0, c.unseen_ticks / config.HUNGER_SCALE)]
+    return [min(1.0, c.unseen_ticks / world.cfg.HUNGER_SCALE)]
 
 
 def _hunger_v(world, g):
-    return np.minimum(1.0, g["unseen"] / config.HUNGER_SCALE)[:, None]
+    return np.minimum(1.0, g["unseen"] / world.cfg.HUNGER_SCALE)[:, None]
 
 
 def _noise(world, c, ctx):

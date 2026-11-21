@@ -32,15 +32,16 @@ SAMPLE_HEADER = ["tick", "population", "births", "deaths_hunger", "deaths_age", 
 
 class ContinuousSimulation:
     def __init__(self, rng, timeline_path=None, founders=None, verbose=False, start_tick=0, append=False,
-                 log_deaths=False):
+                 log_deaths=False, cfg=config):
         """`founders`: {profile: [(genome, size)]} to start from a saved population (load_population); else random founders
-        of config.ACTIVE_PROFILES. `start_tick` and `append`: resume a saved run, adding to its timeline.csv."""
+        of cfg.ACTIVE_PROFILES. `start_tick` and `append`: resume a saved run, adding to its timeline.csv."""
+        self.cfg = cfg   # Settings in force (see config.Settings); the live module by default
         self.rng = rng
         self.verbose = verbose
         self.timeline_path = timeline_path
-        self.world = World(rng)
+        self.world = World(rng, cfg)
         self.world.tick = start_tick
-        self.food_level = config.FOOD_COUNT   # Food per screen now (follows the population, see food_goal)
+        self.food_level = self.cfg.FOOD_COUNT   # Food per screen now (follows the population, see food_goal)
         self.next_uid = 0
         self.extinct = False
         self.total_births = 0
@@ -48,7 +49,7 @@ class ContinuousSimulation:
         # log_deaths=True: one record per death (tick, age, mean speed over its life, children, meals, cause)
         self.death_log = [] if log_deaths else None
         self._reset_counters()
-        profiles = list(founders) if founders else list(config.ACTIVE_PROFILES)
+        profiles = list(founders) if founders else list(self.cfg.ACTIVE_PROFILES)
         self.species = profiles
         self.header = SAMPLE_HEADER + [f"pop__{p}" for p in profiles]
         for index, name in enumerate(profiles):
@@ -56,11 +57,11 @@ class ContinuousSimulation:
                 for genome, size in founders[name]:
                     brain = new_brain(name)
                     brain.set_genome(genome)
-                    self._add(brain, name, size=size if config.SIZE_MODE != "fixe" else 1.0)
+                    self._add(brain, name, size=size if self.cfg.SIZE_MODE != "fixe" else 1.0)
             else:
-                for _ in range(_share(config.INITIAL_POPULATION, index, len(profiles))):
+                for _ in range(_share(self.cfg.INITIAL_POPULATION, index, len(profiles))):
                     brain = new_brain(name)
-                    brain.randomize(rng, config.NN_INIT_STD)
+                    brain.randomize(rng, self.cfg.NN_INIT_STD)
                     self._add(brain, name)
         if timeline_path and append and os.path.exists(timeline_path):
             self.header = _upgrade_header(timeline_path, self.header)
@@ -82,7 +83,7 @@ class ContinuousSimulation:
         living = [c for c in world.creatures if c.alive]
         self.life_ticks += len(living)
         for c in living:
-            if config.AGE_MAX and c.age >= config.AGE_MAX:
+            if self.cfg.AGE_MAX and c.age >= self.cfg.AGE_MAX:
                 c.alive = False
                 c.death_cause = "vieillesse"
         for parent in [c for c in living if c.alive and self._can_give_birth(c)]:
@@ -101,11 +102,11 @@ class ContinuousSimulation:
                                            "children": c.children, "food": c.food_eaten,
                                            "lineage_gen": c.lineage_gen, "cause": c.death_cause})
         world.creatures = [c for c in world.creatures if c.alive]
-        if world.tick % config.SAMPLE_TICKS == 0:
+        if world.tick % self.cfg.SAMPLE_TICKS == 0:
             self._sample()
         if not world.creatures:
             self.extinct = True
-            if self.world.tick % config.SAMPLE_TICKS:
+            if self.world.tick % self.cfg.SAMPLE_TICKS:
                 self._sample()   # Last line: the extinction itself
         return not self.extinct
 
@@ -113,11 +114,11 @@ class ContinuousSimulation:
         """Food per screen that the population calls for right now: FOOD_COUNT with no creature, FOOD_COUNT_MIN from
         FOOD_PRESSURE_POP living creatures born in this world on, a straight line in between. Big, thriving population → scarce food;
         collapse → food comes back."""
-        hi, lo = config.FOOD_COUNT, config.FOOD_COUNT_MIN
+        hi, lo = self.cfg.FOOD_COUNT, self.cfg.FOOD_COUNT_MIN
         # Only creatures born in this world count: the founders (random, or loaded) mostly die in the first bottleneck,
         # the food must not get scarce because of them
         born = sum(1 for c in self.world.creatures if c.lineage_gen > 0)
-        pressure = min(1.0, born / max(1, config.FOOD_PRESSURE_POP))
+        pressure = min(1.0, born / max(1, self.cfg.FOOD_PRESSURE_POP))
         return hi + (lo - hi) * pressure
 
     def food_per_screen(self):
@@ -128,22 +129,22 @@ class ContinuousSimulation:
         """Moves the food level toward food_goal() (`ticks` since the last update; None = jump to the goal) and
         adjusts the number of food sources. Called every FOOD_UPDATE_TICKS, and when a setting changes."""
         goal = self.food_goal()
-        if ticks is None or config.FOOD_ADAPT_TICKS <= 0:
+        if ticks is None or self.cfg.FOOD_ADAPT_TICKS <= 0:
             self.food_level = goal
         else:
-            self.food_level += (goal - self.food_level) * min(1.0, ticks / config.FOOD_ADAPT_TICKS)
+            self.food_level += (goal - self.food_level) * min(1.0, ticks / self.cfg.FOOD_ADAPT_TICKS)
         if self.world._count(self.food_level) != len(self.world.foods):
             self.world.resize_items(self.food_level)
 
     @property
     def pop_max(self):
         """Computing cap: POP_MAX creatures in the whole world, whatever its size (not scaled like food and obstacles)."""
-        return config.POP_MAX
+        return self.cfg.POP_MAX
 
     @property
     def new_sample(self):
         """True on the tick a line was just added to timeline.csv."""
-        return self.world.tick % config.SAMPLE_TICKS == 0 or self.extinct
+        return self.world.tick % self.cfg.SAMPLE_TICKS == 0 or self.extinct
 
     def descendant_of(self, creature):
         """A living descendant of `creature` (youngest child first, then grandchildren...), or None."""
@@ -168,16 +169,16 @@ class ContinuousSimulation:
 
     def _can_give_birth(self, c):
         # Threshold, cost and energy of the newborn scale with the body: a small creature has a small reserve
-        return (c.energy >= config.REPRO_THRESHOLD * c.body and c.age >= config.MATURITY_AGE
-                and (c.last_birth_age is None or c.age - c.last_birth_age >= config.REPRO_COOLDOWN))
+        return (c.energy >= self.cfg.REPRO_THRESHOLD * c.body and c.age >= self.cfg.MATURITY_AGE
+                and (c.last_birth_age is None or c.age - c.last_birth_age >= self.cfg.REPRO_COOLDOWN))
 
     def _give_birth(self, parent):
-        parent.energy -= config.REPRO_COST * parent.body
+        parent.energy -= self.cfg.REPRO_COST * parent.body
         parent.last_birth_age = parent.age
         parent.children += 1
         brain = new_brain(parent.profile)
-        brain.set_genome(mutate(parent.brain.get_genome(), self.rng, config.MUTATION_STD))
-        child = self._add(brain, parent.profile, energy=config.REPRO_CHILD_ENERGY * parent.body,
+        brain.set_genome(mutate(parent.brain.get_genome(), self.rng, self.cfg.MUTATION_STD))
+        child = self._add(brain, parent.profile, energy=self.cfg.REPRO_CHILD_ENERGY * parent.body,
                           near=(parent.x, parent.y), parent_id=parent.uid, lineage_gen=parent.lineage_gen + 1,
                           size=self._child_size(parent.size))
         child.energy = min(child.energy, child.energy_max)
@@ -186,10 +187,10 @@ class ContinuousSimulation:
 
     def _child_size(self, size):
         """Body gene of a newborn: the parent's, times a random factor (mutation), kept in [SIZE_MIN, SIZE_MAX]."""
-        if config.SIZE_MODE == "fixe":
+        if self.cfg.SIZE_MODE == "fixe":
             return 1.0
-        size *= math.exp(self.rng.gauss(0.0, config.SIZE_MUTATION_STD))
-        return min(config.SIZE_MAX, max(config.SIZE_MIN, size))
+        size *= math.exp(self.rng.gauss(0.0, self.cfg.SIZE_MUTATION_STD))
+        return min(self.cfg.SIZE_MAX, max(self.cfg.SIZE_MIN, size))
 
     def _add(self, brain, profile, **kwargs):
         c = self.world.add_creature(brain, profile, uid=self.next_uid, birth_tick=self.world.tick, **kwargs)

@@ -8,7 +8,6 @@ import math
 
 import numpy as np
 
-import config
 from brain.profiles import PROFILES
 from core.sensors import SENSORS
 
@@ -81,10 +80,10 @@ def _move(world, cs, g, out, spec, food_d2):
         command, first_memory = out[:, 1], 2
     else:
         command, first_memory = np.full(len(cs), float(spec["fixed_speed"])), 1
-    max_speed = config.CREATURE_MAX_SPEED
+    max_speed = world.cfg.CREATURE_MAX_SPEED
     target = (command + 1.0) / 2.0 * max_speed
-    speed = g["speed"] + np.clip(target - g["speed"], -config.CREATURE_ACCELERATION, config.CREATURE_ACCELERATION)
-    max_turn = config.CREATURE_MAX_TURN * (1.0 - config.TURN_SPEED_PENALTY * speed / max_speed)
+    speed = g["speed"] + np.clip(target - g["speed"], -world.cfg.CREATURE_ACCELERATION, world.cfg.CREATURE_ACCELERATION)
+    max_turn = world.cfg.CREATURE_MAX_TURN * (1.0 - world.cfg.TURN_SPEED_PENALTY * speed / max_speed)
     angle = (g["angle"] + turn * max_turn + math.pi) % (2 * math.pi) - math.pi
     xs = (np.fromiter((c.x for c in cs), float, len(cs)) + speed * np.cos(angle)) % world.width
     ys = (np.fromiter((c.y for c in cs), float, len(cs)) + speed * np.sin(angle)) % world.height
