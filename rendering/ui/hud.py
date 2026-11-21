@@ -34,10 +34,10 @@ class Hud:
         self.chart_keys = set(DEFAULT_SERIES)   # Curves shown (menu Courbes)
         self.layout = None
         self.profiles = list(config.ACTIVE_PROFILES)        # Species in the world
-        self.timeline_path = None   # timeline.csv of the running simulation (set by app.py)
+        self.timeline_path = None   # timeline.csv of the running simulation (set by app/)
         self.rows = []
         self.visible = True    # Tab hides every panel (clean view of the world)
-        self.lineage = None    # LineageTracker of the scene (set by app.py)
+        self.lineage = None    # LineageTracker of the scene (set by app/)
 
     # ---------- layout ----------
 

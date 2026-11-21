@@ -1,6 +1,6 @@
 """Start menu, shown at launch over the blurred world: Continuer (the population kept when the game was closed),
 Charger (a population saved by hand), Nouvelle simulation (settings screen), Quitter.
-It only reads the save files and returns action names; app.py runs them."""
+It only reads the save files and returns action names; app/ runs them."""
 import os
 import time
 
