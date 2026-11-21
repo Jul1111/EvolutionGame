@@ -1,6 +1,7 @@
 """Commands: every action from the keyboard or from the menus goes through App.do(), a table of handlers."""
 from functools import partial
 
+from app.state import AppState
 import pygame
 
 import config
@@ -22,7 +23,7 @@ KEYS = {pygame.K_UP: "speed_up", pygame.K_DOWN: "speed_down", pygame.K_d: "debug
         pygame.K_TAB: "panels", pygame.K_m: "minimap", pygame.K_e: "effects"}
 
 
-class CommandsMixin:
+class CommandsMixin(AppState):
     def _cycle_panel(self, big_attr, shown_attr, toggle):
         """Hidden → small (side bar) → large (over the world) → hidden, for the curves and the network view."""
         if getattr(self.overlay, big_attr):

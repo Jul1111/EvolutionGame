@@ -1,4 +1,5 @@
 """Life of a session: new simulation, resume, save and load of populations, start menu and setup screen."""
+from app.state import AppState
 import os
 import time
 
@@ -10,7 +11,7 @@ from rendering.ui.startmenu import StartMenu
 from utils.timefmt import format_time
 
 
-class SessionMixin:
+class SessionMixin(AppState):
     def _new_sim(self, founders=None, start_tick=0, append=False):
         return ContinuousSimulation(self.rng, self.timeline, founders=founders, start_tick=start_tick, append=append)
 

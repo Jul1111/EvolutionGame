@@ -96,10 +96,6 @@ class App(SettingsMixin, SessionMixin, CommandsMixin, EventsMixin, FrameMixin):
         self.last_saved = latest_snapshot()
         self._build_commands()
 
-    @property
-    def world(self):
-        return self.sim.world
-
     def close(self):
         """End of the session: keeps the population for the next launch, closes the window."""
         self._save_on_exit()

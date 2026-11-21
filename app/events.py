@@ -1,4 +1,5 @@
 """Events: window layout, keyboard and mouse."""
+from app.state import AppState
 import pygame
 
 from rendering.ui.layout import compute_layout
@@ -6,7 +7,7 @@ from rendering.world.scene import pick_creature
 from app.commands import KEYS
 
 
-class EventsMixin:
+class EventsMixin(AppState):
     def _update_layout(self):
         """Recomputes the layout when the window changed. Returns True when it did not change (drawing can go on)."""
         window = self.display.surface()

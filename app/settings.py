@@ -1,4 +1,5 @@
 """Settings editable from the menu: which ones, how they cycle, when they apply, and their persistence."""
+from app.state import AppState
 import config
 from brain.profiles import PROFILES
 from utils.settings import save_settings
@@ -47,7 +48,7 @@ def prev_step(steps, current):
     return next((v for v in reversed(steps) if v < current - 1e-9), steps[-1])
 
 
-class SettingsMixin:
+class SettingsMixin(AppState):
     def _apply_param(self, key, value):
         """Setting changed in the menu: now, or at the next restart for RESTART_PARAMS (or for every setting while
         the setup screen is open: nothing runs yet)."""

@@ -1,4 +1,5 @@
 """One frame: simulation ticks within the time budget, selection following, drawing, and the main loop."""
+from app.state import AppState
 import os
 import time
 
@@ -13,7 +14,7 @@ from utils.timefmt import format_time
 from app.settings import PARAMS
 
 
-class FrameMixin:
+class FrameMixin(AppState):
     def _follow_selection(self):
         """After a tick: records the trail, and when the selected creature died, moves to its heir (T) or to the new
         best one (B)."""
