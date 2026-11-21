@@ -111,3 +111,12 @@ def test_batched_update_matches_reference_for_every_species():
         assert abs(torus_delta(a.x, b.x, fast.width)) < 1e-6 and abs(torus_delta(a.y, b.y, fast.height)) < 1e-6
         assert abs(a.energy - b.energy) < 1e-6 and a.unseen_ticks == b.unseen_ticks
         assert all(abs(m - n) < 1e-6 for m, n in zip(a.memory, b.memory))
+
+
+def test_derived_config_follows_its_sources():
+    """WORLD_WIDTH and the like are computed when read: nothing to refresh after a setting changed."""
+    config.WORLD_SCALE = 2
+    assert config.WORLD_WIDTH == 2 * config.SCREEN_WIDTH and config.WORLD_HEIGHT == 2 * config.SCREEN_HEIGHT
+    config.ENERGY_MAX = 123.0
+    assert config.ENERGY_INPUT_MAX == 123.0
+    assert "WORLD_WIDTH" not in dir(config)   # Not a module attribute: it cannot be set by mistake or saved

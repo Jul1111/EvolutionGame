@@ -25,8 +25,6 @@ DEAD_COLOR = (90, 90, 90)
 WORLD_SCALE = 1             # Side of the world in screens (a screen = SCREEN_WIDTH x SCREEN_HEIGHT). 2 = 4 times the area,
                             # food, obstacles and computing cap included (not the founders); about 4 times slower once the
                             # population has grown. The view opens at the scale of one screen. Menu Paramètres, next restart
-WORLD_WIDTH = round(SCREEN_WIDTH * WORLD_SCALE)
-WORLD_HEIGHT = round(SCREEN_HEIGHT * WORLD_SCALE)
 # FOOD_COUNT, POISON_COUNT and OBSTACLE_COUNT are given per screen-sized area: the world holds WORLD_SCALE² times more
 
 # Configuration for food
@@ -61,7 +59,6 @@ SIM_MIN_BUDGET_MS = 4      # ...but always at least this much per frame, however
 # Configuration for senses
 VISION_RANGE = 200          # Maximum distance at which a creature sees food
 VISION_FOV_DEGREES = 120    # Field of view, centred on the heading. 360 = sees all around (the former behaviour). Starting value, to tune
-ENERGY_INPUT_MAX = ENERGY_MAX  # Energy at which the network input saturates at 1.0 (= satiety, so the input covers the full range)
 
 # Configuration for variable speed
 CREATURE_MAX_SPEED = 4.0
@@ -120,7 +117,6 @@ DEBUG_LINK_COLOR = (150, 235, 200)
 HUD_PANEL_COLOR = (25, 31, 37, 255)
 SIDEBAR_BG_COLOR = (15, 18, 22)
 PANEL_WIDTH = 320                    # Side bar on the right of the world view
-WINDOW_WIDTH = SCREEN_WIDTH + PANEL_WIDTH
 TRAIL_LENGTH = 600                   # Ticks of trajectory kept for the selected creature
 HUD_LABEL_COLOR = (150, 165, 170)
 HUD_VALUE_COLOR = (235, 240, 240)
@@ -142,10 +138,17 @@ OBSTACLE_MIN_GAP = 30       # Minimum free space between two obstacles (a creatu
 OBSTACLE_COLOR = (92, 102, 112)
 
 
-def refresh_derived():
-    """Recomputes the values derived from others. Call after changing WORLD_SCALE, SCREEN_* or ENERGY_MAX at run time."""
-    global WORLD_WIDTH, WORLD_HEIGHT, ENERGY_INPUT_MAX, WINDOW_WIDTH
-    WORLD_WIDTH = round(SCREEN_WIDTH * WORLD_SCALE)
-    WORLD_HEIGHT = round(SCREEN_HEIGHT * WORLD_SCALE)
-    ENERGY_INPUT_MAX = ENERGY_MAX
-    WINDOW_WIDTH = SCREEN_WIDTH + PANEL_WIDTH
+# Values derived from others (WORLD_WIDTH from WORLD_SCALE…). They are computed when read, so they can never be out of
+# date after a setting changed: nothing to refresh. They are not module attributes, so they cannot be set or saved.
+DERIVED = {
+    "WORLD_WIDTH": lambda: round(SCREEN_WIDTH * WORLD_SCALE),
+    "WORLD_HEIGHT": lambda: round(SCREEN_HEIGHT * WORLD_SCALE),
+    "ENERGY_INPUT_MAX": lambda: ENERGY_MAX,   # Energy at which the network input saturates at 1.0 (= satiety)
+    "WINDOW_WIDTH": lambda: SCREEN_WIDTH + PANEL_WIDTH,
+}
+
+
+def __getattr__(name):
+    if name in DERIVED:
+        return DERIVED[name]()
+    raise AttributeError(f"module 'config' has no attribute {name!r}")

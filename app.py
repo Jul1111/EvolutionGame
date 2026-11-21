@@ -125,7 +125,6 @@ class App:
 
         # Settings chosen in an earlier session replace the values of config.py (saves/settings.json)
         restored = load_settings({name for name, _, _ in PARAMS.values()} | {"ACTIVE_PROFILES"})
-        config.refresh_derived()   # WORLD_SCALE may come from settings.json: world size, then the zoom limits
         self.scene.world_changed()
         if restored:
             print("Réglages du menu repris : " + ", ".join(f"{n} {old} → {new}" for n, (old, new) in restored.items())
@@ -173,7 +172,6 @@ class App:
         """New population: random founders of the ticked species, or a saved population (founders)."""
         old_scale = config.WORLD_SCALE
         self._apply_pending()
-        config.refresh_derived()
         if config.WORLD_SCALE != old_scale:
             self.scene.world_changed()
         self._archive_timeline()
@@ -185,7 +183,6 @@ class App:
         if not founders:
             return False
         self._apply_pending()
-        config.refresh_derived()
         self.scene.world_changed()
         self._begin(self._new_sim(founders, start_tick=tick, append=True), list(founders))
         self.overlay.toast(f"Population reprise : {len(self.world.creatures)} créatures, temps {format_time(tick)}")

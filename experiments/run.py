@@ -48,7 +48,6 @@ def apply_overrides(overrides):
         if isinstance(default, float) and isinstance(value, int) and not isinstance(value, bool):
             value = float(value)
         setattr(config, name, value)
-    config.refresh_derived()
 
 
 def run_seed(seed, out_dir, overrides, ticks, profiles, population_file):
@@ -109,7 +108,7 @@ def main(argv=None):
     meta = {"name": args.name, "ticks": args.ticks, "from_population": args.from_population,
             "command": " ".join(sys.argv), "git": git_state(), "seeds": args.seeds, "profiles": list(profiles),
             "overrides": overrides,
-            "config": {n: getattr(config, n) for n in dir(config) if n.isupper() and n != "SAVE_DIR"
+            "config": {n: getattr(config, n) for n in [*dir(config), *config.DERIVED] if n.isupper() and n != "SAVE_DIR"
                        and isinstance(getattr(config, n), (int, float, str, bool, list, tuple))}}
     with open(os.path.join(out_dir, "run.json"), "w", encoding="utf-8") as f:
         json.dump(meta, f, indent=2, ensure_ascii=False)
