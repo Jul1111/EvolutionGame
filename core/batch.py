@@ -5,6 +5,7 @@ tests/test_world.py), but computed with numpy, one species at a time for the net
 simulation time went (a Python call per creature per tick).
 """
 import math
+from typing import Any
 
 import numpy as np
 
@@ -24,7 +25,7 @@ def _group(cs, rows, near):
             "near": {k: (d2[rows], dx[rows], dy[rows]) for k, (d2, dx, dy) in near.items()}}
 
 
-_stacks = {}   # species → (the brains, stacked weights): rebuilt only when the members change
+_stacks: dict[str, Any] = {}   # species → (the brains, stacked weights): rebuilt only when the members change
 
 
 def _weights(name, cs):

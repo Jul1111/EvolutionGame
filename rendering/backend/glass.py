@@ -8,7 +8,7 @@ TINT = (14, 18, 24)      # Colour of the glass
 ALPHA = 150              # How dark the glass is (0 = clear, 255 = opaque)
 EDGE = (64, 72, 82)      # Thin light edge
 BLUR = 8                 # Shrink factor: higher = blurrier (and cheaper)
-_corner_masks = {}
+_corner_masks: dict[int, pygame.Surface] = {}
 gpu = None               # Set by rendering/backend/display.py when the graphics card draws (rendering/backend/gpu.py)
 
 

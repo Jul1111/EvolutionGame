@@ -32,6 +32,7 @@ pip install -r requirements-dev.txt
 python main.py          # lancer la simulation
 python -m pytest        # tests (~ 20 s)
 python -m pytest --cov  # + couverture (échoue sous 80 %)
+mypy .                  # types (mode standard)
 ```
 
 Lancer une expérience sans affichage :

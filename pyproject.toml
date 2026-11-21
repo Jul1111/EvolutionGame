@@ -8,7 +8,7 @@ license = { file = "LICENSE" }
 dependencies = ["numpy>=2.2", "pygame-ce>=2.5.8"]
 
 [project.optional-dependencies]
-dev = ["pytest>=8", "pytest-cov>=5", "ruff>=0.6"]
+dev = ["pytest>=8", "pytest-cov>=5", "ruff>=0.6", "mypy>=1.10"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -33,3 +33,7 @@ omit = ["tests/*", ".venv/*", "graphify-out/*"]
 skip_covered = true
 show_missing = true
 fail_under = 80   # Safety net: current coverage is ~83%, a drop below means a new feature without tests
+
+[tool.mypy]
+ignore_missing_imports = true   # pygame-ce and numpy are only partly typed
+exclude = ["graphify-out", ".venv"]

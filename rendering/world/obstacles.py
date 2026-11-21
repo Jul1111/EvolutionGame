@@ -5,6 +5,7 @@ Pure rendering. No simulation random number is drawn: each anemone has its own p
 its own radius and rotation, so the picture is fixed for a given obstacle."""
 import math
 import random
+from typing import Any
 
 import numpy as np
 import pygame
@@ -26,7 +27,7 @@ SS = 2                                          # Tentacles are drawn 2x bigger 
 SHADOW_OFFSET = (0.04, 0.07)
 SHADOW_BLUR = 0.50
 SHADOW_STRENGTH = 0.22
-_cache = {}
+_cache: dict[Any, Any] = {}
 _state = {"tick": -1, "builds": 0}
 
 
@@ -149,7 +150,7 @@ def _make_tentacles(o, k, rng):
     return specs
 
 
-_color_cache = {}
+_color_cache: dict[Any, Any] = {}
 
 
 def _segment_colors(pal, layer, steps):
@@ -236,7 +237,8 @@ def _entry(o, k):
 
 
 SETTLE_MS = 180   # New pictures are only built once the zoom has stopped changing for this long
-_latest = {}   # (shape, radius, rotation) → last entry with built frames, used while another zoom level is built
+# (shape, radius, rotation) → last entry with built frames, used while another zoom level is built
+_latest: dict[Any, Any] = {}
 
 
 def _bucket(k):

@@ -33,4 +33,5 @@ Les couleurs et la largeur du panneau latéral ne sont pas des réglages : elles
 - **Langue.** Le code est en anglais : noms, commentaires, docstrings, messages d'erreur. Le français est pour ce que le joueur ou le lecteur voit : textes de l'interface (`rendering/ui/overlay/texts.py`, menus, bulles d'aide), documentation (`README.md`, `docs/`) et messages de commit.
 - **Style.** `ruff check .` doit passer (lignes de 120 colonnes au plus). La CI le lance avant les tests. Pas de reformatage automatique du code existant.
 - **Tests.** `python -m pytest` (environ 20 s) ; `--cov` ajoute la couverture, que la CI exige à 80 % minimum. Le rendu est testé sans écran (`SDL_VIDEODRIVER=dummy`, déjà réglé dans `tests/conftest.py`) : `tests/test_rendering.py` dessine tous les panneaux, vues et espèces. Un nouveau panneau ou une nouvelle vue s'y ajoute en quelques lignes.
+- **Types.** `mypy .` (réglé dans `pyproject.toml`, passé par la CI). Les annotations des attributs de `App` sont dans `app/state.py`.
 - **Commits.** Un commit par modification, pour que l'historique se lise comme le journal du projet.
