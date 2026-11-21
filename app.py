@@ -7,6 +7,7 @@ import os
 import random
 import time
 from collections import deque
+from functools import partial
 
 import pygame
 
@@ -149,6 +150,7 @@ class App:
         self.overlay.start = StartMenu(autosave_path() if config.LOAD_ON_START else None, populations_dir())
         self.hud.reload_stats(sorted({c.profile for c in self.world.creatures}, key=list(PROFILES).index))
         self.last_saved = latest_snapshot()
+        self._build_commands()
 
     @property
     def world(self):
@@ -284,153 +286,220 @@ class App:
         self.trail.clear()
         self.cam_follow = True
 
+    # Every command, from the keyboard or from the menus, goes through do(): a name looked up in a table of handlers.
+    # A handler returns True to keep the menu open (to click again, or to pick several curves), else nothing.
+
+    def _build_commands(self):
+        hud, overlay, scene, display = self.hud, self.overlay, self.scene, self.display
+        toggle, keep_open = self._toggle, self._keep_open
+        self._commands = {
+            # Speed and view
+            "speed_up": partial(self._change_speed, +1),
+            "speed_down": partial(self._change_speed, -1),
+            "pause": self._pause,
+            "step": self._step,
+            "fullscreen": display.toggle_fullscreen,
+            "zoom_in": partial(self._zoom, 1.25),
+            "zoom_out": partial(self._zoom, 0.8),
+            "view_fit": scene.view_all,
+            "view_screen": scene.view_screen,
+            "cam_follow": partial(toggle, self, "cam_follow"),
+            "cam_follow_off": partial(setattr, self, "cam_follow", False),   # The mini-map moved the view by hand
+            # What is shown
+            "debug": self._cycle_debug,
+            "color": scene.cycle_color_mode,
+            "chart": partial(self._cycle_panel, "chart_big", "show_chart", hud.toggle_chart),
+            "graph": partial(self._cycle_panel, "net_big", "show_graph", hud.toggle_graph),
+            "panels": partial(toggle, hud, "visible"),
+            "minimap": partial(toggle, overlay.minimap, "enabled"),
+            "effects": partial(toggle, scene.effects, "enabled"),
+            "legend": partial(toggle, overlay, "legend_open"),
+            "help": partial(toggle, overlay, "help_open"),
+            "series_default": keep_open(hud.reset_series),
+            # Selection
+            "best": self._best,
+            "follow": self._follow,
+            # Settings panel and presets
+            "params_panel": partial(toggle, overlay, "params_open"),
+            "params_close": partial(setattr, overlay, "params_open", False),
+            "params_cancel": self._params_cancel,
+            "preset_prev": keep_open(partial(self._move_preset, -1)),
+            "preset_next": keep_open(partial(self._move_preset, +1)),
+            "preset_save": keep_open(self._save_preset),
+            "preset_apply": keep_open(self._apply_preset),
+            # Populations
+            "restart_now": self._restart_random,
+            "save_pop": self._save_population,
+            "load_pop": self._load_last_population,
+            # Start menu and setup screen
+            "start_continue": self._start_continue,
+            "start_load_list": self._open_load_list,
+            "start_back": self._start_back,
+            "start_new": self._start_new,
+            "reset": partial(self._open_setup, can_cancel=True),
+            "setup_launch": self._setup_launch,
+            "setup_resume": self._setup_resume,
+            "setup_cancel": self._setup_cancel,
+            "quit": partial(setattr, self, "running", False),
+            # A setting of the menu: next preset value (now, or at the next restart)
+            **{key: keep_open(partial(self._cycle_param, key)) for key in PARAMS},
+        }
+        # Commands with an argument after the prefix ("profile:complet")
+        self._prefixed = {
+            "profile:": keep_open(self._toggle_profile),
+            "param:": keep_open(self._step_param),
+            "series:": keep_open(hud.toggle_series),
+            "start_load:": self._start_load,
+        }
+
+    @staticmethod
+    def _toggle(obj, attr):
+        setattr(obj, attr, not getattr(obj, attr))
+
+    @staticmethod
+    def _keep_open(handler):
+        def run(*args):
+            handler(*args)
+            return True
+        return run
+
     def do(self, action):
         """Runs a command. Returns True to keep the menu open."""
         if self.setup is not None and action in SETUP_BLOCKED:
-            return False
-        overlay, hud, scene = self.overlay, self.hud, self.scene
-        if action == "speed_up":
-            self.speed_index = min(self.speed_index + 1, len(config.SPEED_STEPS) - 1)
-        elif action == "speed_down":
-            self.speed_index = max(self.speed_index - 1, 0)
-        elif action == "debug":
-            self.debug_mode = (self.debug_mode + 1) % 3
-        elif action == "color":
-            scene.cycle_color_mode()
-        elif action == "pause":
-            self.paused = not self.paused
-        elif action == "step":
-            self.step_request = self.paused
-        elif action == "chart":
-            self._cycle_panel("chart_big", "show_chart", hud.toggle_chart)
-        elif action == "graph":
-            self._cycle_panel("net_big", "show_graph", hud.toggle_graph)
-        elif action == "panels":
-            hud.visible = not hud.visible
-        elif action == "minimap":
-            overlay.minimap.enabled = not overlay.minimap.enabled
-        elif action == "effects":
-            scene.effects.enabled = not scene.effects.enabled
-        elif action == "cam_follow_off":
-            self.cam_follow = False   # The mini-map moved the view by hand
-        elif action in ("preset_prev", "preset_next"):
-            self.presets.refresh()
-            self.presets.move(-1 if action == "preset_prev" else 1)
-            return True
-        elif action == "preset_save":
-            overlay.toast(f"Préréglage enregistré : saves/presets/{self.presets.save(self._settings_values())}")
-            return True
-        elif action == "preset_apply":
-            self._apply_preset()
-            return True
-        elif action == "legend":
-            overlay.legend_open = not overlay.legend_open
-        elif action == "help":
-            overlay.help_open = not overlay.help_open
-        elif action == "params_panel":
-            overlay.params_open = not overlay.params_open
-        elif action == "params_close":
-            overlay.params_open = False
-        elif action == "params_cancel":
-            self.pending.clear()
-            self._persist_settings()
-        elif action.startswith("profile:"):
-            self._toggle_profile(action[len("profile:"):])
-            return True
-        elif action in ("zoom_in", "zoom_out"):
-            vw, vh = scene.size
-            scene.zoom_by(1.25 if action == "zoom_in" else 0.8, (vw / 2, vh / 2))
-        elif action == "view_fit":
-            scene.view_all()
-        elif action == "view_screen":
-            scene.view_screen()
-        elif action == "cam_follow":
-            self.cam_follow = not self.cam_follow
-        elif action.startswith("param:"):
-            # Arrows of the settings panel: previous / next preset. Back to the value in force = nothing pending.
-            _, direction, key = action.split(":")
-            name, steps, _ = PARAMS[key]
-            current = self.pending.get(key, getattr(config, name))
-            self._apply_param(key, prev_step(steps, current) if direction == "dec" else next_step(steps, current))
-            return True
-        elif action == "best":
-            if self.world.creatures:
-                self._select_best()
-                self.auto_best = True   # Stays on «the best»: at its death, the new best one
-        elif action == "follow":
-            self.follow = not self.follow
-            if self.follow and self.selected is None and self.world.creatures:
-                self._select_best()
-        elif action == "fullscreen":
-            self.display.toggle_fullscreen()
-        elif action == "restart_now":
-            self.restart()
-            overlay.toast("Nouvelle population tirée au hasard")
-        elif action == "save_pop":
-            if self.world.creatures:
-                self.last_saved = snapshot_path("manuelle")
-                save_population(self.sim, self.last_saved)
-                overlay.toast(f"Population sauvegardée : saves/populations/{os.path.basename(self.last_saved)}")
-        elif action == "load_pop":
-            if self.last_saved and os.path.exists(self.last_saved):
-                founders = load_population(self.last_saved)
-                if founders:
-                    self.restart(founders)
-                    overlay.toast(f"Population chargée : {os.path.basename(self.last_saved)}")
-            else:
-                overlay.toast("Aucune population sauvegardée (S pour sauvegarder)")
-        elif action.startswith("series:"):
-            hud.toggle_series(action[len("series:"):])
-            return True   # Menu stays open to pick several curves
-        elif action == "series_default":
-            hud.reset_series()
-            return True
-        elif action in PARAMS:
-            # Menu click: next preset value (now, or at the next restart). The menu stays open to click again.
-            name, steps, _ = PARAMS[action]
-            self._apply_param(action, next_step(steps, self.pending.get(action, getattr(config, name))))
-            return True
-        elif action == "start_continue":
-            if self._resume_autosave():
-                overlay.start = None
-                self._close_setup()
-        elif action == "start_load_list":
-            overlay.start.view = "load"
-        elif action == "start_back":
-            overlay.params_open = False   # Back from the settings of a new simulation, or from the load list
-            if overlay.start is None:
-                overlay.start = StartMenu(autosave_path() if config.LOAD_ON_START else None, populations_dir())
-            overlay.start.view = "main"
-        elif action == "start_new":
-            overlay.start = None
-            overlay.params_open = True
-        elif action.startswith("start_load:"):
-            path = action[len("start_load:"):]
-            founders = load_population(path)
+            return False   # Setup screen: only its own buttons, the settings, the species and the view
+        handler = self._commands.get(action)
+        if handler is not None:
+            return bool(handler())
+        for prefix, prefixed in self._prefixed.items():
+            if action.startswith(prefix):
+                return bool(prefixed(action[len(prefix):]))
+        return False
+
+    # Speed, pause, view
+
+    def _change_speed(self, step):
+        self.speed_index = max(0, min(self.speed_index + step, len(config.SPEED_STEPS) - 1))
+
+    def _pause(self):
+        self.paused = not self.paused
+
+    def _step(self):
+        self.step_request = self.paused
+
+    def _cycle_debug(self):
+        self.debug_mode = (self.debug_mode + 1) % 3
+
+    def _zoom(self, factor):
+        vw, vh = self.scene.size
+        self.scene.zoom_by(factor, (vw / 2, vh / 2))
+
+    # Selection
+
+    def _best(self):
+        if self.world.creatures:
+            self._select_best()
+            self.auto_best = True   # Stays on «the best»: at its death, the new best one
+
+    def _follow(self):
+        self.follow = not self.follow
+        if self.follow and self.selected is None and self.world.creatures:
+            self._select_best()
+
+    # Settings and presets
+
+    def _params_cancel(self):
+        self.pending.clear()
+        self._persist_settings()
+
+    def _move_preset(self, step):
+        self.presets.refresh()
+        self.presets.move(step)
+
+    def _save_preset(self):
+        self.overlay.toast(f"Préréglage enregistré : saves/presets/{self.presets.save(self._settings_values())}")
+
+    def _cycle_param(self, key):
+        """Menu click: next preset value (now, or at the next restart)."""
+        name, steps, _ = PARAMS[key]
+        self._apply_param(key, next_step(steps, self.pending.get(key, getattr(config, name))))
+
+    def _step_param(self, arg):
+        """Arrows of the settings panel ("dec:<key>" / "inc:<key>"): previous / next preset. Back to the value in force
+        = nothing pending."""
+        direction, key = arg.split(":")
+        name, steps, _ = PARAMS[key]
+        current = self.pending.get(key, getattr(config, name))
+        self._apply_param(key, prev_step(steps, current) if direction == "dec" else next_step(steps, current))
+
+    # Populations
+
+    def _restart_random(self):
+        self.restart()
+        self.overlay.toast("Nouvelle population tirée au hasard")
+
+    def _save_population(self):
+        if self.world.creatures:
+            self.last_saved = snapshot_path("manuelle")
+            save_population(self.sim, self.last_saved)
+            self.overlay.toast(f"Population sauvegardée : saves/populations/{os.path.basename(self.last_saved)}")
+
+    def _load_last_population(self):
+        if self.last_saved and os.path.exists(self.last_saved):
+            founders = load_population(self.last_saved)
             if founders:
                 self.restart(founders)
-                self.last_saved = path
-                overlay.start = None
-                self._close_setup()
-                self.paused = False
-                overlay.toast(f"Population chargée : {os.path.basename(path)}")
-        elif action == "quit":
-            self.running = False
-        elif action == "reset":
-            self._open_setup(can_cancel=True)
-        elif action == "setup_launch":
-            self.restart()
+                self.overlay.toast(f"Population chargée : {os.path.basename(self.last_saved)}")
+        else:
+            self.overlay.toast("Aucune population sauvegardée (S pour sauvegarder)")
+
+    # Start menu and setup screen
+
+    def _start_continue(self):
+        if self._resume_autosave():
+            self.overlay.start = None
             self._close_setup()
-        elif action == "setup_resume":
-            if self._resume_autosave():
-                self._close_setup()
-        elif action == "setup_cancel":
-            self.pending.clear()
-            self.pending_profiles = None
-            self._persist_settings()
+
+    def _open_load_list(self):
+        self.overlay.start.view = "load"
+
+    def _start_back(self):
+        overlay = self.overlay
+        overlay.params_open = False   # Back from the settings of a new simulation, or from the load list
+        if overlay.start is None:
+            overlay.start = StartMenu(autosave_path() if config.LOAD_ON_START else None, populations_dir())
+        overlay.start.view = "main"
+
+    def _start_new(self):
+        self.overlay.start = None
+        self.overlay.params_open = True
+
+    def _start_load(self, path):
+        if not os.path.exists(path):   # Deleted since the list was made
+            self.overlay.toast(f"Fichier introuvable : {os.path.basename(path)}")
+            return
+        founders = load_population(path)
+        if founders:
+            self.restart(founders)
+            self.last_saved = path
+            self.overlay.start = None
             self._close_setup()
             self.paused = False
-        return False
+            self.overlay.toast(f"Population chargée : {os.path.basename(path)}")
+
+    def _setup_launch(self):
+        self.restart()
+        self._close_setup()
+
+    def _setup_resume(self):
+        if self._resume_autosave():
+            self._close_setup()
+
+    def _setup_cancel(self):
+        self.pending.clear()
+        self.pending_profiles = None
+        self._persist_settings()
+        self._close_setup()
+        self.paused = False
 
     # ---------------------------------------------------------------- events
 

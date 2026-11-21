@@ -1,19 +1,8 @@
-import os
+import pygame
 
-os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
-os.environ.setdefault("EVOLUTION_RENDERER", "cpu")
-
-import pygame  # noqa: E402
-
-import config  # noqa: E402
-from app import App, PARAMS, next_step, prev_step  # noqa: E402
-
-
-def _app(monkeypatch, tmp_path):
-    monkeypatch.setattr(config, "LOAD_SETTINGS", False)
-    monkeypatch.setattr(config, "LOAD_ON_START", False)
-    config.INITIAL_POPULATION = 30
-    return App()
+import config
+from app import KEYS, PARAMS, next_step, prev_step
+from rendering.ui.overlay.texts import TOOLBAR
 
 
 def test_step_cycle():
@@ -22,8 +11,8 @@ def test_step_cycle():
     assert next_step(["a", "b"], "b") == "a" and prev_step(["a", "b"], "a") == "b"
 
 
-def test_app_runs_frames_and_commands(monkeypatch, tmp_path):
-    app = _app(monkeypatch, tmp_path)
+def test_app_runs_frames_and_commands(make_app):
+    app = make_app(launched=False)
     assert app.setup is not None            # Setup screen at launch: nothing runs yet
     app.do("start_new")
     app.do("setup_launch")                   # New simulation, running
@@ -37,8 +26,8 @@ def test_app_runs_frames_and_commands(monkeypatch, tmp_path):
     assert app.selected is not None or not app.world.creatures
 
 
-def test_params_apply_now_or_at_restart(monkeypatch, tmp_path):
-    app = _app(monkeypatch, tmp_path)
+def test_params_apply_now_or_at_restart(make_app):
+    app = make_app(launched=False)
     app.do("setup_launch")
     old = config.MUTATION_STD
     app.do("mutation")                       # Applies at once
@@ -50,11 +39,37 @@ def test_params_apply_now_or_at_restart(monkeypatch, tmp_path):
     assert all(key in PARAMS for key in app.pending)
 
 
-def test_escape_quits_and_saves(monkeypatch, tmp_path):
-    app = _app(monkeypatch, tmp_path)
+def test_escape_quits_and_saves(make_app):
+    app = make_app(launched=False)
     app.do("start_new")
     app.do("setup_launch")
     app.run(max_frames=3)
     pygame.event.post(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_ESCAPE, unicode="", mod=0))
     app.run(max_frames=2)
     assert not app.running
+
+
+def test_do_dispatch_table(make_app):
+    app = make_app()
+    # Every key and every tool bar button leads to a command
+    toolbar = {item[0] for item in TOOLBAR if isinstance(item, tuple)}
+    assert set(KEYS.values()) <= set(app._commands) and toolbar <= set(app._commands)
+    assert set(PARAMS) <= set(app._commands)
+    # Return value: True keeps the menu open
+    assert app.do("no_such_action") is False and app.do("pause") is False
+    assert app.do("mutation") is True and app.do("param:inc:mutation") is True
+    assert app.do("profile:complet") is True and app.do("series:births") is True
+    assert app.do("preset_prev") is True and app.do("series_default") is True
+    # An unknown name after a known prefix does not crash
+    assert app.do("start_load:/no/such/file.npz") is False
+    app.run(max_frames=2)
+
+
+def test_setup_screen_blocks_run_commands(make_app):
+    app = make_app(launched=False)
+    assert app.setup is not None
+    app.do("pause")
+    assert not app.paused or app.setup["cancel"] is False   # Blocked: the setup screen keeps the simulation stopped
+    ticks = app.world.tick
+    app.run(max_frames=3)
+    assert app.world.tick == ticks

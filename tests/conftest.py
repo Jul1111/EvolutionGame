@@ -1,3 +1,4 @@
+import gc
 import os
 import sys
 
@@ -46,4 +47,6 @@ def make_app(monkeypatch):
         return app
 
     yield make
+    apps.clear()
+    gc.collect()   # An App is in a reference cycle: free its window now, not in the middle of the next test
     pygame.quit()
