@@ -25,10 +25,18 @@ def clean_config(tmp_path):
         setattr(config, n, v)
 
 
+@pytest.fixture(params=["cpu", "gpu"])
+def renderer(request, monkeypatch):
+    """The two ways of drawing (see rendering/backend/): the processor, and the graphics card, here SDL's software
+    renderer under the dummy video driver."""
+    monkeypatch.setenv("EVOLUTION_RENDERER", request.param)
+    return request.param
+
+
 @pytest.fixture
-def make_app(monkeypatch):
-    """Builds an App (window, menus, panels) with a small population. `launched=True` starts a simulation, else the
-    start menu and setup screen of the launch are shown."""
+def make_app(monkeypatch, renderer):
+    """Builds an App (window, menus, panels) with a small population, drawn by each renderer in turn.
+    `launched=True` starts a simulation, else the start menu and setup screen of the launch are shown."""
     import pygame
     apps = []
 
@@ -40,6 +48,7 @@ def make_app(monkeypatch):
             setattr(config, name, value)
         from app import App
         app = App()
+        assert (app.display.gpu is not None) == (renderer == "gpu"), "the requested renderer did not start"
         if launched:
             app.do("start_new")
             app.do("setup_launch")
