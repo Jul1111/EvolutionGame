@@ -87,7 +87,8 @@ def main(argv=None):
     parser.add_argument("--profiles", nargs="+", default=None, help="Espèces fondatrices (défaut : ACTIVE_PROFILES)")
     parser.add_argument("--from-population", default=None,
                         help="Population sauvegardée de départ (.npz). {seed} est remplacé par le numéro de graine")
-    parser.add_argument("--set", nargs="*", default=[], metavar="NOM=VALEUR", help="Remplace une constante de config.py")
+    parser.add_argument("--set", nargs="*", default=[], metavar="NOM=VALEUR",
+                        help="Remplace une constante de config.py")
     parser.add_argument("--jobs", type=int, default=os.cpu_count(), help="Graines lancées en parallèle")
     args = parser.parse_args(argv)
 

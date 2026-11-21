@@ -77,7 +77,8 @@ class Creature:
         self.speed += change
 
         # The faster the creature goes, the less it can turn
-        max_turn = self.cfg.CREATURE_MAX_TURN * (1.0 - self.cfg.TURN_SPEED_PENALTY * self.speed / self.cfg.CREATURE_MAX_SPEED)
+        cfg = self.cfg
+        max_turn = cfg.CREATURE_MAX_TURN * (1.0 - cfg.TURN_SPEED_PENALTY * self.speed / cfg.CREATURE_MAX_SPEED)
         self.angle = normalize_angle(self.angle + turn * max_turn)
 
         # Blind = no available food in view (food that was eaten is somewhere else when it comes back)

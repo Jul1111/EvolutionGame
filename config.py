@@ -23,15 +23,16 @@ CREATURE_COLOR = (240, 200, 80)
 DEAD_COLOR = (90, 90, 90)
 
 # Configuration for world
-WORLD_SCALE = 1             # Side of the world in screens (a screen = SCREEN_WIDTH x SCREEN_HEIGHT). 2 = 4 times the area,
-                            # food, obstacles and computing cap included (not the founders); about 4 times slower once the
-                            # population has grown. The view opens at the scale of one screen. Menu Paramètres, next restart
+WORLD_SCALE = 1             # Side of the world in screens (a screen = SCREEN_WIDTH x SCREEN_HEIGHT). 2 = 4 times the
+                            # area, food, obstacles and computing cap included (not the founders); about 4 times slower
+                            # once the population has grown. The view opens at the scale of one screen.
+                            # Menu Paramètres, next restart
 # FOOD_COUNT, POISON_COUNT and OBSTACLE_COUNT are given per screen-sized area: the world holds WORLD_SCALE² times more
 
 # Configuration for food
 SEED = 42
-FOOD_COUNT = 40             # Food sources per screen when the population is small (and at the start: random founders need
-                            # plenty to get through the first bottleneck, at 25-30 they die out, 09/11)
+FOOD_COUNT = 40             # Food sources per screen when the population is small (and at the start: random
+                            # founders need plenty to get through the first bottleneck, at 25-30 they die out, 09/11)
 FOOD_COUNT_MIN = 15         # Food sources per screen when the population is large: food follows the population, no
                             # calendar (evolution/continuous.py). Same value as FOOD_COUNT = food never changes
 FOOD_PRESSURE_POP = 300     # Living creatures (whole world) at which the food is down to FOOD_COUNT_MIN; in between,
@@ -43,7 +44,8 @@ FOOD_COLOR = (90, 200, 110)
 # Configuration for energy
 FOOD_ENERGY = 30.0
 INITIAL_ENERGY = 100.0
-ENERGY_MAX = 200.0          # Satiety: a creature only eats if the whole meal fits (energy + food <= max). Starting value, to tune
+ENERGY_MAX = 200.0          # Satiety: a creature only eats if the whole meal fits (energy + food <= max).
+                            # Starting value, to tune
 
 
 # Configuration for time display
@@ -51,15 +53,17 @@ TICKS_PER_SECOND = 60
 
 # Configuration for simulation speed
 SPEED_STEPS = [1, 2, 5, 10, 20, 50, 100]
-RENDERER = "auto"          # "auto": the graphics card draws (rendering/backend/gpu.py) if SDL finds a hardware renderer (Metal,
-                           # OpenGL, Direct3D), else the processor. "gpu": graphics card even without hardware (software
-                           # renderer, slower). "cpu": the processor. Also the EVOLUTION_RENDERER environment variable
+RENDERER = "auto"          # "auto": the graphics card draws (rendering/backend/gpu.py) if SDL finds a hardware
+                           # renderer (Metal, OpenGL, Direct3D), else the processor. "gpu": graphics card even
+                           # without hardware (software renderer, slower). "cpu": the processor. Also the
+                           # EVOLUTION_RENDERER environment variable
 MIN_FPS = 30               # At high speed the simulation only takes what drawing leaves of a frame at this rate
 SIM_MIN_BUDGET_MS = 4      # ...but always at least this much per frame, however slow the drawing
 
 # Configuration for senses
 VISION_RANGE = 200          # Maximum distance at which a creature sees food
-VISION_FOV_DEGREES = 120    # Field of view, centred on the heading. 360 = sees all around (the former behaviour). Starting value, to tune
+VISION_FOV_DEGREES = 120    # Field of view, centred on the heading. 360 = sees all around (the former behaviour).
+                            # Starting value, to tune
 
 # Configuration for variable speed
 CREATURE_MAX_SPEED = 4.0
@@ -72,8 +76,10 @@ ENERGY_MOVE_COST = 0.03     # Extra energy lost per tick, per unit of speed
 # Profiles (species) of the founders: INITIAL_POPULATION split between them (menu Réseau, applied at the next restart)
 ACTIVE_PROFILES = ["complet"]
 NN_INIT_STD = 0.5           # Std of the initial random weights
-CREATURE_MAX_TURN = 0.25    # Max rotation per tick (radians) at rest, when the turn output is +/-1 (starting value, to tune)
-TURN_SPEED_PENALTY = 0.5    # The faster the creature, the wider its turns: max turn x (1 - penalty x speed / max speed). Starting value, to tune
+CREATURE_MAX_TURN = 0.25    # Max rotation per tick (radians) at rest, when the turn output is +/-1
+                            # (starting value, to tune)
+TURN_SPEED_PENALTY = 0.5    # The faster the creature, the wider its turns: max turn x (1 - penalty x speed / max
+                            # speed). Starting value, to tune
 CREATURE_ACCELERATION = 0.25  # Max change of speed per tick, accelerating or braking (starting value, to tune)
 
 # Configuration for continuous evolution (evolution/continuous.py): no generations, creatures are born and die.
@@ -85,14 +91,16 @@ REPRO_CHILD_ENERGY = 50.0   # Energy of the newborn (less than the cost: no perp
 MATURITY_AGE = 600          # Ticks before a creature can give birth (10 s)
 REPRO_COOLDOWN = 300        # Ticks between two births of the same creature
 AGE_MAX = 6000              # Death of old age (100 s). 0 = never
-POP_MAX = 400               # Computing cap for the whole world, whatever its size: at the cap births are blocked and counted (cap_blocked)
+POP_MAX = 400               # Computing cap for the whole world, whatever its size: at the cap births are blocked
+                            # and counted (cap_blocked)
 SAMPLE_TICKS = 600          # One line of timeline.csv every SAMPLE_TICKS ticks
 
 # Configuration for the body gene: size (core/creature.py). Founders have size 1; a newborn gets the size of its
 # parent × exp(N(0, SIZE_MUTATION_STD)), kept in [SIZE_MIN, SIZE_MAX].
 # SIZE_MODE: "fixe" = everyone 1, no mutation. "neutre" = the size mutates but changes nothing (drift control).
-# "actif" = trade-offs: contact radius, energy reserve and the energy of a birth ∝ size; base cost ∝ size^SIZE_BASE_EXPONENT
-# (Kleiber's law: a big body is cheaper to keep per unit of size); cost of moving ∝ size. Starting values, to tune
+# "actif" = trade-offs: contact radius, energy reserve and the energy of a birth ∝ size; base cost ∝
+# size^SIZE_BASE_EXPONENT (Kleiber's law: a big body is cheaper to keep per unit of size); cost of moving ∝ size.
+# Starting values, to tune
 SIZE_MODE = "actif"
 SIZE_MUTATION_STD = 0.05
 SIZE_MIN = 0.5
@@ -100,12 +108,14 @@ SIZE_MAX = 2.0
 SIZE_BASE_EXPONENT = 0.75
 
 # Configuration for mutation
-MUTATION_STD = 0.1          # Std of the gaussian noise added to each weight of a child (0.2 was chosen on one seed only)
+MUTATION_STD = 0.1          # Std of the gaussian noise added to each weight of a child (0.2 was chosen on one seed
+                            # only)
 
 # Configuration for saving and logging
 SAVE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "saves")
 LOAD_ON_START = True        # The game resumes the population it had when it was closed (saves/autosave.npz)
-LOAD_SETTINGS = True        # Reuse the settings changed from the menu (saves/settings.json). False = values of this file
+LOAD_SETTINGS = True        # Reuse the settings changed from the menu (saves/settings.json). False = values of this
+                            # file
 
 # Configuration for rendering (organic style)
 BG_CENTER_COLOR = (30, 40, 46)       # Centre of the "petri dish" background

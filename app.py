@@ -102,7 +102,8 @@ class App:
         self.hud = Hud()
         self.hud.renderer = self.display.renderer_label()   # «GPU» or «CPU», shown next to the FPS
         self.menu = MenuBar()
-        self.overlay = Overlay(self.hud, self.scene)   # Tool bar, legend, help, hover tips, settings panel, large network
+        # Tool bar, legend, help, hover tips, settings panel, large network
+        self.overlay = Overlay(self.hud, self.scene)
         self.hud.lineage = self.scene.lineage          # Living lineages in the Population panel
         self.presets = PresetBrowser()                 # Saved settings (saves/presets/), browsed in the settings panel
         self.overlay.presets = self.presets
@@ -111,7 +112,8 @@ class App:
         self.cam_follow = False       # True: the camera stays on the selected creature
         self.drag_start = None        # Mouse position of a left press in the world (select on release, pan if dragged)
         self.dragging = False
-        self.follow = False           # True: when the selected creature dies, its youngest living descendant is selected
+        self.follow = False           # True: when the selected creature dies, its youngest living descendant is
+                                      # selected
         self.debug_mode = 0           # 0 = off, 1 = selected (else oldest living) creature, 2 = all living creatures
         self.selected = None          # Creature picked with a click
         self.auto_best = False        # True after B: when the selected creature dies, the new best one is selected
@@ -588,7 +590,8 @@ class App:
 
     def _menu_state(self, speed, chart_state, net_state):
         """Values shown by the labels and check boxes of the menu bar."""
-        pending, pending_profiles, scene, hud, overlay = self.pending, self.pending_profiles, self.scene, self.hud, self.overlay
+        pending, pending_profiles = self.pending, self.pending_profiles
+        scene, hud, overlay = self.scene, self.hud, self.overlay
         shown = self._profiles_shown()
         return {
             "speed": speed, "real_speed": self.real_speed, "paused": self.paused,

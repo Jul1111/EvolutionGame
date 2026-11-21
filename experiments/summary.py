@@ -122,7 +122,8 @@ def summarize_timeline(run_dir):
 
 
 def print_timeline_table(run_dirs, last=10):
-    print(f"\nÉvolution continue : moyenne des {last} derniers relevés de chaque graine survivante, ± écart-type entre graines")
+    print(f"\nÉvolution continue : moyenne des {last} derniers relevés de chaque graine survivante, "
+          "± écart-type entre graines")
     print(f"{'expérience':<34} {'extinctions':>11}" + "".join(f"{m:>20}" for m in TIMELINE_METRICS))
     for run_dir in run_dirs:
         timelines = load_timelines(run_dir)
@@ -148,10 +149,12 @@ def print_species_table(run_dirs, last=10):
     majority or extinct. A species that spreads on most seeds carries something useful."""
     for run_dir in run_dirs:
         timelines = load_timelines(run_dir)
-        species = sorted({k[5:] for rows in timelines.values() for k in (rows[0] if rows else {}) if k.startswith("pop__")})
+        species = sorted({k[5:] for rows in timelines.values() for k in (rows[0] if rows else {})
+                          if k.startswith("pop__")})
         if len(species) < 2:
             continue
-        print(f"\nEspèces ({os.path.basename(run_dir.rstrip(os.sep))}) : part de la population, {last} derniers relevés")
+        name = os.path.basename(run_dir.rstrip(os.sep))
+        print(f"\nEspèces ({name}) : part de la population, {last} derniers relevés")
         print(f"{'espèce':<20} {'part moy.':>10} {'écart':>8} {'majoritaire':>12} {'éteinte':>8}")
         shares = {sp: [] for sp in species}
         majority = {sp: 0 for sp in species}

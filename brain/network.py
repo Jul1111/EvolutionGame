@@ -26,7 +26,8 @@ class NeuralNetwork:
         return self.activations(inputs)[1]
 
     def activations(self, inputs):
-        """Comme forward, mais renvoie aussi la couche cachée : (hidden, output). Sert à l'affichage, ne modifie rien."""
+        """Comme forward, mais renvoie aussi la couche cachée : (hidden, output). Sert à l'affichage, ne modifie
+        rien."""
         x = np.array(inputs, dtype=float)
         if self.direct:
             return np.zeros(0), np.tanh(self.w1 @ x + self.b1)

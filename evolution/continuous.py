@@ -33,8 +33,8 @@ SAMPLE_HEADER = ["tick", "population", "births", "deaths_hunger", "deaths_age", 
 class ContinuousSimulation:
     def __init__(self, rng, timeline_path=None, founders=None, verbose=False, start_tick=0, append=False,
                  log_deaths=False, cfg=config):
-        """`founders`: {profile: [(genome, size)]} to start from a saved population (load_population); else random founders
-        of cfg.ACTIVE_PROFILES. `start_tick` and `append`: resume a saved run, adding to its timeline.csv."""
+        """`founders`: {profile: [(genome, size)]} to start from a saved population (load_population); else random
+        founders of cfg.ACTIVE_PROFILES. `start_tick` and `append`: resume a saved run, adding to its timeline.csv."""
         self.cfg = cfg   # Settings in force (see config.Settings); the live module by default
         self.rng = rng
         self.verbose = verbose
@@ -112,8 +112,8 @@ class ContinuousSimulation:
 
     def food_goal(self):
         """Food per screen that the population calls for right now: FOOD_COUNT with no creature, FOOD_COUNT_MIN from
-        FOOD_PRESSURE_POP living creatures born in this world on, a straight line in between. Big, thriving population → scarce food;
-        collapse → food comes back."""
+        FOOD_PRESSURE_POP living creatures born in this world on, a straight line in between. Big, thriving
+        population → scarce food; collapse → food comes back."""
         hi, lo = self.cfg.FOOD_COUNT, self.cfg.FOOD_COUNT_MIN
         # Only creatures born in this world count: the founders (random, or loaded) mostly die in the first bottleneck,
         # the food must not get scarce because of them
@@ -138,7 +138,8 @@ class ContinuousSimulation:
 
     @property
     def pop_max(self):
-        """Computing cap: POP_MAX creatures in the whole world, whatever its size (not scaled like food and obstacles)."""
+        """Computing cap: POP_MAX creatures in the whole world, whatever its size (not scaled like food and
+        obstacles)."""
         return self.cfg.POP_MAX
 
     @property
@@ -225,7 +226,8 @@ class ContinuousSimulation:
             "mean_age_at_death": statistics.mean(self.death_ages) if self.death_ages else None,
             "mean_lineage_gen": sum(c.lineage_gen for c in cs) / n if n else None,
             "max_lineage_gen": max((c.lineage_gen for c in cs), default=None),
-            # Meals (and poison hits) per 1000 ticks of life: how good the creatures are at feeding, whatever their number
+            # Meals (and poison hits) per 1000 ticks of life: how good the creatures are at feeding, whatever their
+            # number
             "food_rate": (self.world.eaten - self._eaten0) * per_k,
             "poison_rate": (self.world.poisoned - self._poisoned0) * per_k,
             "mean_speed": sum(c.speed for c in cs) / n if n else None,

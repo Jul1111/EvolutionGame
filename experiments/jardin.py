@@ -65,7 +65,8 @@ def main(argv=None):
 
     jobs = [(src, d, s) for src in args.sources for d in args.densities for s in args.seeds]
     with ProcessPoolExecutor(max_workers=args.jobs) as pool:
-        results = list(pool.map(garden, *zip(*jobs), *[[v] * len(jobs) for v in (args.ticks, args.warmup, args.profile)]))
+        shared = [[v] * len(jobs) for v in (args.ticks, args.warmup, args.profile)]
+        results = list(pool.map(garden, *zip(*jobs), *shared))
     table = {}
     for (src, d, _), r in zip(jobs, results):
         if r is not None:

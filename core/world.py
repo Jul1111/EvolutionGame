@@ -22,10 +22,13 @@ class World:
         self.area_factor = self.width * self.height / (self.cfg.SCREEN_WIDTH * self.cfg.SCREEN_HEIGHT)
         # Obstacles first: food, poison and creatures are never placed inside one
         self.obstacles = self._make_obstacles()
-        reach = self.cfg.CREATURE_RADIUS + self.cfg.FOOD_RADIUS   # Far enough from an obstacle for a creature to touch it
-        self.foods = [Food(*self._free_position(reach), self.cfg.FOOD_ENERGY) for _ in range(self._count(self.cfg.FOOD_COUNT))]
+        # Far enough from an obstacle for a creature to touch it
+        reach = self.cfg.CREATURE_RADIUS + self.cfg.FOOD_RADIUS
+        self.foods = [Food(*self._free_position(reach), self.cfg.FOOD_ENERGY)
+                      for _ in range(self._count(self.cfg.FOOD_COUNT))]
         # Poison: same kind of object as food, but its `energy` is the damage. Seen through its own two inputs
-        self.poisons = [Food(*self._free_position(reach), self.cfg.POISON_ENERGY) for _ in range(self._count(self.cfg.POISON_COUNT))]
+        self.poisons = [Food(*self._free_position(reach), self.cfg.POISON_ENERGY)
+                        for _ in range(self._count(self.cfg.POISON_COUNT))]
         self.tick = 0
         self.blind_ticks = 0       # Ticks of life with no available food in view, speed and |turn| then (core/batch.py)
         self.blind_speed = 0.0
@@ -40,7 +43,8 @@ class World:
         return round(per_screen * self.area_factor)
 
     def _make_obstacles(self):
-        """Random obstacles (shapes from OBSTACLE_SHAPES), kept apart so that there is always room to pass between two."""
+        """Random obstacles (shapes from OBSTACLE_SHAPES), kept apart so that there is always room to pass between
+        two."""
         obstacles = []
         for _ in range(self._count(self.cfg.OBSTACLE_COUNT)):
             for _attempt in range(100):
@@ -56,7 +60,8 @@ class World:
     def _blocked(self, x, y, margin):
         """True if the point is inside an obstacle, or closer than `margin` to its edge."""
         for o in self.obstacles:
-            dx, dy = torus_delta(o.x, x, self.width), torus_delta(o.y, y, self.height)   # From the obstacle to the point
+            # From the obstacle to the point
+            dx, dy = torus_delta(o.x, x, self.width), torus_delta(o.y, y, self.height)
             if math.hypot(dx, dy) <= o.radius + margin:   # Inside the bounding circle: look at the real shape
                 cx, cy, inside = o.closest(dx, dy)
                 if inside or math.hypot(dx - cx, dy - cy) <= margin:
@@ -97,7 +102,8 @@ class World:
         return False
 
     def _item_returns(self, item):
-        """Count down an eaten food or a used poison; on the tick it comes back, it is placed (or waits one more tick)."""
+        """Count down an eaten food or a used poison; on the tick it comes back, it is placed (or waits one more
+        tick)."""
         item.cooldown -= 1
         if item.cooldown == 0 and not self._place_item(item):
             item.cooldown = 1
@@ -122,7 +128,8 @@ class World:
             creature.obstacle_ticks += 1
 
     def update(self):
-        """One tick. Same rules as _update_reference (tests/test_world.py checks it), computed for all creatures at once."""
+        """One tick. Same rules as _update_reference (tests/test_world.py checks it), computed for all creatures at
+        once."""
         # Phase 0: what every creature sees, computed together (items do not move during phase 1)
         seeing = self.sense_all()
 
@@ -412,7 +419,8 @@ class World:
         return best, in_view
 
     def direction(self, creature, found):
-        """Network inputs for one kind of target: [distance, relative angle]. Nothing in view: maximum distance, ahead."""
+        """Network inputs for one kind of target: [distance, relative angle]. Nothing in view: maximum distance,
+        ahead."""
         if found is None:
             return [1.0, 0.0]
         distance2, dx, dy = found
