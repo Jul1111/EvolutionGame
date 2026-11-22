@@ -29,7 +29,7 @@ Réglages de `config.py` : `FOOD_COUNT = 60` (nourriture des petites populations
 
 - Le goulot de départ est passé dans 24 graines sur 24 (8 en 1×1, 16 en 2×2), contre 8 sur 16 avec `FOOD_COUNT = 40`.
 - Le plafond ne bloque plus de naissances ; c'est la nourriture qui règle la population.
-- Duel en 2×2 (16 graines) : `complet` l'emporte 10 fois, `complet_faim` 6 fois. Écart compatible avec le hasard (p = 0,45) : le capteur de faim ne donne ni avantage ni handicap mesurable. Il n'est pas cassé, mais il vaut presque toujours ~0 : son échelle (600 ticks) est 50 fois plus longue que les moments typiques sans nourriture en vue. Avec une échelle de 60 ticks, l'entrée varie et le réseau s'en sert un peu (couper le capteur coûte ~2,5 % de population), mais le duel reste à 10 contre 5 (et une graine où les deux coexistent) : l'avantage est trop petit face au hasard du départ. Une espèce élimine toujours l'autre, entre 6 000 et 70 000 ticks.
+- Duel en 2×2 (16 graines) : `complet` l'emporte 10 fois, `complet_faim` 6 fois. Écart compatible avec le hasard (p = 0,45) : le capteur de faim ne donne ni avantage ni handicap mesurable. Il n'est pas cassé, mais il vaut presque toujours ~0 : son échelle (600 ticks) est 50 fois plus longue que les moments typiques sans nourriture en vue. Avec une échelle de 60 ticks, l'entrée varie et le réseau s'en sert un peu (couper le capteur coûte ~2,5 % de population), mais le duel reste à 9 contre 6 (et une graine où les deux coexistent) : l'avantage est trop petit face au hasard du départ. Une espèce élimine toujours l'autre, entre 6 000 et 70 000 ticks.
 - **Vitesse** (revérifiée le 22/11, section « La vitesse avec les règles actuelles ») : la conclusion du 08/11 ne tient plus. C'est la quantité de nourriture qui règle la vitesse (×2 de 15 à 60 nourritures par écran, à densité égale), la densité ne la baisse que de 6 à 18 %. Les lignées diffèrent beaucoup entre elles (0,5 à 4), et la sélection favorise les plus rapides (rho +0,27 ± 0,19, positif dans les 8 populations) au lieu des intermédiaires.
 
 ### Évolution continue, ancienne règle de nourriture (08/11/2026, historique)
@@ -214,9 +214,9 @@ Même duel (2×2, 60°, 16 graines, 120 000 ticks), avec `HUNGER_SCALE=60` au li
 | Échelle | `complet` gagne | `complet_faim` gagne | Les deux encore là | Entrée « Faim » moyenne | Population quand on coupe le capteur |
 |---|---|---|---|---|---|
 | 600 ticks (défaut) | 10 | 6 | 0 | 0,02 | ±5 %, dans les deux sens |
-| 60 ticks | 10 | 5 | 1 (graine 6, 68 % / 32 %) | 0,17 (au-dessus de 0,05 54 % du temps) | −1 à −5 % dans les 6 populations |
+| 60 ticks | 9 | 6 | 1 (graine 6, `complet` à 68 %) | 0,17 (au-dessus de 0,05 54 % du temps) | −1 à −5 % dans les 6 populations |
 
-- **Toujours pas de vainqueur** : `complet` l'emporte 10 fois sur 16, comme avec l'échelle par défaut. Les gagnants changent d'une graine à l'autre, pas le total.
+- **Toujours pas de vainqueur** : `complet` élimine l'autre espèce dans 9 graines, `complet_faim` dans 6, et une graine garde les deux (10 contre 6 en comptant l'espèce majoritaire, comme avec l'échelle par défaut). Les gagnants changent d'une graine à l'autre, pas le total.
 - **Mais le capteur sert un peu** : avec l'échelle de 60, le couper fait baisser la population de chacune des 6 populations `complet_faim` gagnantes (−2,5 % en moyenne). Six baisses sur six arrivent une fois sur 32 au hasard. Avec l'échelle de 600, les écarts allaient dans les deux sens.
 - **Pourquoi le duel ne le montre pas** : un avantage de quelques pour cent de population ne pèse rien face au hasard du départ, qui décide du vainqueur avant 30 000 ticks dans presque toutes les graines. Il faudrait des centaines de graines pour le voir dans un duel.
 - **Limites** : un effet de quelques pour cent sur une seule suite par population ; la population de ces suites dépasse l'équilibre (500 à 600, créatures rechargées hors pression de nourriture), même biais dans les deux bras.
