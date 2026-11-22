@@ -215,3 +215,16 @@ def test_cap_grows_with_the_world():
     small = ContinuousSimulation(random.Random(1), cfg=config.Settings(INITIAL_POPULATION=10, WORLD_SCALE=1))
     big = ContinuousSimulation(random.Random(1), cfg=config.Settings(INITIAL_POPULATION=10, WORLD_SCALE=2))
     assert big.pop_max == 4 * small.pop_max == 4 * config.POP_MAX
+
+
+def test_food_pressure_grows_with_the_world():
+    """FOOD_PRESSURE_POP is per screen: the same number of born creatures presses a 2×2 world 4 times less."""
+    goals = []
+    for scale in (1, 2):
+        cfg = config.Settings(INITIAL_POPULATION=40, WORLD_SCALE=scale, FOOD_COUNT=40, FOOD_COUNT_MIN=15,
+                              FOOD_PRESSURE_POP=40)
+        sim = ContinuousSimulation(random.Random(1), cfg=cfg)
+        for c in sim.world.creatures:
+            c.lineage_gen = 1
+        goals.append(sim.food_goal())
+    assert goals[0] == 15 and abs(goals[1] - (40 - 25 / 4)) < 1e-9
