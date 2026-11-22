@@ -101,7 +101,7 @@ tests/         Tests pytest
 - [x] Évolution continue par sélection naturelle
 - [x] Gène de taille
 - [x] Mesure de l'exploration, espèces faim / bruit / mémoire, duels d'espèces
-- [ ] Duels : quelle aide à explorer l'emporte ? (faim : aucun effet avec l'échelle par défaut)
+- [ ] Duels : quelle aide à explorer l'emporte ? (faim : sans effet à l'échelle par défaut ; à 60 ticks, ~2,5 % de population en plus, invisible dans un duel de 16 graines)
 - [ ] Étude du gène de taille (actif contre neutre)
 - [ ] Reproduction à deux parents
 - [ ] Environnement changeant

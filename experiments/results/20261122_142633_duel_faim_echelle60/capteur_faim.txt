@@ -1,0 +1,8 @@
+# Capteur «faim» à HUNGER_SCALE=60, 6 populations complet_faim gagnantes (22/11/2026, commit 5af7405)
+# Même protocole que 20261122_135654_duel_graines_9_16/capteur_faim.txt
+142633_duel_faim_echelle60/seed_1      n=43408  faim moy 0.17  >0,05  54%  =1   2%  |Δsortie| faim 0→1 : virage 0.146 vitesse 0.166   (énergie 0→1 : 0.153 0.210)  pop normal 614 / coupé 601   vitesse 0.55 / 0.57
+142633_duel_faim_echelle60/seed_3      n=37809  faim moy 0.17  >0,05  54%  =1   2%  |Δsortie| faim 0→1 : virage 0.148 vitesse 0.541   (énergie 0→1 : 0.190 0.427)  pop normal 547 / coupé 532   vitesse 0.79 / 0.86
+142633_duel_faim_echelle60/seed_5      n=36262  faim moy 0.17  >0,05  53%  =1   2%  |Δsortie| faim 0→1 : virage 0.184 vitesse 0.423   (énergie 0→1 : 0.175 0.185)  pop normal 510 / coupé 505   vitesse 0.98 / 0.86
+142633_duel_faim_echelle60/seed_7      n=39092  faim moy 0.16  >0,05  53%  =1   1%  |Δsortie| faim 0→1 : virage 0.221 vitesse 0.504   (énergie 0→1 : 0.146 0.186)  pop normal 563 / coupé 548   vitesse 0.70 / 0.74
+142633_duel_faim_echelle60/seed_8      n=42439  faim moy 0.18  >0,05  54%  =1   2%  |Δsortie| faim 0→1 : virage 0.192 vitesse 0.477   (énergie 0→1 : 0.171 0.182)  pop normal 595 / coupé 582   vitesse 0.67 / 0.69
+142633_duel_faim_echelle60/seed_9      n=40179  faim moy 0.18  >0,05  54%  =1   2%  |Δsortie| faim 0→1 : virage 0.227 vitesse 0.493   (énergie 0→1 : 0.161 0.253)  pop normal 567 / coupé 541   vitesse 0.70 / 0.79
