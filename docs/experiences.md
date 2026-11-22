@@ -68,6 +68,20 @@ Seule la quantité de nourriture fait une différence nette. Les autres (1 à 3 
 - **Limites** : 8 graines, une seule valeur testée par levier, pas de combinaison. 0/8 n'exclut pas un taux d'extinction de quelques pour cent.
 - **Retenu** : `FOOD_COUNT = 60` dans `config.py` (le changement le plus ciblé : il ne touche pas le plancher).
 
+### Goulot dans une partie réelle : monde 2×2, duel d'espèces (22/11/2026)
+
+Vérification du calibrage hors du cadre où il a été fait : réglages d'une partie jouée (`WORLD_SCALE=2`, `VISION_FOV_DEGREES=60`, espèces `complet` et `complet_faim`), 8 graines × 120 000 ticks. Résultats : `experiments/results/20261122_02*_mes_reglages_*`.
+
+| `FOOD_COUNT` | Extinctions | Population | Naissances bloquées par le plafond | `complet_faim` éteinte |
+|---|---|---|---|---|
+| 40 | 4/8 (ticks 9 300 à 18 900) | 400 | ~33 000 par graine | 8/8 |
+| 60 | 0/8 | 400 | ~40 000 par graine | 5/8 |
+
+- Le goulot se comporte comme dans le monde 1×1 : 4 sur 8 à 40, 0 sur 8 à 60. Le calibrage tient dans ce cadre.
+- **À l'équilibre, le plafond `POP_MAX` (400) limite la population, pas la nourriture** : toutes les graines survivantes sont à 400, et des dizaines de milliers de naissances sont refusées. Dans un monde 2×2, la nourriture est 4 fois plus abondante mais le plafond ne change pas.
+- **Duel** : dans chaque graine, une espèce finit par occuper tout le monde. Avec `FOOD_COUNT=60`, `complet` gagne 5 graines sur 8 et `complet_faim` 3 sur 8 : pas de vainqueur net à 8 graines.
+- **Limites** : un seul cadre de partie ; le plafond fausse toute mesure de l'équilibre (population, vitesse) dans ce monde.
+
 ### Mode générations (supprimé le 08/11, historique)
 
 Le monde durci (×2, 5 nourritures, 20 poisons à 80, 25 obstacles) avec une sélection sur l'âge d'abord menait au piège d'immobilité sur 4 graines sur 4. Dans le monde réparé (10 nourritures), l'évolution progressait sur 4 graines sur 4. Résultats dans `experiments/results/20261108_20*` (format de l'époque, lisible par `experiments.summary`).
