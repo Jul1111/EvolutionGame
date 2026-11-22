@@ -27,8 +27,9 @@ class Tips:
             return None
         lx, ly = x - sb.x, y - sb.y
         u, ky = hud.u, hud.ky
-        fmt = dict(size_min=hud.cfg.SIZE_MIN, size_max=hud.cfg.SIZE_MAX, pop_max=hud.cfg.POP_MAX,
-                   energy_max=hud.cfg.ENERGY_MAX, speed_max=hud.cfg.CREATURE_MAX_SPEED)
+        cfg = hud.cfg
+        fmt = dict(size_min=cfg.SIZE_MIN, size_max=cfg.SIZE_MAX, pop_max=cfg.POP_CAP, pop_screen=cfg.POP_MAX,
+                   energy_max=cfg.ENERGY_MAX, speed_max=cfg.CREATURE_MAX_SPEED)
         for name, rows in (("gen", GEN_TIPS), ("creature", CREATURE_TIPS)):
             slot = hud.slots.get(name)
             if slot and slot.collidepoint(lx, ly):

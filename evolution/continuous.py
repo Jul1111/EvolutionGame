@@ -138,9 +138,8 @@ class ContinuousSimulation:
 
     @property
     def pop_max(self):
-        """Computing cap: POP_MAX creatures in the whole world, whatever its size (not scaled like food and
-        obstacles)."""
-        return self.cfg.POP_MAX
+        """Computing cap of the whole world: POP_MAX per screen, like food and obstacles."""
+        return self.cfg.POP_CAP
 
     @property
     def new_sample(self):

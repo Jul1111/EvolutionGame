@@ -44,7 +44,7 @@ def test_cap_blocks_and_counts():
     for c in sim.world.creatures:
         c.energy, c.age = config.REPRO_THRESHOLD + 50, config.MATURITY_AGE
     sim.step()
-    assert len(sim.world.creatures) <= config.POP_MAX
+    assert len(sim.world.creatures) <= config.POP_MAX * config.WORLD_SCALE ** 2
     assert sim.cap_blocked > 0
 
 
@@ -208,3 +208,10 @@ def test_settings_rejects_unknown_names_and_derives_from_itself():
         config.Settings(NOT_A_SETTING=1)
     s = config.Settings(WORLD_SCALE=3)
     assert s.WORLD_WIDTH == 3 * config.SCREEN_WIDTH and config.WORLD_WIDTH == config.SCREEN_WIDTH
+
+
+def test_cap_grows_with_the_world():
+    """POP_MAX is per screen: a 2×2 world holds 4 times more creatures before the cap blocks births."""
+    small = ContinuousSimulation(random.Random(1), cfg=config.Settings(INITIAL_POPULATION=10, WORLD_SCALE=1))
+    big = ContinuousSimulation(random.Random(1), cfg=config.Settings(INITIAL_POPULATION=10, WORLD_SCALE=2))
+    assert big.pop_max == 4 * small.pop_max == 4 * config.POP_MAX

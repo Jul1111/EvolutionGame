@@ -42,7 +42,7 @@ PARAM_INFO = {
 
 # Explanations shown when the mouse rests on a label of the side bar: (logical y of the row, text)
 GEN_TIPS = [
-    (38, "Vivantes sur le plafond de calcul ({pop_max}, quelle que soit la taille du monde). Au plafond, les naissances sont bloquées : la population n'est plus réglée par la nourriture."),
+    (38, "Vivantes sur le plafond de calcul ({pop_max} : {pop_screen} par écran). Au plafond, les naissances sont bloquées : la population n'est plus réglée par la nourriture."),
     (68, "Temps simulé depuis le départ de cette population."),
     (86, "Naissances et morts depuis le départ. Une créature naît quand son parent atteint le seuil d'énergie."),
     (104, "Génération de lignée : nombre d'ancêtres depuis les fondateurs tirés au hasard (0)."),

@@ -85,8 +85,9 @@ REPRO_CHILD_ENERGY = 50.0   # Energy of the newborn (less than the cost: no perp
 MATURITY_AGE = 600          # Ticks before a creature can give birth (10 s)
 REPRO_COOLDOWN = 300        # Ticks between two births of the same creature
 AGE_MAX = 6000              # Death of old age (100 s). 0 = never
-POP_MAX = 400               # Computing cap for the whole world, whatever its size: at the cap births are blocked
-                            # and counted (cap_blocked)
+POP_MAX = 400               # Computing cap per screen: the whole world holds WORLD_SCALE² times more (POP_CAP). At
+                            # the cap births are blocked and counted (cap_blocked). Per screen since 22/11: a 2×2 world
+                            # with a fixed cap of 400 was held by the cap, not by the food (docs/experiences.md)
 SAMPLE_TICKS = 600          # One line of timeline.csv every SAMPLE_TICKS ticks
 
 # Configuration for the body gene: size (core/creature.py). Founders have size 1; a newborn gets the size of its
@@ -135,6 +136,7 @@ DERIVED = {
     "WORLD_WIDTH": lambda c: round(c.SCREEN_WIDTH * c.WORLD_SCALE),
     "WORLD_HEIGHT": lambda c: round(c.SCREEN_HEIGHT * c.WORLD_SCALE),
     "ENERGY_INPUT_MAX": lambda c: c.ENERGY_MAX,   # Energy at which the network input saturates at 1.0 (= satiety)
+    "POP_CAP": lambda c: c.POP_MAX * c.WORLD_SCALE ** 2,   # Computing cap of the whole world
 }
 
 

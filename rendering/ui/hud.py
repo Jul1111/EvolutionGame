@@ -191,7 +191,7 @@ class Hud:
                            max(3, c.x(4)))
 
         bar_h = max(3, c.x(5))
-        cap = info.get("pop_max", self.cfg.POP_MAX)
+        cap = info.get("pop_max", self.cfg.POP_CAP)
         _row(p, f, c, 38, "Vivantes / plafond", f"{n}/{cap}")
         _bar(p, pad, c.y(59), W - 2 * pad, bar_h, n / cap if cap else 0, (204, 172, 132))
         _row(p, f, c, 68, "Temps simulé", format_time(world.tick))
