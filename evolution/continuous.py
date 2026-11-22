@@ -112,13 +112,13 @@ class ContinuousSimulation:
 
     def food_goal(self):
         """Food per screen that the population calls for right now: FOOD_COUNT with no creature, FOOD_COUNT_MIN from
-        FOOD_PRESSURE living creatures born in this world on (FOOD_PRESSURE_POP per screen), a straight line in
-        between. Big, thriving population → scarce food; collapse → food comes back."""
+        FOOD_PRESSURE_POP living creatures born in this world on, a straight line in between. Big, thriving
+        population → scarce food; collapse → food comes back."""
         hi, lo = self.cfg.FOOD_COUNT, self.cfg.FOOD_COUNT_MIN
         # Only creatures born in this world count: the founders (random, or loaded) mostly die in the first bottleneck,
         # the food must not get scarce because of them
         born = sum(1 for c in self.world.creatures if c.lineage_gen > 0)
-        pressure = min(1.0, born / max(1, self.cfg.FOOD_PRESSURE))
+        pressure = min(1.0, born / max(1, self.cfg.FOOD_PRESSURE_POP))
         return hi + (lo - hi) * pressure
 
     def food_per_screen(self):

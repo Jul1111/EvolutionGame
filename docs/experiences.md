@@ -111,6 +111,7 @@ Après le passage de `POP_MAX` et `FOOD_PRESSURE_POP` en valeurs par écran (`PO
 - **Duel** : `complet` l'emporte dans 7 graines sur 8 (5 sur 8 avec l'ancienne règle) ; `complet_faim` s'éteint dans 7.
 - **Coût** : un tick coûte ~17,5 ms à 900 créatures (~24 ms à 1 600), contre ~6 ms à 400. C'est plus qu'une image à 60 i/s : dans le jeu, un monde 2×2 à l'équilibre tourne sous 60 images par seconde même en vitesse ×1, et les vitesses supérieures ne vont pas plus vite.
 - **Limites** : coût mesuré sur une seule machine (8 cœurs, un processus par graine) ; 3×3 non testé (densité attendue ~2 000 créatures).
+- **Retenu** : la pression de nourriture redevient un nombre pour le monde entier (`FOOD_PRESSURE_POP = 300`), le plafond reste par écran : un 2×2 se fixe vers 440 créatures, à ~6 ms par tick.
 
 ### Mode générations (supprimé le 08/11, historique)
 

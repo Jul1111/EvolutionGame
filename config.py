@@ -33,9 +33,8 @@ FOOD_COUNT = 60             # Food sources per screen when the population is sma
                             # 40, 0 out of 8 at 60, docs/experiences.md, 22/11)
 FOOD_COUNT_MIN = 15         # Food sources per screen when the population is large: food follows the population, no
                             # calendar (evolution/continuous.py). Same value as FOOD_COUNT = food never changes
-FOOD_PRESSURE_POP = 300     # Living creatures born in this world, per screen (the whole world: FOOD_PRESSURE), at
-                            # which the food is down to FOOD_COUNT_MIN; in between, straight line from FOOD_COUNT
-                            # (0 creature) to FOOD_COUNT_MIN. Per screen since 22/11, like the food it regulates
+FOOD_PRESSURE_POP = 300     # Living creatures (whole world) at which the food is down to FOOD_COUNT_MIN; in between,
+                            # straight line from FOOD_COUNT (0 creature) to FOOD_COUNT_MIN
 FOOD_ADAPT_TICKS = 3000     # The food moves toward that level over about this time (50 s), not at once: no yo-yo
 FOOD_RADIUS = 4
 
@@ -138,8 +137,6 @@ DERIVED = {
     "WORLD_HEIGHT": lambda c: round(c.SCREEN_HEIGHT * c.WORLD_SCALE),
     "ENERGY_INPUT_MAX": lambda c: c.ENERGY_MAX,   # Energy at which the network input saturates at 1.0 (= satiety)
     "POP_CAP": lambda c: c.POP_MAX * c.WORLD_SCALE ** 2,   # Computing cap of the whole world
-    "FOOD_PRESSURE": lambda c: c.FOOD_PRESSURE_POP * c.WORLD_SCALE ** 2,   # Born creatures of the whole world at which
-                                                                           # the food is at its minimum
 }
 
 
