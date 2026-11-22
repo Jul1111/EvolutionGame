@@ -106,11 +106,15 @@ def test_batched_update_matches_reference_for_every_species():
     for _ in range(200):
         fast.update()
         ref._update_reference()
+    # The two paths add the same numbers in a different order (matrix products vs one creature at a time), and that
+    # order depends on the linear algebra library: after 200 ticks positions differ by ~4e-8 on macOS, ~3e-5 on the
+    # Linux runner. A logic error (speed, sensor, collision) moves a creature by about a pixel within a few ticks.
+    tol = 1e-3
     for a, b in zip(fast.creatures, ref.creatures):
-        assert a.alive == b.alive and a.food_eaten == b.food_eaten
-        assert abs(torus_delta(a.x, b.x, fast.width)) < 1e-6 and abs(torus_delta(a.y, b.y, fast.height)) < 1e-6
-        assert abs(a.energy - b.energy) < 1e-6 and a.unseen_ticks == b.unseen_ticks
-        assert all(abs(m - n) < 1e-6 for m, n in zip(a.memory, b.memory))
+        assert a.alive == b.alive and a.food_eaten == b.food_eaten and a.unseen_ticks == b.unseen_ticks
+        assert abs(torus_delta(a.x, b.x, fast.width)) < tol and abs(torus_delta(a.y, b.y, fast.height)) < tol
+        assert abs(a.energy - b.energy) < tol
+        assert all(abs(m - n) < tol for m, n in zip(a.memory, b.memory))
 
 
 def test_derived_config_follows_its_sources():
