@@ -25,11 +25,11 @@ Réglages de `config.py` : `FOOD_COUNT = 60` (nourriture des petites populations
 | Cadre | Extinctions | Population à l'équilibre | Vitesse moyenne | Coût d'un tick |
 |---|---|---|---|---|
 | 1×1, une espèce (`complet`) | 0/8 | 204 ± 27 | 1,49 ± 1,03 (une graine à ~3,9, les autres ~1) | ~1,4 ms |
-| 2×2, 60°, `complet` + `complet_faim` | 0/8 | 444 ± 29 | 0,78 ± 0,08 | ~7,4 ms |
+| 2×2, 60°, `complet` + `complet_faim` | 0/16 | 440 ± 27 | 0,77 ± 0,08 | ~7,4 ms |
 
-- Le goulot de départ est passé dans 16 graines sur 16 (contre 8 sur 16 avec `FOOD_COUNT = 40`).
+- Le goulot de départ est passé dans 24 graines sur 24 (8 en 1×1, 16 en 2×2), contre 8 sur 16 avec `FOOD_COUNT = 40`.
 - Le plafond ne bloque plus de naissances ; c'est la nourriture qui règle la population.
-- Duel en 2×2 : `complet` l'emporte dans 5 graines sur 8, `complet_faim` dans 3 : pas de vainqueur net.
+- Duel en 2×2 (16 graines) : `complet` l'emporte 10 fois, `complet_faim` 6 fois. Écart compatible avec le hasard (p = 0,45) : le capteur de faim ne donne ni avantage ni handicap mesurable. Une espèce élimine toujours l'autre, entre 6 000 et 70 000 ticks.
 - **Vitesse** (revérifiée le 22/11, section « La vitesse avec les règles actuelles ») : la conclusion du 08/11 ne tient plus. La densité ne ralentit que peu les créatures (−14 à −24 % de 30 à 280 créatures dans 5 populations sur 8, rien dans les 3 autres), les lignées diffèrent beaucoup entre elles (0,5 à 4), et la sélection favorise désormais les plus rapides (rho +0,27 ± 0,19, positif dans les 8 populations) au lieu des intermédiaires.
 
 ### Évolution continue, ancienne règle de nourriture (08/11/2026, historique)
@@ -162,6 +162,21 @@ Même protocole que le 08/11 (jardin commun, puis gradient de sélection), sur l
 **Conclusion** : avec les règles actuelles, la vitesse n'est plus surtout un comportement qui s'adapte à la densité ; elle varie d'abord entre lignées, et la sélection pousse vers les plus rapides. Le 08/11 décrivait un autre monde (nourriture fixe, sans `FOOD_COUNT` élevé pour les petites populations).
 
 **Limites** : une seule configuration (1×1, une espèce) ; 3 tirages par condition du jardin ; une seule suite par population pour le gradient ; nourriture du jardin fixée à son maximum.
+
+### Duel `complet` contre `complet_faim` sur 16 graines (22/11/2026)
+
+Partie 2×2, 60°, règles actuelles, 120 000 ticks, 100 fondateurs de chaque espèce. Graines 1 à 8 : `experiments/results/20261122_121405_mes_reglages_plafond1600` (lancé avec `POP_MAX=1600` pour le monde entier, l'équivalent exact du plafond actuel de 400 par écran en 2×2 ; l'optimisation de la vision ne change aucun bit). Graines 9 à 16 : `experiments/results/20261122_135654_duel_graines_9_16`.
+
+| Graines | `complet` gagne | `complet_faim` gagne | Perdante éteinte au tick |
+|---|---|---|---|
+| 1 à 8 | 5 | 3 | 6 000 à 70 200 |
+| 9 à 16 | 5 | 3 | 12 600 à 42 600 |
+| **Total** | **10** | **6** | médiane ~17 000 |
+
+- **Pas de vainqueur** : 10 sur 16 pour `complet`, soit 62 % (intervalle de confiance à 95 % : 39 à 82 %). Sous l'hypothèse d'espèces aussi bonnes l'une que l'autre, un écart au moins aussi grand arrive 45 fois sur 100. Le capteur de faim n'apporte rien de mesurable dans ce monde, ni en bien ni en mal.
+- **Toujours un seul survivant** : dans les 16 graines, une espèce disparaît, le plus souvent avant 30 000 ticks. Le vainqueur semble se décider tôt, à la sortie du goulot, plutôt que par un avantage durable.
+- Les 8 nouvelles graines reproduisent exactement la répartition des 8 premières (5 contre 3) ; population 439 ± 25, comme avant.
+- **Limites** : un seul monde (2×2, 60°) ; avec un écart réel de quelques points, il faudrait une centaine de graines pour le voir.
 
 ### Coût du calcul (22/11/2026)
 
