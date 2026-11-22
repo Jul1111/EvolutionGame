@@ -34,6 +34,39 @@ Même protocole que l'équilibre du 08/11 (4 graines × 120 000 ticks, réglages
 - **Ce n'est pas dû au rangement du code** : le même run sur le dernier commit d'avant les refactorings (`b2ba45a`, « Nourriture qui suit la population ») donne exactement les mêmes chiffres, mêmes ticks d'extinction compris. L'écart avec le 08/11 vient donc de ce changement de règle de nourriture (et du calcul par lot du 09/11), pas du refactoring.
 - **Limites** : 2 graines survivantes seulement, donc aucune conclusion sur la vitesse ou la population d'équilibre ; une seule configuration testée. À faire : refaire le calibrage du goulot (nourriture au départ, seuil de reproduction) avec 8 graines ou plus avant de toucher aux réglages.
 
+### Calibrage du goulot de départ (22/11/2026)
+
+Question : quel réglage fait passer le goulot du départ (200 fondateurs au hasard → quelques dizaines) sans dérégler l'équilibre ? Mêmes graines 1 à 8 pour toutes les variantes (comparaison appariée), un réglage changé à la fois. Résultats : `experiments/results/20261122_01*_calib_*`.
+
+**Balayage, 8 graines × 30 000 ticks** (les extinctions arrivent toutes avant 25 000 ticks) :
+
+| Variante | Extinctions |
+|---|---|
+| actuelle (`FOOD_COUNT=40`, `FOOD_ENERGY=30`, seuil 120) | 4/8 |
+| `FOOD_COUNT=60` | 0/8 |
+| `FOOD_ENERGY=45` | 0/8 |
+| `FOOD_COUNT=60`, `FOOD_COUNT_MIN=25` | 0/8 |
+| `INITIAL_POPULATION=300` | 1/8 |
+| `REPRO_THRESHOLD=100` | 1/8 |
+| `REPRO_THRESHOLD=110` | 2/8 |
+| `MATURITY_AGE=300` | 2/8 |
+| `FOOD_RESPAWN_DELAY=30` | 3/8 |
+
+Seule la quantité de nourriture fait une différence nette. Les autres (1 à 3 sur 8 contre 4 sur 8) ne se distinguent pas de la référence à 8 graines.
+
+**Équilibre, 8 graines × 120 000 ticks** (moyenne des 10 derniers relevés des graines survivantes, ± écart-type entre graines) :
+
+| Variante | Extinctions | Population | Vitesse | Repas / 1000 ticks | Âge à la mort |
+|---|---|---|---|---|---|
+| actuelle | 4/8 | 180 ± 6 | 1,19 ± 0,15 | 1,67 | 1 962 |
+| `FOOD_COUNT=60` | 0/8 | 204 ± 27 | 1,49 ± 1,03 | 1,81 | 1 890 |
+| `FOOD_ENERGY=45` | 0/8 | 231 ± 12 | 1,01 ± 0,24 | 1,10 | 1 842 |
+
+- `FOOD_COUNT=60` ne change que la nourriture des petites populations (le départ, l'après-effondrement) : le plancher reste à 15 par écran. L'équilibre bouge peu (+13 % de population). Une graine (la 2) part sur une autre stratégie : 142 créatures à vitesse ~3,9, contre ~1 pour les autres, d'où le grand écart-type de la vitesse.
+- `FOOD_ENERGY=45` change toute la partie (chaque repas vaut 50 % de plus) : population plus haute (+28 %) et homogène, moins de repas nécessaires.
+- Le plafond (400) ne bloque aucune naissance dans les trois cas.
+- **Limites** : 8 graines, une seule valeur testée par levier, pas de combinaison. 0/8 n'exclut pas un taux d'extinction de quelques pour cent.
+
 ### Mode générations (supprimé le 08/11, historique)
 
 Le monde durci (×2, 5 nourritures, 20 poisons à 80, 25 obstacles) avec une sélection sur l'âge d'abord menait au piège d'immobilité sur 4 graines sur 4. Dans le monde réparé (10 nourritures), l'évolution progressait sur 4 graines sur 4. Résultats dans `experiments/results/20261108_20*` (format de l'époque, lisible par `experiments.summary`).
