@@ -29,7 +29,7 @@ Réglages de `config.py` : `FOOD_COUNT = 60` (nourriture des petites populations
 
 - Le goulot de départ est passé dans 24 graines sur 24 (8 en 1×1, 16 en 2×2), contre 8 sur 16 avec `FOOD_COUNT = 40`.
 - Le plafond ne bloque plus de naissances ; c'est la nourriture qui règle la population.
-- Duel en 2×2 (16 graines) : `complet` l'emporte 10 fois, `complet_faim` 6 fois. Écart compatible avec le hasard (p = 0,45) : le capteur de faim ne donne ni avantage ni handicap mesurable. Il n'est pas cassé, mais il vaut presque toujours 0 (une nourriture est presque toujours en vue). Une espèce élimine toujours l'autre, entre 6 000 et 70 000 ticks.
+- Duel en 2×2 (16 graines) : `complet` l'emporte 10 fois, `complet_faim` 6 fois. Écart compatible avec le hasard (p = 0,45) : le capteur de faim ne donne ni avantage ni handicap mesurable. Il n'est pas cassé, mais il vaut presque toujours ~0 : son échelle (600 ticks) est 50 fois plus longue que les moments typiques sans nourriture en vue. Une espèce élimine toujours l'autre, entre 6 000 et 70 000 ticks.
 - **Vitesse** (revérifiée le 22/11, section « La vitesse avec les règles actuelles ») : la conclusion du 08/11 ne tient plus. C'est la quantité de nourriture qui règle la vitesse (×2 de 15 à 60 nourritures par écran, à densité égale), la densité ne la baisse que de 6 à 18 %. Les lignées diffèrent beaucoup entre elles (0,5 à 4), et la sélection favorise les plus rapides (rho +0,27 ± 0,19, positif dans les 8 populations) au lieu des intermédiaires.
 
 ### Évolution continue, ancienne règle de nourriture (08/11/2026, historique)
@@ -202,8 +202,9 @@ Partie 2×2, 60°, règles actuelles, 120 000 ticks, 100 fondateurs de chaque es
 | Capteur coupé (forcé à 0), même graine, 20 000 ticks | population et vitesse à ±5 % près, écarts dans les deux sens selon la population |
 
 - Le capteur n'est pas cassé, et le réseau réagirait à lui (ses poids ne sont pas nuls).
-- Mais l'entrée ne porte presque jamais d'information : elle repart à 0 dès qu'une nourriture est en vue, ce qui arrive presque tout le temps avec 60 nourritures par écran au départ et une portée de 200. Le temps sans rien voir dépasse rarement quelques dizaines de ticks, pour une échelle `HUNGER_SCALE` de 600.
-- D'où le duel nul : dans ce monde, savoir depuis combien de temps on n'a rien vu ne sert à rien. Il faudrait un monde où la nourriture est souvent hors de vue (moins de nourriture, vision plus courte) pour que le capteur ait une chance de compter.
+- Mais l'entrée reste collée près de 0, à cause de son échelle. La nourriture est pourtant hors de vue 81 % du temps (`blind_frac`) ; seulement, ces moments sont courts (~12 ticks en moyenne : la créature tourne et en aperçoit vite une), alors que l'entrée met `HUNGER_SCALE` = 600 ticks à monter jusqu'à 1. Elle dépasse donc rarement quelques centièmes.
+- D'où, sans doute, le duel nul : avec cette échelle, le capteur ne distingue pas « rien vu depuis 5 ticks » de « rien vu depuis 50 ». Test avec une échelle de 60 ticks : section suivante.
+- (Corrigé le 22/11 : une première version disait qu'une nourriture est « presque toujours en vue », ce que `blind_frac` dément.)
 - Limite : la population monte au-dessus de l'équilibre (500 à 590) pendant ces 20 000 ticks, car les créatures rechargées ne comptent pas dans la pression de nourriture ; c'est le même biais dans les deux bras.
 
 ### Coût du calcul (22/11/2026)
