@@ -74,7 +74,7 @@ Vérification du calibrage hors du cadre où il a été fait : réglages d'une p
 
 | `FOOD_COUNT` | Extinctions | Population | Naissances bloquées par le plafond | `complet_faim` éteinte |
 |---|---|---|---|---|
-| 40 | 4/8 (ticks 9 300 à 18 900) | 400 | ~33 000 par graine | 8/8 |
+| 40 | 4/8 (ticks 9 300 à 18 900) | 400 | ~33 000 par graine | 4 sur les 4 survivantes |
 | 60 | 0/8 | 400 | ~40 000 par graine | 5/8 |
 
 - Le goulot se comporte comme dans le monde 1×1 : 4 sur 8 à 40, 0 sur 8 à 60. Le calibrage tient dans ce cadre.

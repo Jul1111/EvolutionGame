@@ -146,7 +146,8 @@ def print_timeline_table(run_dirs, last=10):
 
 def print_species_table(run_dirs, last=10):
     """Duel: share of each species in the population (last relevés of each seed), and on how many seeds it is the
-    majority or extinct. A species that spreads on most seeds carries something useful."""
+    majority or extinct. A species that spreads on most seeds carries something useful. Only the seeds where the
+    population survived count: a seed where everything died out says nothing about which species wins."""
     for run_dir in run_dirs:
         timelines = load_timelines(run_dir)
         species = sorted({k[5:] for rows in timelines.values() for k in (rows[0] if rows else {})
@@ -154,12 +155,16 @@ def print_species_table(run_dirs, last=10):
         if len(species) < 2:
             continue
         name = os.path.basename(run_dir.rstrip(os.sep))
-        print(f"\nEspèces ({name}) : part de la population, {last} derniers relevés")
+        print(f"\nEspèces ({name}) : part de la population, {last} derniers relevés des graines survivantes")
         print(f"{'espèce':<20} {'part moy.':>10} {'écart':>8} {'majoritaire':>12} {'éteinte':>8}")
         shares = {sp: [] for sp in species}
         majority = {sp: 0 for sp in species}
         extinct = {sp: 0 for sp in species}
+        died_out = 0
         for rows in timelines.values():
+            if not rows or not _float(rows[-1].get("population")):
+                died_out += 1
+                continue
             tail = rows[-last:]
             totals = {sp: sum(_float(r.get(f"pop__{sp}")) or 0 for r in tail) for sp in species}
             whole = sum(totals.values())
@@ -175,6 +180,8 @@ def print_species_table(run_dirs, last=10):
                 std = statistics.stdev(vals) if len(vals) > 1 else float("nan")
                 print(f"{sp:<20} {statistics.mean(vals):>10.0%} {std:>8.0%} {majority[sp]:>9}/{len(vals)} "
                       f"{extinct[sp]:>5}/{len(vals)}")
+        if died_out:
+            print(f"({died_out} graine(s) éteinte(s) en entier, laissée(s) de côté)")
 
 
 def main():

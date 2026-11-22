@@ -31,16 +31,25 @@ def follow(source, seed, ticks, skip):
     from evolution.continuous import ContinuousSimulation, load_population
     sim = ContinuousSimulation(random.Random(seed), founders=load_population(source), log_deaths=True)
     sim.run(ticks)
-    deaths = [d for d in sim.death_log if d["tick"] >= skip and d["age"] >= 600]   # Adults only (could breed)
-    if len(deaths) < 20:
+    result = speed_vs_children(sim.death_log, skip)
+    if result is not None:
+        result["extinct"] = sim.extinct
+    return result
+
+
+def speed_vs_children(death_log, skip, min_deaths=20):
+    """From the deaths after `skip` ticks (adults only, they could breed): rank correlation between mean speed and
+    children, and the mean children and speed per speed quartile. None with fewer than `min_deaths` deaths."""
+    deaths = [d for d in death_log if d["tick"] >= skip and d["age"] >= 600]
+    if len(deaths) < min_deaths:
         return None
     speed = np.array([d["mean_speed"] for d in deaths])
     kids = np.array([d["children"] for d in deaths])
     q = np.quantile(speed, [0.25, 0.5, 0.75])
     groups = np.digitize(speed, q)
     by_quartile = [float(kids[groups == g].mean()) if (groups == g).any() else float("nan") for g in range(4)]
-    return {"n": len(deaths), "rho": spearman(speed, kids), "quartiles": by_quartile,
-            "speed_q": [float(speed[groups == g].mean()) for g in range(4)], "extinct": sim.extinct}
+    speed_q = [float(speed[groups == g].mean()) if (groups == g).any() else float("nan") for g in range(4)]
+    return {"n": len(deaths), "rho": spearman(speed, kids), "quartiles": by_quartile, "speed_q": speed_q}
 
 
 def main(argv=None):
