@@ -106,3 +106,9 @@ def test_run_seed_starts_a_duel_from_two_populations(tmp_path):
     with open(os.path.join(tmp_path, "out", "seed_4", "timeline.csv"), newline="", encoding="utf-8") as f:
         first = next(csv.DictReader(f))
     assert float(first["pop__complet"]) > 0 and float(first["pop__complet_faim"]) > 0
+
+
+def test_a_seed_without_its_starting_population_is_skipped(tmp_path):
+    message = run_module.run_seed(5, str(tmp_path), {"SAMPLE_TICKS": 10}, 20, ["complet"],
+                                  [str(tmp_path / "a_{seed}.npz"), str(tmp_path / "b_{seed}.npz")])
+    assert "ignorée" in message and not (tmp_path / "seed_5").exists()

@@ -98,6 +98,10 @@ def run_seed(seed, out_dir, overrides, ticks, profiles, population_file):
     from evolution.continuous import ContinuousSimulation, save_population, load_population
     cfg = build_settings(overrides, SEED=seed, ACTIVE_PROFILES=list(profiles))
     seed_dir = os.path.join(out_dir, f"seed_{seed}")
+    files = [] if not population_file else [population_file] if isinstance(population_file, str) else population_file
+    missing = [p.format(seed=seed) for p in files if not os.path.exists(p.format(seed=seed))]
+    if missing:   # Typically: that seed died out in the run the population comes from
+        return f"graine {seed} : ignorée, population de départ absente ({os.path.relpath(missing[0], ROOT)})"
     if not population_file:
         founders = None
     elif isinstance(population_file, str) or len(population_file) == 1:   # One file: the whole population
