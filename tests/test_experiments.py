@@ -112,3 +112,21 @@ def test_a_seed_without_its_starting_population_is_skipped(tmp_path):
     message = run_module.run_seed(5, str(tmp_path), {"SAMPLE_TICKS": 10}, 20, ["complet"],
                                   [str(tmp_path / "a_{seed}.npz"), str(tmp_path / "b_{seed}.npz")])
     assert "ignorée" in message and not (tmp_path / "seed_5").exists()
+
+
+def test_replica_and_pairs():
+    """A replica replays the same founders with other chance; a shift pairs each seed with another one."""
+    assert run_module.world_rng(4).random() == __import__("random").Random(4).random()   # Replica 0: as before
+    assert run_module.world_rng(4, 1).random() != run_module.world_rng(4).random()
+    assert run_module.paired_seeds([1, 2, 5], 1) == {1: 2, 2: 5, 5: 1}
+    assert run_module.paired_seeds([1, 2, 5], 0) == {1: 1, 2: 2, 5: 5}
+
+
+def test_a_crossed_duel_reads_the_paired_seed(tmp_path):
+    message = run_module.run_seed(5, str(tmp_path), {"SAMPLE_TICKS": 10}, 20, ["complet"],
+                                  [str(tmp_path / "a_{seed}.npz"), str(tmp_path / "b_{pair}.npz")], pair=8)
+    assert "a_5.npz" in message   # {seed} for the first file...
+    (tmp_path / "a_5.npz").touch()
+    message = run_module.run_seed(5, str(tmp_path), {"SAMPLE_TICKS": 10}, 20, ["complet"],
+                                  [str(tmp_path / "a_{seed}.npz"), str(tmp_path / "b_{pair}.npz")], pair=8)
+    assert "b_8.npz" in message   # ...{pair} for the second

@@ -9,6 +9,9 @@
         --from-population experiments/results/<run A>/seed_{seed}/population_finale.npz \
                           experiments/results/<run B>/seed_{seed}/population_finale.npz
         (duel of evolved populations: INITIAL_POPULATION founders, an equal share drawn from each file)
+    ... --replica 1      same founders, another chance in the world (is the winner of a duel luck or the lineages?)
+    ... --shift 1 --from-population <run A>/seed_{seed}/... <run B>/seed_{pair}/...
+        ({pair}: the seed `shift` places further in --seeds, cyclically: each population meets other opponents)
 
 Each run writes experiments/results/<date>_<name>/:
     run.json                    command, git commit, every constant of config.py (after --set)
@@ -93,24 +96,35 @@ def mixed_founders(paths, total, rng):
     return founders
 
 
-def run_seed(seed, out_dir, overrides, ticks, profiles, population_file):
-    """One seed (run in its own process by main, to use every core)."""
+def world_rng(seed, replica=0):
+    """Chance of the world for a seed. Replica 0 is the plain seed (earlier runs); another replica replays the same
+    founders (they are drawn with their own random.Random(seed)) with other chance."""
+    return random.Random(seed if not replica else seed * 1000 + replica)
+
+
+def paired_seeds(seeds, shift):
+    """{seed: the seed `shift` places further in the list, cyclically}: who meets whom in a crossed duel."""
+    return {s: seeds[(i + shift) % len(seeds)] for i, s in enumerate(seeds)}
+
+
+def run_seed(seed, out_dir, overrides, ticks, profiles, population_file, replica=0, pair=None):
+    """One seed (run in its own process by main, to use every core). In population paths {seed} is the seed and
+    {pair} its paired seed (crossed duels, default: the seed itself)."""
     from evolution.continuous import ContinuousSimulation, save_population, load_population
     cfg = build_settings(overrides, SEED=seed, ACTIVE_PROFILES=list(profiles))
     seed_dir = os.path.join(out_dir, f"seed_{seed}")
     files = [] if not population_file else [population_file] if isinstance(population_file, str) else population_file
-    missing = [p.format(seed=seed) for p in files if not os.path.exists(p.format(seed=seed))]
+    files = [p.format(seed=seed, pair=seed if pair is None else pair) for p in files]
+    missing = [p for p in files if not os.path.exists(p)]
     if missing:   # Typically: that seed died out in the run the population comes from
         return f"graine {seed} : ignorée, population de départ absente ({os.path.relpath(missing[0], ROOT)})"
     if not population_file:
         founders = None
-    elif isinstance(population_file, str) or len(population_file) == 1:   # One file: the whole population
-        path = population_file if isinstance(population_file, str) else population_file[0]
-        founders = load_population(path.format(seed=seed))
-    else:                                                                    # Several: an equal share of each
-        founders = mixed_founders([p.format(seed=seed) for p in population_file], cfg.INITIAL_POPULATION,
-                                  random.Random(seed))
-    sim = ContinuousSimulation(random.Random(seed), os.path.join(seed_dir, "timeline.csv"), founders=founders,
+    elif len(files) == 1:   # One file: the whole population
+        founders = load_population(files[0])
+    else:                   # Several: an equal share of each
+        founders = mixed_founders(files, cfg.INITIAL_POPULATION, random.Random(seed))
+    sim = ContinuousSimulation(world_rng(seed, replica), os.path.join(seed_dir, "timeline.csv"), founders=founders,
                               cfg=cfg)
     start = time.time()
     played = sim.run(ticks)
@@ -141,6 +155,10 @@ def main(argv=None):
                         help="Population sauvegardée de départ (.npz). {seed} est remplacé par le numéro de graine. "
                              "Plusieurs fichiers : INITIAL_POPULATION fondateurs, à parts égales de chacun (duel "
                              "de populations évoluées)")
+    parser.add_argument("--replica", type=int, default=0,
+                        help="Autre hasard du monde, mêmes fondateurs (0 : la graine telle quelle)")
+    parser.add_argument("--shift", type=int, default=0,
+                        help="{pair} dans --from-population : la graine placée SHIFT rangs plus loin dans --seeds")
     parser.add_argument("--set", nargs="*", default=[], metavar="NOM=VALEUR",
                         help="Remplace une constante de config.py")
     parser.add_argument("--jobs", type=int, default=os.cpu_count(), help="Graines lancées en parallèle")
@@ -162,7 +180,7 @@ def main(argv=None):
     os.makedirs(out_dir)
     meta = {"name": args.name, "ticks": args.ticks, "from_population": args.from_population,
             "command": " ".join(sys.argv), "git": git_state(), "seeds": args.seeds, "profiles": list(profiles),
-            "overrides": overrides,
+            "overrides": overrides, "replica": args.replica, "shift": args.shift,
             "config": {n: getattr(cfg, n) for n in [*cfg.__dict__, *config.DERIVED] if n.isupper() and n != "SAVE_DIR"
                        and isinstance(getattr(cfg, n), (int, float, str, bool, list, tuple))}}
     with open(os.path.join(out_dir, "run.json"), "w", encoding="utf-8") as f:
@@ -170,9 +188,10 @@ def main(argv=None):
     print(f"{args.name} : {len(args.seeds)} graines × {args.ticks} ticks, profils {', '.join(profiles)} "
           f"→ {os.path.relpath(out_dir, ROOT)}")
 
+    pairs = paired_seeds(args.seeds, args.shift)
     with ProcessPoolExecutor(max_workers=max(1, args.jobs)) as pool:
-        futures = [pool.submit(run_seed, s, out_dir, overrides, args.ticks, profiles, args.from_population)
-                   for s in args.seeds]
+        futures = [pool.submit(run_seed, s, out_dir, overrides, args.ticks, profiles, args.from_population,
+                               args.replica, pairs[s]) for s in args.seeds]
         for fut in futures:
             print(fut.result())
 
