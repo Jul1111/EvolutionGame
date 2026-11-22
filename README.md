@@ -72,6 +72,15 @@ Liste complète et détail des menus : [docs/interface.md](docs/interface.md).
 
 Toutes les constantes sont dans `config.py`. Règles détaillées, gène de taille et espèces : [docs/fonctionnement.md](docs/fonctionnement.md).
 
+## Ce qu'on a appris
+
+Résultats sur 8 à 16 graines par condition, détails et limites dans [docs/experiences.md](docs/experiences.md) :
+
+- **Le départ est un goulot** : sur 200 fondateurs au hasard, il en reste quelques dizaines. Avec 40 nourritures par écran, une graine sur deux s'éteignait ; avec 60 (`FOOD_COUNT`), aucune sur 24.
+- **La nourriture règle la population** : environ 200 créatures par écran à l'équilibre. Le plafond de calcul (`POP_MAX`, 400 par écran) ne sert plus.
+- **La vitesse est un comportement appris qui suit la nourriture** : à génomes égaux, une créature va deux fois plus vite avec 60 nourritures par écran qu'avec 15. Le nombre de voisins compte peu. Les lignées diffèrent beaucoup entre elles, et la sélection favorise les plus rapides.
+- **Les duels d'espèces finissent toujours par l'élimination d'une des deux**, en général avant 30 000 ticks.
+
 ## Structure
 
 ```
@@ -92,7 +101,7 @@ tests/         Tests pytest
 - [x] Évolution continue par sélection naturelle
 - [x] Gène de taille
 - [x] Mesure de l'exploration, espèces faim / bruit / mémoire, duels d'espèces
-- [ ] Duels : quelle aide à explorer l'emporte ?
+- [ ] Duels : quelle aide à explorer l'emporte ? (faim : aucun effet avec l'échelle par défaut)
 - [ ] Étude du gène de taille (actif contre neutre)
 - [ ] Reproduction à deux parents
 - [ ] Environnement changeant
@@ -106,7 +115,7 @@ Un mécanisme à la fois, validé sur 4 graines minimum. Voir [docs/contribuer.m
 ## Limites connues
 
 - Mémoire seulement pour l'espèce `complet_memoire` (2 cellules), pas encore étudiée.
-- Performances limitées au-delà de quelques centaines de créatures.
+- Performances : un tick coûte ~1,4 ms en 1×1 (~200 créatures) et ~7 ms en 2×2 (~440). Vers 900 créatures, un tick coûte ~11 ms : avec le dessin, le jeu passe sous 60 images par seconde.
 
 ## Licence
 
