@@ -7,17 +7,45 @@ from rendering.ui.netview import network_rows, _node, _edge
 from rendering.ui.overlay.widgets import PANEL, DIM
 
 
-class NetworkMixin:
-    def _draw_net_big(self, window, world, selected):
-        u, f, w = self.u, self.fonts, self.area
+class NetworkPanel:
+    """The large view, over the world: movable by its title."""
+
+    def __init__(self, ctx):
+        self.ctx = ctx
+        self.big = False
+        self.rect = None
+        self.pos = None       # Top-left, once moved
+        self._drag = None     # Grab offset while it is dragged
+
+    def contains(self, x, y):
+        return self.big and self.rect is not None and self.rect.collidepoint(x, y)
+
+    def grab(self, x, y):
+        """A click on the title starts a drag. Returns True when it did."""
+        net = self.rect
+        if self.big and net and net.collidepoint(x, y) and y < net.y + round(44 * self.ctx.u):
+            self._drag = (x - net.x, y - net.y)
+            return True
+        return False
+
+    def hover(self, x, y):
+        if self._drag is not None:   # Dragging by the title
+            if pygame.mouse.get_pressed()[0]:
+                self.pos = (x - self._drag[0], y - self._drag[1])
+            else:
+                self._drag = None
+
+    def draw(self, window, world, selected):
+        ctx = self.ctx
+        u, f, w = ctx.u, ctx.fonts, ctx.area
         pw, ph = round(w.w * 0.56), round(w.h * 0.62)
         rect = pygame.Rect(0, 0, pw, ph)
-        if self.net_pos is None:
+        if self.pos is None:
             rect.bottomright = (w.right - round(12 * u), w.bottom - round(12 * u))
         else:
-            rect.topleft = self.net_pos
+            rect.topleft = self.pos
         rect.clamp_ip(w)
-        self.net_pos = rect.topleft
+        self.pos = rect.topleft
         frost(window, rect, round(12 * u), alpha=150)
         surf = pygame.Surface(rect.size, pygame.SRCALPHA)
         pygame.draw.rect(surf, (*PANEL, 60), surf.get_rect(), border_radius=round(12 * u))
@@ -25,7 +53,7 @@ class NetworkMixin:
         surf.blit(grab, (pw - round(16 * u) - grab.get_width(), round(16 * u)))
         pad = round(16 * u)
         surf.blit(f["title"].render("Réseau de la créature sélectionnée", True, VALUE), (pad, round(10 * u)))
-        self._rects["net"] = rect
+        self.rect = rect
         if selected is None or not selected.alive:
             note = "Clique sur une créature vivante." if selected is None else "Créature morte."
             surf.blit(f["base"].render(note, True, LABEL), (pad, round(48 * u)))

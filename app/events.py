@@ -14,8 +14,8 @@ class Events:
         menu, overlay, setup, do = self.menu, self.overlay, self.state.setup, self.commands.do
         if menu.open_index is not None:
             menu.close()               # First Escape closes the open menu
-        elif setup is not None and overlay.help_open:
-            overlay.help_open = False
+        elif setup is not None and overlay.help.open:
+            overlay.help.open = False
         elif setup is not None:
             if setup["cancel"]:
                 do("setup_cancel")          # Setup opened from «Nouvelle simulation»: back to the running one
@@ -36,7 +36,7 @@ class Events:
         do = self.commands.do
         if event.key == pygame.K_ESCAPE:
             self._on_escape()
-        elif self.overlay.start is not None and not self.overlay.params_open \
+        elif self.overlay.start is not None and not self.overlay.params.open \
                 and event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
             do(self.overlay.start.default_action())   # Start menu: Enter = Continuer (or Nouvelle simulation)
         elif event.key in KEYS:

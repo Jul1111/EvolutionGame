@@ -58,7 +58,7 @@ class Frame:
             "debug": ("off", "sélection", "toutes")[selection.debug_mode],
             "color": scene.color_label(), "chart": ("non", "panneau", "grand")[chart_state],
             "graph": ("non", "petit", "grand")[net_state],
-            "legend": overlay.legend_open, "follow": selection.follow,
+            "legend": overlay.legend.open, "follow": selection.follow,
             "fullscreen": self.display.fullscreen,
             **{"s_" + key: key in hud.chart_keys for key in SERIES_BY_KEY},
             **{a: fmt(pending.get(a, getattr(self.cfg, name))) + ("  *" if a in pending else "")
@@ -90,20 +90,20 @@ class Frame:
                  {"births": sim.total_births, "deaths": sim.total_deaths, "extinct": sim.extinct,
                   "pop_max": sim.pop_max, "setup": state.setup is not None},
                  selection.debug_mode, state.paused, selected, scene.color_label())
-        net_state = 2 if overlay.net_big else (1 if hud.show_graph else 0)
+        net_state = 2 if overlay.net.big else (1 if hud.show_graph else 0)
         chart_state = 2 if overlay.chart_big else (1 if hud.show_chart else 0)
         params_info = [(a, *PARAM_INFO.get(a, (a, "")), fmt(getattr(self.cfg, name)),
                         fmt(settings.pending[a]) if a in settings.pending else None)
-                       for a, (name, _, fmt) in PARAMS.items()] if overlay.params_open else []
+                       for a, (name, _, fmt) in PARAMS.items()] if overlay.params.open else []
         state.real_speed = 0.9 * state.real_speed + 0.1 * ran if ticks_to_run else 0.0   # Smoothed ticks per frame
-        overlay.draw(window, {"paused": state.paused, "speed": speed, "real_speed": state.real_speed,
-                              "debug": selection.debug_mode, "follow": selection.follow, "graph": net_state,
-                              "chart": chart_state, "cam_follow": selection.cam_follow,
-                              "profiles": list(settings.profiles_shown()),
-                              "profiles_pending": settings.pending_profiles is not None},
-                     world, selected, params_info)
+        overlay_state = {"paused": state.paused, "speed": speed, "real_speed": state.real_speed,
+                         "debug": selection.debug_mode, "follow": selection.follow, "graph": net_state,
+                         "chart": chart_state, "cam_follow": selection.cam_follow,
+                         "profiles": list(settings.profiles_shown()),
+                         "profiles_pending": settings.pending_profiles is not None}
+        overlay.draw(window, overlay_state, world, selected, params_info)
         self.menu.draw(window, self._menu_state(speed, chart_state, net_state))
-        overlay.draw_tips(window, world, selected, self.menu.open_index is not None)
+        overlay.draw_tips(window, world, selected, self.menu.open_index is not None, overlay_state)
         self.display.flip()
 
     def run(self, max_frames=None):

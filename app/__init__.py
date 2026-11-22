@@ -49,7 +49,7 @@ class App:
         self.overlay = Overlay(self.hud, self.scene)
         self.hud.lineage = self.scene.lineage          # Living lineages in the Population panel
         presets = PresetBrowser(cfg)                   # Saved settings (saves/presets/), browsed in the settings panel
-        self.overlay.presets = presets
+        self.overlay.params.presets = presets
         self.screen = Screen(self.display, self.scene, self.hud, self.menu, self.overlay)
 
         # Settings chosen in an earlier session replace the values of config.py (saves/settings.json)

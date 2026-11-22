@@ -26,9 +26,22 @@ def legend_entries(label):
     return entries
 
 
-class LegendMixin:
-    def _draw_legend(self, window):
-        u, f, w = self.u, self.fonts, self.area
+class Legend:
+    def __init__(self, ctx, scene, minimap):
+        self.ctx, self.scene, self.minimap = ctx, scene, minimap
+        self.open = False
+        self.rect = None      # Where it was drawn last (None when hidden): for clicks
+        self._cache = {}
+
+    def relayout(self):
+        self._cache.clear()
+
+    def contains(self, x, y):
+        return self.open and self.rect is not None and self.rect.collidepoint(x, y)
+
+    def draw(self, window):
+        ctx = self.ctx
+        u, f, w = ctx.u, ctx.fonts, ctx.area
         label = self.scene.color_label()
         key = ("legend", label)
         if key not in self._cache:
@@ -80,4 +93,4 @@ class LegendMixin:
         rect = surf.get_rect(bottomleft=(w.x + round(12 * u), bottom - round(10 * u)))
         frost(window, rect, round(10 * u))
         window.blit(surf, rect.topleft)
-        self._rects["legend"] = rect
+        self.rect = rect

@@ -8,9 +8,19 @@ from rendering.ui.overlay.texts import (HELP_KEYS,
 from rendering.ui.overlay.widgets import PANEL
 
 
-class HelpMixin:
-    def _draw_help(self, window):
-        u, f, w = self.u, self.fonts, self.area
+class Help:
+    def __init__(self, ctx):
+        self.ctx = ctx
+        self.open = False
+        self.rect = None
+        self._cache = {}
+
+    def relayout(self):
+        self._cache.clear()
+
+    def draw(self, window):
+        ctx = self.ctx
+        u, f, w = ctx.u, ctx.fonts, ctx.area
         if "help" not in self._cache:
             pad, row_h, col_gap = round(22 * u), round(23 * u), round(28 * u)
             half = (len(HELP_KEYS) + 1) // 2
@@ -39,8 +49,8 @@ class HelpMixin:
                 y += round(row_h * 0.85)
             self._cache["help"] = surf
         surf = self._cache["help"]
-        window.blit(self.veil, (0, 0))
+        window.blit(ctx.veil, (0, 0))
         rect = surf.get_rect(center=w.center)
         frost(window, rect, round(12 * u), alpha=185)
         window.blit(surf, rect.topleft)
-        self._rects["help"] = rect
+        self.rect = rect

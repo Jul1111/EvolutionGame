@@ -26,13 +26,14 @@ class Commands:
         self.state, self.selection, self.session, self.settings = state, selection, session, settings
         self._build()
 
-    def _cycle_panel(self, big_attr, shown_attr, toggle):
-        """Hidden → small (side bar) → large (over the world) → hidden, for the curves and the network view."""
-        if getattr(self.overlay, big_attr):
-            setattr(self.overlay, big_attr, False)
+    def _cycle_panel(self, big_owner, big_attr, shown_attr, toggle):
+        """Hidden → small (side bar) → large (over the world) → hidden, for the curves and the network view.
+        The large view is the attribute `big_attr` of `big_owner`."""
+        if getattr(big_owner, big_attr):
+            setattr(big_owner, big_attr, False)
         elif getattr(self.hud, shown_attr):
             toggle()
-            setattr(self.overlay, big_attr, True)
+            setattr(big_owner, big_attr, True)
         else:
             toggle()
 
@@ -56,20 +57,20 @@ class Commands:
             # What is shown
             "debug": self._cycle_debug,
             "color": scene.cycle_color_mode,
-            "chart": partial(self._cycle_panel, "chart_big", "show_chart", hud.toggle_chart),
-            "graph": partial(self._cycle_panel, "net_big", "show_graph", hud.toggle_graph),
+            "chart": partial(self._cycle_panel, overlay, "chart_big", "show_chart", hud.toggle_chart),
+            "graph": partial(self._cycle_panel, overlay.net, "big", "show_graph", hud.toggle_graph),
             "panels": partial(toggle, hud, "visible"),
             "minimap": partial(toggle, overlay.minimap, "enabled"),
             "effects": partial(toggle, scene.effects, "enabled"),
-            "legend": partial(toggle, overlay, "legend_open"),
-            "help": partial(toggle, overlay, "help_open"),
+            "legend": partial(toggle, overlay.legend, "open"),
+            "help": partial(toggle, overlay.help, "open"),
             "series_default": keep_open(hud.reset_series),
             # Selection
             "best": self._best,
             "follow": self._follow,
             # Settings panel and presets
-            "params_panel": partial(toggle, overlay, "params_open"),
-            "params_close": partial(setattr, overlay, "params_open", False),
+            "params_panel": partial(toggle, overlay.params, "open"),
+            "params_close": partial(setattr, overlay.params, "open", False),
             "params_cancel": settings.params_cancel,
             "preset_prev": keep_open(partial(settings.move_preset, -1)),
             "preset_next": keep_open(partial(settings.move_preset, +1)),

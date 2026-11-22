@@ -30,7 +30,7 @@ class Session:
         """At launch: the start menu (Continuer / Charger / Nouvelle simulation), then the setup screen for a new one.
         The simulation does not run until it is launched from the settings panel."""
         self.state.setup = {"resume": False, "cancel": False, "from_start": True}
-        self.overlay.setup = self.state.setup
+        self.overlay.params.setup = self.state.setup
         self.overlay.start = self._start_menu()
         self.hud.reload_stats(sorted({c.profile for c in self.world.creatures}, key=list(PROFILES).index))
         self.last_saved = latest_snapshot(self.cfg)
@@ -84,14 +84,14 @@ class Session:
     def open_setup(self, can_cancel):
         """Settings screen before a new simulation: everything set there applies when it is launched."""
         self.state.setup = {"resume": False, "cancel": can_cancel}
-        self.overlay.setup = self.state.setup
-        self.overlay.params_open = True
+        self.overlay.params.setup = self.state.setup
+        self.overlay.params.open = True
         self.state.paused = True
 
     def _close_setup(self):
         self.state.setup = None
-        self.overlay.setup = None
-        self.overlay.params_open = False
+        self.overlay.params.setup = None
+        self.overlay.params.open = False
 
     def restart_random(self):
         self.restart()
@@ -122,14 +122,14 @@ class Session:
 
     def start_back(self):
         overlay = self.overlay
-        overlay.params_open = False   # Back from the settings of a new simulation, or from the load list
+        overlay.params.open = False   # Back from the settings of a new simulation, or from the load list
         if overlay.start is None:
             overlay.start = self._start_menu()
         overlay.start.view = "main"
 
     def start_new(self):
         self.overlay.start = None
-        self.overlay.params_open = True
+        self.overlay.params.open = True
 
     def start_load(self, path):
         if not os.path.exists(path):   # Deleted since the list was made

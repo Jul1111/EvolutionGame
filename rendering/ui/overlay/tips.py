@@ -12,7 +12,11 @@ from rendering.world.scene import pick_creature
 from utils.timefmt import TICKS_PER_SECOND
 
 
-class TipsMixin:
+class Tips:
+    def __init__(self, ctx, hud, scene, toolbar, blocks, modal_open):
+        self.ctx, self.hud, self.scene, self.toolbar = ctx, hud, scene, toolbar
+        self.blocks = blocks          # (x, y) → True on a card or a panel
+        self.modal_open = modal_open  # () → True while a modal panel or the start menu is shown
 
     def _hud_tip(self, x, y, selected):
         hud = self.hud
@@ -23,8 +27,8 @@ class TipsMixin:
             return None
         lx, ly = x - sb.x, y - sb.y
         u, ky = hud.u, hud.ky
-        fmt = dict(size_min=self.hud.cfg.SIZE_MIN, size_max=self.hud.cfg.SIZE_MAX, pop_max=self.hud.cfg.POP_MAX,
-                   energy_max=self.hud.cfg.ENERGY_MAX, speed_max=self.hud.cfg.CREATURE_MAX_SPEED)
+        fmt = dict(size_min=hud.cfg.SIZE_MIN, size_max=hud.cfg.SIZE_MAX, pop_max=hud.cfg.POP_MAX,
+                   energy_max=hud.cfg.ENERGY_MAX, speed_max=hud.cfg.CREATURE_MAX_SPEED)
         for name, rows in (("gen", GEN_TIPS), ("creature", CREATURE_TIPS)):
             slot = hud.slots.get(name)
             if slot and slot.collidepoint(lx, ly):
@@ -47,33 +51,33 @@ class TipsMixin:
                 top = base + round((i * 15 + (4 if i >= n_in else 0)) * u)
                 if top <= ly < top + round(15 * u):
                     tip = NET_TIPS.get(label)
-                    cfg = self.hud.cfg
+                    cfg = hud.cfg
                     return tip.format(hunger=cfg.HUNGER_SCALE // TICKS_PER_SECOND) if tip else None
         return None
 
-    def draw_tips(self, window, world, selected, menu_open):
+    def draw(self, window, world, selected, menu_open, state):
         """Hover tips, drawn last. Buttons and labels explain themselves after a short rest; a creature gets a
         summary."""
-        if (self.mouse is None or menu_open or self.params_open or self.help_open or self.layout is None
-                or self.start is not None):
+        ctx = self.ctx
+        if ctx.mouse is None or menu_open or self.modal_open() or ctx.layout is None:
             return
-        x, y = self.mouse
-        dwell = time.monotonic() - self.mouse_since
+        x, y = ctx.mouse
+        dwell = time.monotonic() - ctx.mouse_since
         lines = None
-        for rect, action, icon, title, shortcut in self.buttons:
+        for rect, action, icon, title, shortcut in self.toolbar.buttons:
             if rect.collidepoint(x, y) and dwell > 0.3:
                 lines = [(title, "base", VALUE)] + ([(f"Raccourci : {shortcut}", "small", DIM)] if shortcut else [])
-        if lines is None and self.speed_rect.collidepoint(x, y) and dwell > 0.3:
-            lines = [(f"Vitesse demandée : {self.state.get('speed', 1)} ticks par image, réelle : "
-                      f"{self.state.get('real_speed', 0):.0f} (en orange quand la machine ne suit pas)", "base", VALUE),
+        if lines is None and self.toolbar.speed_rect.collidepoint(x, y) and dwell > 0.3:
+            lines = [(f"Vitesse demandée : {state.get('speed', 1)} ticks par image, réelle : "
+                      f"{state.get('real_speed', 0):.0f} (en orange quand la machine ne suit pas)", "base", VALUE),
                      ("Flèches haut / bas", "small", DIM)]
         if lines is None and dwell > 0.45:
             text = self._hud_tip(x, y, selected)
             if text:
-                lines = [(t, "small", VALUE) for t in wrap(self.fonts["small"], text, round(300 * self.u))]
+                lines = [(t, "small", VALUE) for t in wrap(ctx.fonts["small"], text, round(300 * ctx.u))]
         over_ui = self.blocks(x, y)
-        if lines is None and self.layout.world.collidepoint(x, y) and not over_ui and dwell > 0.08:
-            wx, wy = self.scene.screen_to_world(x - self.layout.world.x, y - self.layout.world.y)
+        if lines is None and ctx.layout.world.collidepoint(x, y) and not over_ui and dwell > 0.08:
+            wx, wy = self.scene.screen_to_world(x - ctx.layout.world.x, y - ctx.layout.world.y)
             c = pick_creature(world, wx, wy, self.scene.pick_radius())
             if c is not None:
                 t = int(c.age / TICKS_PER_SECOND)
@@ -88,8 +92,8 @@ class TipsMixin:
             self._draw_box(window, lines, x, y)
 
     def _draw_box(self, window, lines, mx, my):
-        u = self.u
-        imgs = [self.fonts[k].render(t, True, c) for t, k, c in lines]
+        u = self.ctx.u
+        imgs = [self.ctx.fonts[k].render(t, True, c) for t, k, c in lines]
         pad = round(8 * u)
         w = max(i.get_width() for i in imgs) + 2 * pad
         h = sum(i.get_height() for i in imgs) + 2 * pad + round(2 * u) * (len(imgs) - 1)

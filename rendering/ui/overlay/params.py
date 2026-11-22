@@ -8,14 +8,34 @@ from rendering.ui.overlay.texts import PARAM_COLUMNS
 from rendering.ui.overlay.widgets import HOVER, DIM, wrap, _button
 
 
-class ParamsMixin:
-    def _draw_params(self, window, params):
+class ParamsPanel:
+    """Settings panel and setup screen. Modal: it takes every click while open."""
+
+    def __init__(self, ctx, cfg):
+        self.ctx, self.cfg = ctx, cfg
+        self.open = False
+        self.setup = None       # Setup screen before a simulation (app/): {"resume": bool, "cancel": bool} or None
+        self.presets = None     # utils.presets.PresetBrowser (set by app/)
+        self.rect = None
+        self._hits = []         # (rect, action) of the buttons, rebuilt at each draw
+
+    def click(self, x, y):
+        """Returns the action of the button under the pointer, or None. A click outside closes the panel (the
+        setup screen only closes through its buttons)."""
+        for rect, action in self._hits:
+            if rect.collidepoint(x, y):
+                return action
+        if not (self.rect and self.rect.collidepoint(x, y)) and self.setup is None:
+            self.open = False
+        return None
+
+    def draw(self, window, params, state):
         """Settings panel and setup screen, in frosted glass. Two columns of sections, the species, the presets, and the
         full description of the setting under the mouse at the bottom."""
-        u, f, w = self.u, self.fonts, self.area
+        u, f, w = self.ctx.u, self.ctx.fonts, self.ctx.area
         self._hits = []
         pad, gap = round(18 * u), round(16 * u)
-        mouse = self.mouse
+        mouse = self.ctx.mouse
         by_key = {p[0]: p for p in params}
         sections = [[(title, [k for k in keys if k in by_key]) for title, keys in col] for col in PARAM_COLUMNS]
         known = {k for col in PARAM_COLUMNS for _, keys in col for k in keys}
@@ -43,9 +63,9 @@ class ParamsMixin:
         pw = min(round(940 * u), w.w - round(24 * u))
         rect = pygame.Rect(0, 0, pw, head_h + preset_h + need + desc_h + foot_h)
         rect.center = w.center
-        window.blit(self.veil, (0, 0))
+        window.blit(self.ctx.veil, (0, 0))
         frost(window, rect, round(14 * u), alpha=185)
-        self._rects["params"] = rect
+        self.rect = rect
 
         title = "Nouvelle simulation" if self.setup is not None else "Paramètres de simulation"
         window.blit(f["title"].render(title, True, VALUE), (rect.x + pad, rect.y + round(12 * u)))
@@ -139,8 +159,8 @@ class ParamsMixin:
                     y += row_h
             if ci == 1:
                 # Species: tick boxes (applied at the next start)
-                ticked = self.state.get("profiles", list(self.hud.cfg.ACTIVE_PROFILES))
-                head_color = AMBER if self.state.get("profiles_pending") else DIM
+                ticked = state.get("profiles", list(self.cfg.ACTIVE_PROFILES))
+                head_color = AMBER if state.get("profiles_pending") else DIM
                 img = f["small"].render("ESPÈCES (AU PROCHAIN DÉPART)", True, head_color)
                 window.blit(img, (x0, y + sec_h - img.get_height() - round(4 * u)))
                 y += sec_h
