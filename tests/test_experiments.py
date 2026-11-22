@@ -67,3 +67,10 @@ def test_a_population_is_continued_in_the_world_of_its_run(tmp_path):
     # Without run.json (a population saved from the game): config.py
     cfg, source = run_module.population_settings(str(tmp_path / "saves" / "x.npz"))
     assert cfg.FOOD_COUNT == config.FOOD_COUNT and source == "config.py"
+
+
+def test_garden_takes_its_own_settings():
+    plain = garden("aleatoire", 20, 1, 30, 5, "complet")
+    scarce = garden("aleatoire", 20, 1, 30, 5, "complet", {"FOOD_COUNT": 5})
+    assert scarce["foods"] == 5 and plain["foods"] == config.FOOD_COUNT
+    assert config.FOOD_COUNT != 5   # The module is left alone

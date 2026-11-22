@@ -6,6 +6,7 @@ A population from experiments/results/ is placed in the world of its run (its ru
 
     python -m experiments.jardin experiments/results/<run>/seed_1/population_finale.npz --densities 30 280 --seeds 1 2 3
     python -m experiments.jardin aleatoire --densities 30 280          (random genomes, reference)
+    python -m experiments.jardin <population.npz> --densities 200 --set FOOD_COUNT=15   (another world setting)
 
 For each population, density and seed: N creatures drawn from the population (with replacement if N is larger),
 births off, no old age, TICKS ticks; mean speed and meals per 1000 ticks of life measured after a WARMUP.
@@ -22,11 +23,12 @@ if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
 
 
-def garden(source, density, seed, ticks, warmup, profile):
+def garden(source, density, seed, ticks, warmup, profile, overrides=None):
     import config
     from evolution.continuous import ContinuousSimulation, load_population
     from experiments.run import population_settings
-    settings = {"REPRO_THRESHOLD": float("inf"),   # No births: the density stays what we set
+    settings = {**(overrides or {}),                 # --set: on top of the settings of the population's run
+                "REPRO_THRESHOLD": float("inf"),   # No births: the density stays what we set
                 "AGE_MAX": 0}
     rng = random.Random(seed)
     if source == "aleatoire":
@@ -51,7 +53,7 @@ def garden(source, density, seed, ticks, warmup, profile):
     if not alive_ticks:
         return None
     return {"speed": speed / alive_ticks, "food_rate": (sim.world.eaten - meals0) * 1000 / alive_ticks,
-            "alive_end": len(sim.world.creatures)}
+            "alive_end": len(sim.world.creatures), "foods": len(sim.world.foods)}
 
 
 def main(argv=None):
@@ -63,7 +65,15 @@ def main(argv=None):
     parser.add_argument("--warmup", type=int, default=600, help="Ticks ignorés au début (accélération, placement)")
     parser.add_argument("--profile", default="complet", help="Espèce des génomes aléatoires")
     parser.add_argument("--jobs", type=int, default=os.cpu_count())
+    parser.add_argument("--set", nargs="*", default=[], metavar="NOM=VALEUR",
+                        help="Réglages changés pour le jardin (par-dessus ceux du run de la population)")
     args = parser.parse_args(argv)
+    from experiments.run import build_settings, parse_value
+    overrides = {}
+    for item in args.set:
+        name, _, value = item.partition("=")
+        overrides[name.strip().upper()] = parse_value(value)
+    build_settings(overrides)   # Stops on a typo or a derived name, before anything runs
 
     from experiments.run import population_settings
     for src in args.sources:
@@ -71,12 +81,14 @@ def main(argv=None):
             print(f"{os.path.relpath(src, ROOT)} : réglages de {population_settings(src)[1]}")
     jobs = [(src, d, s) for src in args.sources for d in args.densities for s in args.seeds]
     with ProcessPoolExecutor(max_workers=args.jobs) as pool:
-        shared = [[v] * len(jobs) for v in (args.ticks, args.warmup, args.profile)]
+        shared = [[v] * len(jobs) for v in (args.ticks, args.warmup, args.profile, overrides)]
         results = list(pool.map(garden, *zip(*jobs), *shared))
     table = {}
     for (src, d, _), r in zip(jobs, results):
         if r is not None:
             table.setdefault((src, d), []).append(r)
+    if overrides:
+        print("Réglages changés : " + ", ".join(f"{k}={v}" for k, v in overrides.items()))
     print(f"\n{'population':<60} {'densité':>8} {'vitesse':>16} {'repas/1000t':>16}")
     for (src, d), rs in table.items():
         label = src if src == "aleatoire" else os.path.relpath(src, ROOT)
