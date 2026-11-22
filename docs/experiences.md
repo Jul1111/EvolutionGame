@@ -29,7 +29,7 @@ Réglages de `config.py` : `FOOD_COUNT = 60` (nourriture des petites populations
 
 - Le goulot de départ est passé dans 24 graines sur 24 (8 en 1×1, 16 en 2×2), contre 8 sur 16 avec `FOOD_COUNT = 40`.
 - Le plafond ne bloque plus de naissances ; c'est la nourriture qui règle la population.
-- Duels de populations évoluées (1×1) : une fois les fondateurs choisis, l'issue ne dépend presque pas du hasard du monde (même vainqueur dans 37 rejeux sur 40). En duels croisés (chaque lignée contre 4 adversaires), la qualité de la lignée adverse prédit 81 à 91 % des issues. Faim et bruit : aucun effet d'espèce. Mémoire : vrai handicap (13 lignées mémoire sur 16 perdent en majorité contre des `complet` variés, p = 0,02).
+- Duels de populations évoluées (1×1) : une fois les fondateurs choisis, l'issue ne dépend presque pas du hasard du monde (même vainqueur dans 37 rejeux sur 40). En duels croisés (chaque lignée contre 4 adversaires), la qualité de la lignée adverse prédit 81 à 91 % des issues. Faim et bruit : aucun effet d'espèce. Mémoire : vrai handicap (13 lignées mémoire sur 16 perdent en majorité contre des `complet` variés, p = 0,02), bien que les réseaux s'en servent (la couper coûte 3 % de population et fait perdre les duels plus vite). Ce qui gagne : la population qu'une lignée tient seule (79 % des duels) ; les lignées rapides perdent presque tout.
 - Duel en 2×2 (16 graines) : `complet` l'emporte 10 fois, `complet_faim` 6 fois. Écart compatible avec le hasard (p = 0,45) : le capteur de faim ne donne ni avantage ni handicap mesurable. Il n'est pas cassé, mais il vaut presque toujours ~0 : son échelle (600 ticks) est 50 fois plus longue que les moments typiques sans nourriture en vue. Avec une échelle de 60 ticks, l'entrée varie et le réseau s'en sert un peu (couper le capteur coûte ~2,5 % de population), mais le duel reste à 9 contre 6 (et une graine où les deux coexistent) : l'avantage est trop petit face au hasard du départ. Une espèce élimine toujours l'autre, entre 6 000 et 70 000 ticks.
 - **Vitesse** (revérifiée le 22/11, section « La vitesse avec les règles actuelles ») : la conclusion du 08/11 ne tient plus. C'est la quantité de nourriture qui règle la vitesse (×2 de 15 à 60 nourritures par écran, à densité égale), la densité ne la baisse que de 6 à 18 %. Les lignées diffèrent beaucoup entre elles (0,5 à 4), et la sélection favorise les plus rapides (rho +0,27 ± 0,19, positif dans les 8 populations) au lieu des intermédiaires.
 
@@ -275,6 +275,33 @@ Suite de la section précédente, mêmes populations évoluées seules, mêmes r
 - **Faim et bruit : pas d'effet d'espèce.** 9 lignées faim sur 16 et 8 lignées bruit sur 15 perdent en majorité : le hasard. L'avantage apparent de `complet` (62-63 % des duels) vient de quelques lignées adverses faibles, qui perdent tous leurs duels.
 - Le 30 sur 44 de la section précédente mélangeait donc un vrai handicap (mémoire) et deux nuls (faim, bruit).
 - **Limites** : 1×1 ; une population évoluée par graine et par espèce (16 lignées) ; les décalages réutilisent les mêmes lignées, d'où des tests au niveau des lignées plutôt que des duels.
+
+### Ce qui fait une lignée forte, et à quoi sert la mémoire (22/11/2026)
+
+**1. Traits mesurés seul contre résultats en duel.** Pour chacun des 151 duels croisés, on compare les deux populations telles qu'elles étaient seules (moyenne des 10 derniers relevés de `seul_*`). Sorties et script : `experiments/results/20261122_230145_croise3_complet_memoire/lignees.txt`.
+
+| Trait (mesuré seul) | Le camp où il est le plus élevé gagne |
+|---|---|
+| Population | **79 %** (120 sur 151) |
+| Âge moyen à la mort | 72 % |
+| Part du temps sans nourriture en vue | 72 % |
+| Taille, génération max | 56 %, 44 % (aucun lien) |
+| Enfants, morts de faim | 34 %, 35 % |
+| Énergie moyenne | 28 % |
+| Vitesse | **26 %** : le plus rapide perd 3 fois sur 4 |
+| Nourriture mangée par créature | 21 % |
+
+- **La population qu'une lignée tient seule prédit le duel** (79 %, de même contre faim, bruit et mémoire). Une lignée gagne si elle fait vivre plus de créatures avec la même nourriture : des créatures lentes, économes, qui vivent longtemps et mangent peu chacune.
+- **Les lignées rapides perdent presque tout** : les 10 lignées sur 62 qui roulent à plus de 2,5 gagnent 6 % de leurs duels. Seules, elles ne tiennent que 151 créatures contre 206. Contraste avec la sélection *dans* une population, qui pousse vers la vitesse (section « La vitesse avec les règles actuelles ») : courir rapporte à l'individu face à ses voisins, mais une population de coureurs nourrit moins de monde et perd face à une population d'économes.
+- **La mémoire perd au-delà de ce que prédit la population** : 9 duels où la population mémoire était plus nombreuse seule mais a perdu, contre 4 pour faim et 3 pour bruit.
+
+**2. La mémoire sert-elle ?** Sur les 16 populations `complet_memoire` évoluées seules, puis en duel avec la mémoire coupée (entrées de mémoire forcées à 0 à chaque tick). Sorties et script : `experiments/results/20261122_232435_duel_memoire_coupee/sonde_memoire.txt`.
+
+- **Les cellules de mémoire sont actives** : valeur absolue moyenne 0,52 à 0,93, écart-type 0,2 à 0,6 ; remplacer la mémoire réelle par 0 change les sorties autant que faire passer l'énergie de 0 à 1 (virage 0,11 à 0,39, vitesse jusqu'à 0,94).
+- **Seule, la couper coûte** : population −3,1 % en moyenne (deux mondes par population, ticks 5 000 à 20 000), plus basse dans 13 populations sur 16 (p = 0,02).
+- **En duel, la couper fait perdre plus et plus vite** : contre les mêmes `complet` (15 duels d'origine), `complet` gagne 12 fois (au lieu de 10), `complet_memoire` 1 fois (au lieu de 4), les deux restent 2 fois ; élimination médiane 17 400 ticks au lieu de 51 900. Les 3 graines où la mémoire gagnait (1, 3, 14) basculent.
+- **Donc la mémoire n'est pas un poids mort** : les réseaux qui l'ont s'en servent et en dépendent. Le handicap de l'espèce vient de ce que l'évolution en fait : avec 2 entrées et 2 sorties de plus qui se rebouclent, elle trouve des réseaux moins bons dans l'ensemble que ceux de `complet`, même s'ils tirent parti de leur mémoire. Le gain de la mémoire (quelques %) ne compense pas.
+- **Limites** : la coupure ne montre que la dépendance d'un réseau à sa mémoire, pas ce qu'aurait donné une espèce sans mémoire partie du même point ; 1×1.
 
 ### Coût du calcul (22/11/2026)
 
