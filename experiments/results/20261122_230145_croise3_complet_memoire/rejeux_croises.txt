@@ -1,0 +1,181 @@
+
+== complet vs faim
+  graine  1  orig/rejeu1/rejeu2 : C C C
+  graine  2  orig/rejeu1/rejeu2 : X X X
+  graine  3  orig/rejeu1/rejeu2 : C C C
+  graine  4  orig/rejeu1/rejeu2 : C C C
+  graine  5  orig/rejeu1/rejeu2 : X X X
+  graine  6  orig/rejeu1/rejeu2 : X X X
+  graine  7  orig/rejeu1/rejeu2 : C C C
+  graine  8  orig/rejeu1/rejeu2 : X X X
+  graine  9  orig/rejeu1/rejeu2 : C C C
+  graine 10  orig/rejeu1/rejeu2 : - - -
+  graine 11  orig/rejeu1/rejeu2 : C C =
+  graine 12  orig/rejeu1/rejeu2 : = = =
+  graine 13  orig/rejeu1/rejeu2 : C X X
+  graine 14  orig/rejeu1/rejeu2 : X = X
+  graine 15  orig/rejeu1/rejeu2 : C C C
+  graine 16  orig/rejeu1/rejeu2 : C C C
+  même gagnant à chaque rejeu : 13/14
+  croisés : par population complet (i) et par adversaire (j), victoires C/X
+   complet  1:2/3 2:0/4 3:2/3 4:1/3 5:1/3 6:2/3 7:4/4 8:2/3 9:3/4 11:1/4 12:2/2 13:4/4 14:3/4 15:3/4 16:2/3
+   faim     1:4/4 2:0/3 3:1/3 4:3/4 5:0/4 6:0/2 7:3/3 8:1/3 9:4/4 10:2/2 11:3/3 12:0/2 13:2/3 14:1/3 15:4/4 16:4/4
+
+== complet vs bruit
+  graine  1  orig/rejeu1/rejeu2 : X X X
+  graine  2  orig/rejeu1/rejeu2 : X X X
+  graine  3  orig/rejeu1/rejeu2 : C C C
+  graine  4  orig/rejeu1/rejeu2 : C C C
+  graine  5  orig/rejeu1/rejeu2 : C C C
+  graine  6  orig/rejeu1/rejeu2 : C C C
+  graine  7  orig/rejeu1/rejeu2 : - - -
+  graine  8  orig/rejeu1/rejeu2 : C C C
+  graine  9  orig/rejeu1/rejeu2 : = = =
+  graine 10  orig/rejeu1/rejeu2 : - - -
+  graine 11  orig/rejeu1/rejeu2 : C C =
+  graine 12  orig/rejeu1/rejeu2 : X C C
+  graine 13  orig/rejeu1/rejeu2 : X X X
+  graine 14  orig/rejeu1/rejeu2 : C C C
+  graine 15  orig/rejeu1/rejeu2 : X X X
+  graine 16  orig/rejeu1/rejeu2 : C C C
+  même gagnant à chaque rejeu : 12/13
+  croisés : par population complet (i) et par adversaire (j), victoires C/X
+   complet  1:3/4 2:0/4 3:4/4 4:3/3 5:3/3 6:3/3 7:2/2 8:2/4 9:0/3 11:2/3 12:1/2 13:2/3 14:2/3 15:1/3 16:2/4
+   bruit    1:0/3 2:1/3 3:3/4 4:3/4 5:3/4 6:4/4 8:4/4 9:1/2 10:1/3 11:2/3 12:0/2 13:0/2 14:4/4 15:0/2 16:4/4
+
+== complet vs memoire
+  graine  1  orig/rejeu1/rejeu2 : X = X
+  graine  2  orig/rejeu1/rejeu2 : X X X
+  graine  3  orig/rejeu1/rejeu2 : X = =
+  graine  4  orig/rejeu1/rejeu2 : C C C
+  graine  5  orig/rejeu1/rejeu2 : C = C
+  graine  6  orig/rejeu1/rejeu2 : C C C
+  graine  7  orig/rejeu1/rejeu2 : C C C
+  graine  8  orig/rejeu1/rejeu2 : C C C
+  graine  9  orig/rejeu1/rejeu2 : C C C
+  graine 10  orig/rejeu1/rejeu2 : - - -
+  graine 11  orig/rejeu1/rejeu2 : C C C
+  graine 12  orig/rejeu1/rejeu2 : C C C
+  graine 13  orig/rejeu1/rejeu2 : C C C
+  graine 14  orig/rejeu1/rejeu2 : X C X
+  graine 15  orig/rejeu1/rejeu2 : = C =
+  graine 16  orig/rejeu1/rejeu2 : C C C
+  même gagnant à chaque rejeu : 12/13
+  croisés : par population complet (i) et par adversaire (j), victoires C/X
+   complet  1:1/2 2:0/4 3:3/4 4:3/3 5:4/4 6:4/4 7:4/4 8:3/4 9:3/3 11:3/3 12:4/4 13:3/3 14:2/4 15:1/3 16:1/3
+   memoire  1:0/4 2:0/2 3:0/3 4:3/4 5:2/3 6:4/4 7:4/4 8:4/4 9:4/4 10:2/2 11:2/3 12:2/2 13:3/3 14:2/3 15:3/3 16:4/4
+
+
+
+
+faim: complet gagne 32/51 p=0.092  par décalage ['9/14', '10/13', '6/12', '7/12']
+   prédit par lignée complet (sans le duel) : 26/37 = 70%  (toujours la majorité : 63%)
+   prédit par lignée adverse (sans le duel) : 38/43 = 88%  (toujours la majorité : 63%)
+   prédit par les deux : 34/40 = 85%
+bruit: complet gagne 30/48 p=0.111  par décalage ['8/13', '7/12', '6/12', '9/11']
+   prédit par lignée complet (sans le duel) : 25/40 = 62%  (toujours la majorité : 62%)
+   prédit par lignée adverse (sans le duel) : 34/42 = 81%  (toujours la majorité : 62%)
+   prédit par les deux : 28/33 = 85%
+memoire: complet gagne 39/52 p=0.000  par décalage ['10/14', '8/10', '11/13', '10/15']
+   prédit par lignée complet (sans le duel) : 38/48 = 79%  (toujours la majorité : 75%)
+   prédit par lignée adverse (sans le duel) : 42/46 = 91%  (toujours la majorité : 75%)
+   prédit par les deux : 43/46 = 93%
+ensemble: 101/151 p=0.0000
+
+--- analyse.py
+"""Winner per seed of duel runs: replays (same pair, other chance) and crossed duels (complet i vs other j)."""
+import csv, glob, json, os, sys
+R = "/Users/jul/Documents/Dev/EvolutionGame/experiments/results"
+
+def winners(d):
+    out = {}
+    for f in glob.glob(f"{d}/seed_*/timeline.csv"):
+        s = int(f.split("seed_")[1].split("/")[0])
+        rows = list(csv.DictReader(open(f)))
+        last = rows[-1]
+        pops = {k[5:]: float(v) for k, v in last.items() if k.startswith("pop__")}
+        alive = [k for k, v in pops.items() if v > 0]
+        out[s] = "E" if not alive else ("C" if alive == ["complet"] else "X" if len(alive) == 1 else "=")
+    return out
+
+def run(pattern):
+    ds = sorted(glob.glob(f"{R}/*_{pattern}"))
+    return ds[-1] if ds else None
+
+for sp in ("faim", "bruit", "memoire"):
+    print(f"\n== complet vs {sp}")
+    reps = [run(f"duel_evolues_complet_{sp}")] + [run(f"rejeu{k}_complet_{sp}") for k in (1, 2)]
+    W = [winners(d) if d else {} for d in reps]
+    same = tot = 0
+    for s in range(1, 17):
+        line = [w.get(s, "-") for w in W]
+        dec = [x for x in line if x in "CX"]
+        if len(dec) >= 2:
+            tot += 1; same += len(set(dec)) == 1
+        print(f"  graine {s:2d}  orig/rejeu1/rejeu2 : {' '.join(line)}")
+    print(f"  même gagnant à chaque rejeu : {same}/{tot}")
+    # Crossed: matrix complet seed i vs other seed pair
+    cross = {}
+    for k in range(0, 4):
+        d = reps[0] if k == 0 else run(f"croise{k}_complet_{sp}")
+        if not d: continue
+        seeds = json.load(open(f"{d}/run.json"))["seeds"]
+        pair = {s: seeds[(i + k) % len(seeds)] for i, s in enumerate(seeds)}
+        for s, w in winners(d).items():
+            cross[(s, pair[s], k)] = w
+    if cross:
+        print("  croisés : par population complet (i) et par adversaire (j), victoires C/X")
+        for role, idx in (("complet", 0), (sp, 1)):
+            stats = {}
+            for key, w in cross.items():
+                if w in "CX":
+                    st = stats.setdefault(key[idx], [0, 0]); st[0 if w == "C" else 1] += 1
+            print(f"   {role:8s}", " ".join(f"{p}:{a}/{a+b}" for p, (a, b) in sorted(stats.items())))
+--- analyse2.py
+import sys, math
+sys.path.insert(0, "/private/tmp/claude-501/-Users-jul-Documents-Dev-EvolutionGame/cd67667f-3761-42ec-aa1a-b5872c8c57be/scratchpad")
+from analyse import winners, run
+import json
+def binom_p(k, n):
+    from math import comb
+    lo = min(k, n - k)
+    p = sum(comb(n, i) for i in range(0, lo + 1)) / 2 ** n * 2
+    return min(1, p)
+allC = allN = 0
+for sp in ("faim", "bruit", "memoire"):
+    cross = []
+    for k in range(4):
+        d = run(f"duel_evolues_complet_{sp}") if k == 0 else run(f"croise{k}_complet_{sp}")
+        seeds = json.load(open(f"{d}/run.json"))["seeds"]
+        pair = {s: seeds[(i + k) % len(seeds)] for i, s in enumerate(seeds)}
+        for s, w in winners(d).items():
+            if w in "CX": cross.append((s, pair[s], k, w == "C"))
+    n = len(cross); c = sum(x[3] for x in cross)
+    nk = [sum(1 for x in cross if x[2] == k) for k in range(4)]
+    ck = [sum(x[3] for x in cross if x[2] == k) for k in range(4)]
+    print(f"{sp}: complet gagne {c}/{n} p={binom_p(c,n):.3f}  par décalage {[f'{a}/{b}' for a,b in zip(ck,nk)]}")
+    allC += c; allN += n
+    # leave-one-out predictors
+    def loo(idx):
+        ok = tot = 0
+        for j, x in enumerate(cross):
+            others = [y[3] for i, y in enumerate(cross) if i != j and y[idx] == x[idx]]
+            if not others: continue
+            m = sum(others) / len(others)
+            if m == 0.5: continue
+            tot += 1; ok += (m > 0.5) == x[3]
+        return ok, tot
+    base = max(c, n - c) / n
+    for name, idx in (("lignée complet", 0), ("lignée adverse", 1)):
+        ok, tot = loo(idx); print(f"   prédit par {name} (sans le duel) : {ok}/{tot} = {ok/tot:.0%}  (toujours la majorité : {base:.0%})")
+    # both: sum of scores
+    ok = tot = 0
+    for j, x in enumerate(cross):
+        a = [y[3] for i, y in enumerate(cross) if i != j and y[0] == x[0]]
+        b = [y[3] for i, y in enumerate(cross) if i != j and y[1] == x[1]]
+        if not a or not b: continue
+        sc = sum(a)/len(a) + sum(b)/len(b) - 1
+        if sc == 0: continue
+        tot += 1; ok += (sc > 0) == x[3]
+    print(f"   prédit par les deux : {ok}/{tot} = {ok/tot:.0%}")
+print(f"ensemble: {allC}/{allN} p={binom_p(allC, allN):.4f}")

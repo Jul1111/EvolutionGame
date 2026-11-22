@@ -29,7 +29,7 @@ Réglages de `config.py` : `FOOD_COUNT = 60` (nourriture des petites populations
 
 - Le goulot de départ est passé dans 24 graines sur 24 (8 en 1×1, 16 en 2×2), contre 8 sur 16 avec `FOOD_COUNT = 40`.
 - Le plafond ne bloque plus de naissances ; c'est la nourriture qui règle la population.
-- Duels de populations évoluées (1×1, 44 duels) : `complet` l'emporte 30 fois sur 44 contre `complet_faim`, `complet_bruit` et `complet_memoire` réunies (p = 0,02, chaque duel seul non significatif) : une entrée en plus n'aide pas, peut-être coûte un peu. Le vainqueur dépend surtout de la paire de lignées.
+- Duels de populations évoluées (1×1) : une fois les fondateurs choisis, l'issue ne dépend presque pas du hasard du monde (même vainqueur dans 37 rejeux sur 40). En duels croisés (chaque lignée contre 4 adversaires), la qualité de la lignée adverse prédit 81 à 91 % des issues. Faim et bruit : aucun effet d'espèce. Mémoire : vrai handicap (13 lignées mémoire sur 16 perdent en majorité contre des `complet` variés, p = 0,02).
 - Duel en 2×2 (16 graines) : `complet` l'emporte 10 fois, `complet_faim` 6 fois. Écart compatible avec le hasard (p = 0,45) : le capteur de faim ne donne ni avantage ni handicap mesurable. Il n'est pas cassé, mais il vaut presque toujours ~0 : son échelle (600 ticks) est 50 fois plus longue que les moments typiques sans nourriture en vue. Avec une échelle de 60 ticks, l'entrée varie et le réseau s'en sert un peu (couper le capteur coûte ~2,5 % de population), mais le duel reste à 9 contre 6 (et une graine où les deux coexistent) : l'avantage est trop petit face au hasard du départ. Une espèce élimine toujours l'autre, entre 6 000 et 70 000 ticks.
 - **Vitesse** (revérifiée le 22/11, section « La vitesse avec les règles actuelles ») : la conclusion du 08/11 ne tient plus. C'est la quantité de nourriture qui règle la vitesse (×2 de 15 à 60 nourritures par écran, à densité égale), la densité ne la baisse que de 6 à 18 %. Les lignées diffèrent beaucoup entre elles (0,5 à 4), et la sélection favorise les plus rapides (rho +0,27 ± 0,19, positif dans les 8 populations) au lieu des intermédiaires.
 
@@ -249,7 +249,32 @@ Nouveau protocole, pour enlever la loterie du goulot de départ : chaque espèce
 - **Pas de lignée `complet` « championne »** : sur les 14 graines communes aux trois duels, `complet` bat ses trois adversaires dans 4 graines (4,4 attendues si les duels étaient indépendants) et les perd tous dans 1 (0,4 attendue : la graine 2, éliminée en moins de 12 000 ticks les trois fois).
 - **Le nouveau protocole ne rend pas les duels plus nets** : une espèce élimine toujours l'autre, vite (médiane 18 600 à 51 900 ticks, soit environ 10 à 27 durées de vie de ~1 900 ticks), et le sens change d'une graine à l'autre, comme avec des fondateurs au hasard (10 contre 6). Le vainqueur dépend surtout de la paire de lignées qui se rencontrent (les lignées d'une même espèce vont de 0,5 à 4 en vitesse), bien plus que de l'espèce.
 - **Limites** : 1×1 seulement ; un seul tirage de duel par paire de populations ; comparaison regroupée.
-- Pour séparer l'effet de l'espèce de celui de la lignée, il faudrait faire se rencontrer chaque population de l'une avec plusieurs de l'autre (seed *i* contre seed *j*), ou mesurer une valeur sélective par remplacement d'entrées plutôt que par duel.
+- Pour séparer l'effet de l'espèce de celui de la lignée, il faudrait faire se rencontrer chaque population de l'une avec plusieurs de l'autre (seed *i* contre seed *j*), ou mesurer une valeur sélective par remplacement d'entrées plutôt que par duel. Fait : section suivante.
+
+### Rejeux et duels croisés : chance, lignée ou espèce ? (22/11/2026)
+
+Suite de la section précédente, mêmes populations évoluées seules, mêmes réglages (1×1, 120 000 ticks). Résultats : `experiments/results/20261122_2*_rejeu*` et `experiments/results/20261122_2*_croise*` ; tableaux complets et scripts : `experiments/results/20261122_230145_croise3_complet_memoire/rejeux_croises.txt`.
+
+- **Rejeux** (`--replica 1` et `2`) : mêmes fondateurs, autre hasard du monde (positions, nourriture, mutations).
+- **Duels croisés** (`--shift 1`, `2`, `3`) : la population `complet` de la graine *i* rencontre la population adverse de la graine *j* placée 1, 2 ou 3 rangs plus loin. Avec le duel d'origine, chaque lignée rencontre 4 adversaires différents.
+
+**1. Le hasard du monde ne décide presque rien.** Sur les duels tranchés au moins deux fois, le même camp gagne à chaque rejeu dans 37 cas sur 40 (13/14 contre faim, 12/13 contre bruit, 12/13 contre mémoire). Une fois les fondateurs choisis, l'issue est écrite : ce sont les lignées, pas la chance du monde.
+
+**2. Duels croisés** (151 duels tranchés, décalages 0 à 3) :
+
+| Contre `complet` | `complet` gagne | Prédit par la lignée `complet` | Prédit par la lignée adverse | Lignées adverses battues en majorité |
+|---|---|---|---|---|
+| `complet_faim` | 32 sur 51 (63 %) | 70 % | 88 % | 9 sur 16 |
+| `complet_bruit` | 30 sur 48 (62 %) | 62 % | 81 % | 8 sur 15 |
+| `complet_memoire` | 39 sur 52 (75 %) | 79 % | 91 % | 13 sur 16 (p = 0,02) |
+
+« Prédit par la lignée » : le vainqueur d'un duel deviné d'après les autres duels de cette lignée (sans celui-là). Répondre toujours « l'espèce majoritaire » donne 63 %, 62 % et 75 %.
+
+- **La lignée adverse explique la plupart des issues** (81 à 91 % de bonnes prédictions), la lignée `complet` beaucoup moins (62 à 79 %, à peine mieux que la majorité). Une population faim, bruit ou mémoire est « forte » ou « faible » quel que soit le `complet` d'en face ; les populations `complet` d'un même run se ressemblent davantage. Exception : la population `complet` de la graine 2 perd ses 12 duels.
+- **`complet_memoire` est vraiment plus faible** : 13 de ses 16 lignées perdent la majorité de leurs duels contre des `complet` variés (test du signe au niveau des lignées, p = 0,02 ; les duels d'une même lignée ne comptent pas comme indépendants). La mémoire coûte : sans doute plus de poids à faire évoluer pour un bénéfice nul dans ce monde.
+- **Faim et bruit : pas d'effet d'espèce.** 9 lignées faim sur 16 et 8 lignées bruit sur 15 perdent en majorité : le hasard. L'avantage apparent de `complet` (62-63 % des duels) vient de quelques lignées adverses faibles, qui perdent tous leurs duels.
+- Le 30 sur 44 de la section précédente mélangeait donc un vrai handicap (mémoire) et deux nuls (faim, bruit).
+- **Limites** : 1×1 ; une population évoluée par graine et par espèce (16 lignées) ; les décalages réutilisent les mêmes lignées, d'où des tests au niveau des lignées plutôt que des duels.
 
 ### Coût du calcul (22/11/2026)
 
