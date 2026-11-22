@@ -30,7 +30,7 @@ Réglages de `config.py` : `FOOD_COUNT = 60` (nourriture des petites populations
 - Le goulot de départ est passé dans 24 graines sur 24 (8 en 1×1, 16 en 2×2), contre 8 sur 16 avec `FOOD_COUNT = 40`.
 - Le plafond ne bloque plus de naissances ; c'est la nourriture qui règle la population.
 - Duel en 2×2 (16 graines) : `complet` l'emporte 10 fois, `complet_faim` 6 fois. Écart compatible avec le hasard (p = 0,45) : le capteur de faim ne donne ni avantage ni handicap mesurable. Il n'est pas cassé, mais il vaut presque toujours 0 (une nourriture est presque toujours en vue). Une espèce élimine toujours l'autre, entre 6 000 et 70 000 ticks.
-- **Vitesse** (revérifiée le 22/11, section « La vitesse avec les règles actuelles ») : la conclusion du 08/11 ne tient plus. La densité ne ralentit que peu les créatures (−14 à −24 % de 30 à 280 créatures dans 5 populations sur 8, rien dans les 3 autres), les lignées diffèrent beaucoup entre elles (0,5 à 4), et la sélection favorise désormais les plus rapides (rho +0,27 ± 0,19, positif dans les 8 populations) au lieu des intermédiaires.
+- **Vitesse** (revérifiée le 22/11, section « La vitesse avec les règles actuelles ») : la conclusion du 08/11 ne tient plus. C'est la quantité de nourriture qui règle la vitesse (×2 de 15 à 60 nourritures par écran, à densité égale), la densité ne la baisse que de 6 à 18 %. Les lignées diffèrent beaucoup entre elles (0,5 à 4), et la sélection favorise les plus rapides (rho +0,27 ± 0,19, positif dans les 8 populations) au lieu des intermédiaires.
 
 ### Évolution continue, ancienne règle de nourriture (08/11/2026, historique)
 
@@ -151,7 +151,22 @@ Même protocole que le 08/11 (jardin commun, puis gradient de sélection), sur l
 
 - **Peu de plasticité liée à la densité** : 5 populations sur 8 ralentissent de 14 à 24 % quand la densité passe de 30 à 280, les 3 autres pas du tout. Le 08/11 c'était −60 % environ (1,1-1,5 → 0,4-0,6). Les génomes au hasard ne réagissent pas, comme alors.
 - **Les lignées diffèrent beaucoup** : de 0,5 à 4 à densité égale. La vitesse dépend surtout de la lignée qui a gagné dans la graine, plus que des conditions.
-- **Piste, non testée** : à densité égale (~200), les populations vont nettement plus vite dans le jardin (nourriture à 60) que dans leur run à l'équilibre (nourriture vers 28 par écran à ~210 créatures nées), par exemple 2,00 contre 1,12. La quantité de nourriture pèserait plus que la densité. Le run diffère aussi par les naissances et les âges mélangés : à tester avec un jardin à nourriture réduite.
+- **Piste** : à densité égale (~200), les populations vont nettement plus vite dans le jardin (nourriture à 60) que dans leur run à l'équilibre (nourriture vers 28 par écran à ~210 créatures nées), par exemple 2,00 contre 1,12. Testée et confirmée ci-dessous (« Jardin à nourriture variable »).
+
+**Jardin à nourriture variable** (mêmes populations, `--set FOOD_COUNT` à 15, 30 ou 60 par écran, densité 30 ou 200, 3 tirages ; sorties brutes : `experiments/results/20261122_014718_calib_long_nourr60/jardin_nourriture.txt`). Moyenne des populations 1, 3 à 8 (la 2 est collée à la vitesse maximale 4 dans toutes les conditions) :
+
+| Nourriture par écran | Vitesse à 30 créatures | à 200 | Effet de la densité (30 → 200) | Repas / 1000 ticks à 200 |
+|---|---|---|---|---|
+| 15 | 1,09 | 0,86 | −16 % | 0,87 |
+| 30 | 1,56 | 1,25 | −18 % | 1,43 |
+| 60 | 2,02 | 1,86 | −6 % | 1,91 |
+| génomes au hasard, 15 → 60 (à 200) | | 1,14 → 1,60 | | 0,34 → 1,37 |
+
+- **La quantité de nourriture règle la vitesse** : de 15 à 60 nourritures par écran, à densité 200, la vitesse est multipliée par 1,8 à 2,4 selon la population (moyenne 0,86 → 1,86). La densité, à nourriture égale, ne la baisse que de 6 à 18 % en moyenne.
+- **C'est appris** : les génomes au hasard ne gagnent que +40 % de vitesse dans les mêmes conditions (leurs entrées changent quand plus de nourriture est en vue), les génomes évolués +115 %.
+- **Cohérent avec les runs** : à l'équilibre d'un run, la nourriture est vers 28 par écran ; le jardin à 30 nourritures donne 1,25, proche des vitesses mesurées dans les runs (0,7 à 1,7, ~1,1 en médiane). Ce qui ralentit les créatures d'une grosse population, c'est surtout la nourriture qui se raréfie, pas le nombre de voisins.
+- Ce que le 08/11 attribuait à la densité était sans doute en partie un effet de nourriture par créature (nourriture fixe, plus de créatures pour se la partager).
+- **Limites** : 3 tirages, 3 000 ticks par condition ; trois niveaux de nourriture ; une seule configuration (1×1).
 
 **Gradient de sélection** (chaque population continuée 20 000 ticks, morts d'adultes après 5 000, ~1 100 à 1 550 morts chacune) :
 
@@ -159,7 +174,7 @@ Même protocole que le 08/11 (jardin commun, puis gradient de sélection), sur l
 - Le 08/11 : rho +0,07 ± 0,11, avec les intermédiaires favorisés (**sélection stabilisante**). Aujourd'hui la sélection est **dirigée vers la vitesse**.
 - Corrélation seulement : une créature rapide est peut-être rapide parce qu'elle est en bonne santé (bien nourrie), pas l'inverse.
 
-**Conclusion** : avec les règles actuelles, la vitesse n'est plus surtout un comportement qui s'adapte à la densité ; elle varie d'abord entre lignées, et la sélection pousse vers les plus rapides. Le 08/11 décrivait un autre monde (nourriture fixe, sans `FOOD_COUNT` élevé pour les petites populations).
+**Conclusion** : avec les règles actuelles, la vitesse est un comportement appris qui suit **la quantité de nourriture** (×2 de 15 à 60 nourritures par écran), bien plus que la densité ; elle varie aussi beaucoup entre lignées, et la sélection pousse vers les plus rapides. Le 08/11 décrivait un autre monde (nourriture fixe, sans `FOOD_COUNT` élevé pour les petites populations).
 
 **Limites** : une seule configuration (1×1, une espèce) ; 3 tirages par condition du jardin ; une seule suite par population pour le gradient ; nourriture du jardin fixée à son maximum.
 
