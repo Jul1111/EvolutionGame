@@ -220,6 +220,7 @@ Même duel (2×2, 60°, 16 graines, 120 000 ticks), avec `HUNGER_SCALE=60` au li
 - **Mais le capteur sert un peu** : avec l'échelle de 60, le couper fait baisser la population de chacune des 6 populations `complet_faim` gagnantes (−2,5 % en moyenne). Six baisses sur six arrivent une fois sur 32 au hasard. Avec l'échelle de 600, les écarts allaient dans les deux sens.
 - **Pourquoi le duel ne le montre pas** : un avantage de quelques pour cent de population ne pèse rien face au hasard du départ, qui décide du vainqueur avant 30 000 ticks dans presque toutes les graines. Il faudrait des centaines de graines pour le voir dans un duel.
 - **Limites** : un effet de quelques pour cent sur une seule suite par population ; la population de ces suites dépasse l'équilibre (500 à 600, créatures rechargées hors pression de nourriture), même biais dans les deux bras.
+- **Retenu** : `HUNGER_SCALE = 60` dans `config.py`.
 
 ### Coût du calcul (22/11/2026)
 

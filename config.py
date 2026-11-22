@@ -117,7 +117,9 @@ TRAIL_LENGTH = 600                   # Ticks of trajectory kept for the selected
 
 # Configuration for food respawn
 FOOD_RESPAWN_DELAY = 60     # Ticks before an eaten food is available again, always at a new random place
-HUNGER_SCALE = 600          # Sensor «faim»: ticks without seeing food for the input to reach 1 (10 s)
+HUNGER_SCALE = 60           # Sensor «faim»: ticks without seeing food for the input to reach 1 (1 s). At 600 the
+                            # input stayed near 0 (moments without food in view last ~4 ticks, 31 at the 90th
+                            # percentile) and the sensor was useless; at 60 it varies (docs/experiences.md, 22/11)
 SPAWN_CLEARANCE = 20        # Food and poison never reappear closer than this to the edge of a creature (never on one)
 POISON_COUNT = 5            # Poison sources in the world (0 = no poison). The network sees the nearest one
 POISON_ENERGY = 40.0        # Energy lost by the creature that touches a poison (starting value, to tune)

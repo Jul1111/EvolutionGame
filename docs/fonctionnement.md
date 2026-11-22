@@ -34,7 +34,7 @@ Un profil dit quels capteurs alimentent le réseau, la taille de la couche cach�
 | Profil | Entrées | Sorties | Poids |
 |---|---|---|---|
 | `complet` (défaut) | nourriture, énergie, vitesse, peut manger, poison, obstacle ; 6 cachés | virage, vitesse | 74 |
-| `complet_faim` | `complet` + faim (temps depuis la dernière nourriture vue, 0 → 1 en 10 s) | virage, vitesse | 80 |
+| `complet_faim` | `complet` + faim (temps depuis la dernière nourriture vue, 0 → 1 en 1 s) | virage, vitesse | 80 |
 | `complet_bruit` | `complet` + bruit (valeur au hasard à chaque tick, entre -1 et 1) | virage, vitesse | 80 |
 | `complet_memoire` | `complet` + 2 cellules de mémoire (sorties renvoyées en entrée au tick suivant) | virage, vitesse, 2 mémoires | 100 |
 | `chasseur` | nourriture | virage, vitesse | 6 |
