@@ -30,7 +30,7 @@ Réglages de `config.py` : `FOOD_COUNT = 60` (nourriture des petites populations
 - Le goulot de départ est passé dans 16 graines sur 16 (contre 8 sur 16 avec `FOOD_COUNT = 40`).
 - Le plafond ne bloque plus de naissances ; c'est la nourriture qui règle la population.
 - Duel en 2×2 : `complet` l'emporte dans 5 graines sur 8, `complet_faim` dans 3 : pas de vainqueur net.
-- **Pas encore revérifié avec ces règles** : la conclusion du 08/11 sur la vitesse (comportement appris qui dépend de la densité, sélection stabilisante). Le jardin commun et le gradient sont à refaire.
+- **Vitesse** (revérifiée le 22/11, section « La vitesse avec les règles actuelles ») : la conclusion du 08/11 ne tient plus. La densité ne ralentit que peu les créatures (−14 à −24 % de 30 à 280 créatures dans 5 populations sur 8, rien dans les 3 autres), les lignées diffèrent beaucoup entre elles (0,5 à 4), et la sélection favorise désormais les plus rapides (rho +0,27 ± 0,19, positif dans les 8 populations) au lieu des intermédiaires.
 
 ### Évolution continue, ancienne règle de nourriture (08/11/2026, historique)
 
@@ -130,6 +130,38 @@ Après le passage de `POP_MAX` et `FOOD_PRESSURE_POP` en valeurs par écran (`PO
 - **Coût** : un tick coûte ~17,5 ms à 900 créatures (~24 ms à 1 600), contre ~6 ms à 400. C'est plus qu'une image à 60 i/s : dans le jeu, un monde 2×2 à l'équilibre tourne sous 60 images par seconde même en vitesse ×1, et les vitesses supérieures ne vont pas plus vite.
 - **Limites** : coût mesuré sur une seule machine (8 cœurs, un processus par graine) ; 3×3 non testé (densité attendue ~2 000 créatures).
 - **Retenu** : la pression de nourriture redevient un nombre pour le monde entier (`FOOD_PRESSURE_POP = 300`), le plafond reste par écran : un 2×2 se fixe vers 440 créatures, à ~6 ms par tick.
+
+### La vitesse avec les règles actuelles (22/11/2026)
+
+Même protocole que le 08/11 (jardin commun, puis gradient de sélection), sur les 8 populations finales de `calib_long_nourr60` (1×1, une espèce, `FOOD_COUNT=60`, 120 000 ticks). Jardin et gradient les reprennent dans le monde de leur run (`run.json`). Sorties brutes : `experiments/results/20261122_014718_calib_long_nourr60/vitesse_jardin_gradient.txt`.
+
+**Jardin commun** (mêmes génomes, sans naissances ni vieillesse, nourriture fixe à 60 par écran : les créatures chargées ne comptent pas dans la pression ; 3 tirages par condition, 3 000 ticks, mesure après 600) :
+
+| Population | Vitesse à 30 | à 200 | à 280 | Écart 30 → 280 | Vitesse dans son run à l'équilibre |
+|---|---|---|---|---|---|
+| 1 | 2,37 | 2,00 | 1,79 | −24 % | 1,12 |
+| 2 | 3,98 | 3,98 | 3,99 | 0 (vitesse max : 4) | 3,94 |
+| 3 | 1,20 | 1,25 | 1,24 | 0 | 1,00 |
+| 4 | 2,03 | 1,79 | 1,66 | −18 % | 1,07 |
+| 5 | 2,68 | 2,41 | 2,24 | −16 % | 1,26 |
+| 6 | 3,13 | 2,94 | 2,70 | −14 % | 1,69 |
+| 7 | 0,54 | 0,55 | 0,54 | 0 | 0,71 |
+| 8 | 2,20 | 2,06 | 1,88 | −15 % | 1,14 |
+| au hasard | 1,52 | 1,60 | 1,62 | +7 % | |
+
+- **Peu de plasticité liée à la densité** : 5 populations sur 8 ralentissent de 14 à 24 % quand la densité passe de 30 à 280, les 3 autres pas du tout. Le 08/11 c'était −60 % environ (1,1-1,5 → 0,4-0,6). Les génomes au hasard ne réagissent pas, comme alors.
+- **Les lignées diffèrent beaucoup** : de 0,5 à 4 à densité égale. La vitesse dépend surtout de la lignée qui a gagné dans la graine, plus que des conditions.
+- **Piste, non testée** : à densité égale (~200), les populations vont nettement plus vite dans le jardin (nourriture à 60) que dans leur run à l'équilibre (nourriture vers 28 par écran à ~210 créatures nées), par exemple 2,00 contre 1,12. La quantité de nourriture pèserait plus que la densité. Le run diffère aussi par les naissances et les âges mélangés : à tester avec un jardin à nourriture réduite.
+
+**Gradient de sélection** (chaque population continuée 20 000 ticks, morts d'adultes après 5 000, ~1 100 à 1 550 morts chacune) :
+
+- **rho moyen +0,27 ± 0,19**, positif dans les 8 populations (de +0,03 à +0,67) : les plus rapides laissent plus de petits. Petits par quart de vitesse, du plus lent au plus rapide, en moyenne : ~0,56 / 1,08 / 1,46 / 2,01 ; la hausse est régulière dans 7 populations sur 8.
+- Le 08/11 : rho +0,07 ± 0,11, avec les intermédiaires favorisés (**sélection stabilisante**). Aujourd'hui la sélection est **dirigée vers la vitesse**.
+- Corrélation seulement : une créature rapide est peut-être rapide parce qu'elle est en bonne santé (bien nourrie), pas l'inverse.
+
+**Conclusion** : avec les règles actuelles, la vitesse n'est plus surtout un comportement qui s'adapte à la densité ; elle varie d'abord entre lignées, et la sélection pousse vers les plus rapides. Le 08/11 décrivait un autre monde (nourriture fixe, sans `FOOD_COUNT` élevé pour les petites populations).
+
+**Limites** : une seule configuration (1×1, une espèce) ; 3 tirages par condition du jardin ; une seule suite par population pour le gradient ; nourriture du jardin fixée à son maximum.
 
 ### Coût du calcul (22/11/2026)
 
