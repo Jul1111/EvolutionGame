@@ -99,6 +99,7 @@ def test_app_with_its_own_settings_leaves_the_config_module_alone(monkeypatch, t
     finally:
         import gc
         import pygame
+        app.display.close()
         del app
         gc.collect()
         pygame.quit()

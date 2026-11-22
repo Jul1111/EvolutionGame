@@ -52,6 +52,13 @@ class Display:
             pygame.display.set_mode(self.windowed_size, pygame.RESIZABLE)
             pygame.display.set_caption(title)
 
+    def close(self):
+        """Releases the graphics card textures: call before the window is destroyed (rendering/backend/gpu.py)."""
+        if self.gpu is not None:
+            glass.gpu = None
+            self.gpu.close()
+            self.gpu = None
+
     def surface(self):
         """The surface to draw on (in real pixels). Ask again every frame: it follows the window size.
         With the graphics card it is the interface layer (rendering/backend/gpu.py); the world is drawn on canvas()."""

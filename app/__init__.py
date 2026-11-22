@@ -92,4 +92,5 @@ class App:
     def close(self):
         """End of the session: keeps the population for the next launch, closes the window."""
         self.session.save_on_exit()
+        self.display.close()
         pygame.quit()

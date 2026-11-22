@@ -56,6 +56,8 @@ def make_app(monkeypatch, renderer):
         return app
 
     yield make
+    for app in apps:
+        app.display.close()   # Textures are freed while their renderer exists
     apps.clear()
     gc.collect()   # An App is in a reference cycle: free its window now, not in the middle of the next test
     pygame.quit()

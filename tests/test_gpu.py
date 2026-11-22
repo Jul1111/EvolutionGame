@@ -13,9 +13,11 @@ SIZE = (200, 120)
 def gpu():
     pygame.init()
     window = pygame.Window("test", SIZE)
+    gpu = Gpu(window, hardware_only=False)
     try:
-        yield Gpu(window, hardware_only=False)
+        yield gpu
     finally:
+        gpu.close()   # Textures are freed while their renderer exists
         window.destroy()
 
 
@@ -118,3 +120,11 @@ def test_merge_joins_touching_and_overlapping_rects():
     chain = _merge([pygame.Rect(0, 0, 10, 10), pygame.Rect(30, 0, 10, 10), pygame.Rect(9, 0, 22, 10)])
     assert len(chain) == 1 and chain[0] == pygame.Rect(0, 0, 40, 10)
     assert _merge([]) == []
+
+
+def test_close_frees_the_textures_before_the_window_goes(gpu):
+    surface = pygame.Surface((8, 8))
+    gpu.texture(surface)
+    assert gpu._textures
+    gpu.close()
+    assert not gpu._textures and not gpu._targets and gpu.screen is None

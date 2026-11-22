@@ -92,6 +92,17 @@ class Gpu:
         self._corners = {}
         self.resize()
 
+    def close(self):
+        """Frees every texture while the renderer still exists: textures freed after their window was destroyed
+        (pygame.quit, Window.destroy) make SDL crash at a random later moment."""
+        self._textures.clear()
+        self._targets.clear()
+        self._rings.clear()
+        self._corners.clear()
+        self._strip = None
+        self.renderer.target = None
+        self.screen = self.ui_tex = None
+
     # ---------- size ----------
 
     def output_size(self):
