@@ -82,6 +82,21 @@ Vérification du calibrage hors du cadre où il a été fait : réglages d'une p
 - **Duel** : dans chaque graine, une espèce finit par occuper tout le monde. Avec `FOOD_COUNT=60`, `complet` gagne 5 graines sur 8 et `complet_faim` 3 sur 8 : pas de vainqueur net à 8 graines.
 - **Limites** : un seul cadre de partie ; le plafond fausse toute mesure de l'équilibre (population, vitesse) dans ce monde.
 
+### Plafond proportionnel à la surface du monde (22/11/2026)
+
+Même partie (2×2, 60°, `complet` + `complet_faim`, `FOOD_COUNT=60`) avec `POP_MAX=1600`, soit 400 × 4 écrans : ce que donnerait un plafond qui grandit avec le monde. 8 graines × 120 000 ticks. Résultats : `experiments/results/20261122_121405_mes_reglages_plafond1600`.
+
+| Plafond | Extinctions | Population (10 derniers relevés) | Maximum atteint | Naissances refusées | Temps par graine |
+|---|---|---|---|---|---|
+| 400 | 0/8 | 400 | 400 | ~40 000 | ~720 s |
+| 1 600 | 0/8 | 444 ± 29 | 438 à 505 | 0 | ~720 s |
+
+- **La nourriture reprend la main** : sans plafond qui bloque, la population se fixe vers 440, bien en dessous de 1 600. Le plafond à 400 ne retenait que de peu une population qui en voulait ~10 % de plus.
+- **Pourquoi pas ~4 × 200** : `FOOD_PRESSURE_POP` (300) compte les créatures du monde entier, sans tenir compte de sa taille. Dès 300 créatures nées, un monde 2×2 descend au plancher (15 par écran), comme un monde 1×1. La population d'un grand monde est donc tenue par cette règle, pas par la surface.
+- **Coût** : aucun dans ce cadre, le temps de calcul ne bouge pas (la population ne monte que de 10 %).
+- Le duel donne la même répartition qu'avec le plafond à 400 (`complet` 5 graines sur 8).
+- **Limites** : un seul monde (2×2) ; en 3×3, le plafond proportionnel vaudrait 3 600, jamais testé.
+
 ### Mode générations (supprimé le 08/11, historique)
 
 Le monde durci (×2, 5 nourritures, 20 poisons à 80, 25 obstacles) avec une sélection sur l'âge d'abord menait au piège d'immobilité sur 4 graines sur 4. Dans le monde réparé (10 nourritures), l'évolution progressait sur 4 graines sur 4. Résultats dans `experiments/results/20261108_20*` (format de l'époque, lisible par `experiments.summary`).
