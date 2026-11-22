@@ -29,6 +29,7 @@ Réglages de `config.py` : `FOOD_COUNT = 60` (nourriture des petites populations
 
 - Le goulot de départ est passé dans 24 graines sur 24 (8 en 1×1, 16 en 2×2), contre 8 sur 16 avec `FOOD_COUNT = 40`.
 - Le plafond ne bloque plus de naissances ; c'est la nourriture qui règle la population.
+- Duels de populations évoluées (1×1, 44 duels) : `complet` l'emporte 30 fois sur 44 contre `complet_faim`, `complet_bruit` et `complet_memoire` réunies (p = 0,02, chaque duel seul non significatif) : une entrée en plus n'aide pas, peut-être coûte un peu. Le vainqueur dépend surtout de la paire de lignées.
 - Duel en 2×2 (16 graines) : `complet` l'emporte 10 fois, `complet_faim` 6 fois. Écart compatible avec le hasard (p = 0,45) : le capteur de faim ne donne ni avantage ni handicap mesurable. Il n'est pas cassé, mais il vaut presque toujours ~0 : son échelle (600 ticks) est 50 fois plus longue que les moments typiques sans nourriture en vue. Avec une échelle de 60 ticks, l'entrée varie et le réseau s'en sert un peu (couper le capteur coûte ~2,5 % de population), mais le duel reste à 9 contre 6 (et une graine où les deux coexistent) : l'avantage est trop petit face au hasard du départ. Une espèce élimine toujours l'autre, entre 6 000 et 70 000 ticks.
 - **Vitesse** (revérifiée le 22/11, section « La vitesse avec les règles actuelles ») : la conclusion du 08/11 ne tient plus. C'est la quantité de nourriture qui règle la vitesse (×2 de 15 à 60 nourritures par écran, à densité égale), la densité ne la baisse que de 6 à 18 %. Les lignées diffèrent beaucoup entre elles (0,5 à 4), et la sélection favorise les plus rapides (rho +0,27 ± 0,19, positif dans les 8 populations) au lieu des intermédiaires.
 
@@ -221,6 +222,34 @@ Même duel (2×2, 60°, 16 graines, 120 000 ticks), avec `HUNGER_SCALE=60` au li
 - **Pourquoi le duel ne le montre pas** : un avantage de quelques pour cent de population ne pèse rien face au hasard du départ, qui décide du vainqueur avant 30 000 ticks dans presque toutes les graines. Il faudrait des centaines de graines pour le voir dans un duel.
 - **Limites** : un effet de quelques pour cent sur une seule suite par population ; la population de ces suites dépasse l'équilibre (500 à 600, créatures rechargées hors pression de nourriture), même biais dans les deux bras.
 - **Retenu** : `HUNGER_SCALE = 60` dans `config.py`.
+
+### Duels de populations évoluées : faim, bruit, mémoire contre `complet` (22/11/2026)
+
+Nouveau protocole, pour enlever la loterie du goulot de départ : chaque espèce évolue d'abord **seule**, 16 graines × 120 000 ticks (1×1, réglages actuels, dont `HUNGER_SCALE = 60`) ; puis chaque duel part de 100 créatures évoluées de chaque espèce, tirées des populations finales de même numéro de graine (`--from-population` avec deux fichiers), et dure 120 000 ticks. Résultats : `experiments/results/20261122_15*_seul_*` et `experiments/results/20261122_15*_duel_evolues_*`.
+
+**Seules** (moyenne des 10 derniers relevés) : les quatre espèces se valent.
+
+| Espèce | Extinctions | Population | Vitesse |
+|---|---|---|---|
+| `complet` | 1/16 | 206 ± 21 | 1,36 ± 0,79 |
+| `complet_faim` | 0/16 | 193 ± 23 | 1,76 ± 0,92 |
+| `complet_bruit` | 1/16 | 187 ± 28 | 2,05 ± 1,08 |
+| `complet_memoire` | 0/16 | 202 ± 18 | 1,38 ± 0,71 |
+
+**Duels** (une graine éteinte seule n'a pas de duel : 15, 14 et 15 duels) :
+
+| Contre `complet` | `complet` gagne | L'autre gagne | Les deux restent | Élimination (médiane) | p (bilatéral) |
+|---|---|---|---|---|---|
+| `complet_faim` | 9 (+1 mixte) | 5 | 1 | 24 300 ticks | 0,30 |
+| `complet_bruit` | 8 (+1 mixte) | 5 | 1 | 18 600 ticks | 0,42 |
+| `complet_memoire` | 10 (+1 mixte) | 4 | 1 | 51 900 ticks | 0,12 |
+| **Total** | **30 sur 44** (espèce majoritaire) | 14 | | | 0,02 |
+
+- **Aucun duel ne tranche seul.** Ensemble, `complet` l'emporte 30 fois sur 44 contre les espèces qui ont une entrée ou une mémoire en plus (p = 0,02). C'est un indice qu'une entrée en plus ne paie pas, voire coûte un peu (plus de poids à muter, plus de bruit), pas une preuve : les trois duels d'une même graine partagent la même population `complet`, et trois comparaisons regroupées gonflent la chance d'un faux positif.
+- **Pas de lignée `complet` « championne »** : sur les 14 graines communes aux trois duels, `complet` bat ses trois adversaires dans 4 graines (4,4 attendues si les duels étaient indépendants) et les perd tous dans 1 (0,4 attendue : la graine 2, éliminée en moins de 12 000 ticks les trois fois).
+- **Le nouveau protocole ne rend pas les duels plus nets** : une espèce élimine toujours l'autre, vite (médiane 18 600 à 51 900 ticks, soit une dizaine à une vingtaine de générations), et le sens change d'une graine à l'autre, comme avec des fondateurs au hasard (10 contre 6). Le vainqueur dépend surtout de la paire de lignées qui se rencontrent (les lignées d'une même espèce vont de 0,5 à 4 en vitesse), bien plus que de l'espèce.
+- **Limites** : 1×1 seulement ; un seul tirage de duel par paire de populations ; comparaison regroupée.
+- Pour séparer l'effet de l'espèce de celui de la lignée, il faudrait faire se rencontrer chaque population de l'une avec plusieurs de l'autre (seed *i* contre seed *j*), ou mesurer une valeur sélective par remplacement d'entrées plutôt que par duel.
 
 ### Coût du calcul (22/11/2026)
 

@@ -79,7 +79,7 @@ Résultats sur 8 à 16 graines par condition, détails et limites dans [docs/exp
 - **Le départ est un goulot** : sur 200 fondateurs au hasard, il en reste quelques dizaines. Avec 40 nourritures par écran, une graine sur deux s'éteignait ; avec 60 (`FOOD_COUNT`), aucune sur 24.
 - **La nourriture règle la population** : environ 200 créatures par écran à l'équilibre. Le plafond de calcul (`POP_MAX`, 400 par écran) ne sert plus.
 - **La vitesse est un comportement appris qui suit la nourriture** : à génomes égaux, une créature va deux fois plus vite avec 60 nourritures par écran qu'avec 15. Le nombre de voisins compte peu. Les lignées diffèrent beaucoup entre elles, et la sélection favorise les plus rapides.
-- **Les duels d'espèces finissent toujours par l'élimination d'une des deux**, en général avant 30 000 ticks.
+- **Les duels d'espèces finissent presque toujours par l'élimination d'une des deux**, et aucune aide à explorer (faim, bruit, mémoire) ne bat l'espèce de base : le vainqueur dépend surtout des deux lignées qui se rencontrent.
 
 ## Structure
 
@@ -101,7 +101,7 @@ tests/         Tests pytest
 - [x] Évolution continue par sélection naturelle
 - [x] Gène de taille
 - [x] Mesure de l'exploration, espèces faim / bruit / mémoire, duels d'espèces
-- [ ] Duels : quelle aide à explorer l'emporte ? (faim : sans effet à l'échelle par défaut ; à 60 ticks, ~2,5 % de population en plus, invisible dans un duel de 16 graines)
+- [x] Duels : quelle aide à explorer l'emporte ? Aucune : faim, bruit et mémoire ne battent pas `complet` (30 duels sur 44 pour `complet`, p = 0,02 ensemble), le vainqueur dépend surtout de la paire de lignées
 - [ ] Étude du gène de taille (actif contre neutre)
 - [ ] Reproduction à deux parents
 - [ ] Environnement changeant
