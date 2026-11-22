@@ -12,7 +12,7 @@ python -m experiments.gradient experiments/results/<run>/seed_*/population_final
 
 Chaque run écrit `experiments/results/<date>_<nom>/` : `run.json` (commande, commit, toutes les constantes), un `timeline.csv` par graine, `summary.csv` (moyenne et écart-type entre graines), et la population finale. Les `run.json` et les CSV sont versionnés dans git (de quoi retrouver les chiffres cités ici) ; les populations finales `.npz` ne le sont pas, à garder à part si une expérience doit être rejouée à partir d'elles. Durée d'une graine de 120 000 ticks (8 graines en parallèle sur 8 cœurs) : ~2 min en 1×1, ~12 min en 2×2 ; ~7 min en 1×1 sur 2 cœurs. Lancer les longs runs depuis un terminal.
 
-`experiments.jardin` et `experiments.gradient` reprennent une population avec les valeurs de `config.py` (le jardin ne change que la densité) : pas avec les `--set` du run d'où elle vient. Pour une population d'un run en 2×2 ou à réglages changés, les chiffres décrivent donc un autre monde que celui où elle a évolué.
+`experiments.jardin` et `experiments.gradient` reprennent une population dans le monde de son run : toutes les valeurs de son `run.json` (le jardin ne change que la densité, sans naissances ni vieillesse). Une population sans `run.json` (sauvegardée depuis le jeu) prend `config.py`. Le script affiche la source des réglages utilisée. Avant le 22/11, ils prenaient toujours `config.py`.
 
 Deux expériences dont les intervalles (± écart-type) se recouvrent ne sont pas départagées : ajouter des graines avant de conclure.
 

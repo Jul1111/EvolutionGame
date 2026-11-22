@@ -49,3 +49,21 @@ def test_garden_keeps_density_without_births_or_deaths_of_old_age():
     result = garden("aleatoire", 30, 1, 60, 10, "complet")
     assert result is not None
     assert config.AGE_MAX != 0 and config.REPRO_THRESHOLD != float("inf")   # Settings of the garden stayed in it
+
+
+def test_a_population_is_continued_in_the_world_of_its_run(tmp_path):
+    """jardin and gradient read the run.json next to a population: every recorded value, not config.py."""
+    import json
+    run = tmp_path / "run"
+    (run / "seed_1").mkdir(parents=True)
+    recorded = {"FOOD_COUNT": 7, "WORLD_SCALE": 2, "ACTIVE_PROFILES": ["complet_faim"],
+                "WORLD_WIDTH": 1, "NO_LONGER_A_SETTING": 3, "SAVE_DIR": "/elsewhere"}
+    (run / "run.json").write_text(json.dumps({"config": recorded}), encoding="utf-8")
+    cfg, source = run_module.population_settings(str(run / "seed_1" / "population_finale.npz"), AGE_MAX=0)
+    assert cfg.FOOD_COUNT == 7 and cfg.WORLD_SCALE == 2 and cfg.ACTIVE_PROFILES == ["complet_faim"]
+    assert cfg.WORLD_WIDTH == 2 * config.SCREEN_WIDTH            # Derived again from the recorded WORLD_SCALE
+    assert cfg.AGE_MAX == 0 and cfg.SAVE_DIR == config.SAVE_DIR  # `extra` on top; SAVE_DIR never taken
+    assert not hasattr(cfg, "NO_LONGER_A_SETTING") and source.endswith("run.json")
+    # Without run.json (a population saved from the game): config.py
+    cfg, source = run_module.population_settings(str(tmp_path / "saves" / "x.npz"))
+    assert cfg.FOOD_COUNT == config.FOOD_COUNT and source == "config.py"

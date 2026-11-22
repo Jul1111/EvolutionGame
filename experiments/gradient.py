@@ -6,6 +6,7 @@ Continues each population (births on), records every death after SKIP ticks, the
 (Spearman) between the mean speed of a creature over its life and its number of children, and the mean children
 per speed quartile. A negative correlation that holds across populations = slowness is selected at that density.
 A correlation is not a cause: speed also depends on what the creature met.
+A population from experiments/results/ is continued with the settings of its run (its run.json).
 """
 import argparse
 import os
@@ -29,7 +30,9 @@ def spearman(x, y):
 
 def follow(source, seed, ticks, skip):
     from evolution.continuous import ContinuousSimulation, load_population
-    sim = ContinuousSimulation(random.Random(seed), founders=load_population(source), log_deaths=True)
+    from experiments.run import population_settings
+    sim = ContinuousSimulation(random.Random(seed), founders=load_population(source), log_deaths=True,
+                               cfg=population_settings(source)[0])
     sim.run(ticks)
     result = speed_vs_children(sim.death_log, skip)
     if result is not None:
@@ -60,6 +63,9 @@ def main(argv=None):
     parser.add_argument("--seed", type=int, default=1)
     parser.add_argument("--jobs", type=int, default=os.cpu_count())
     args = parser.parse_args(argv)
+    from experiments.run import population_settings
+    for src in args.sources:
+        print(f"{os.path.relpath(src, ROOT)} : réglages de {population_settings(src)[1]}")
     with ProcessPoolExecutor(max_workers=args.jobs) as pool:
         results = list(pool.map(follow, args.sources, [args.seed] * len(args.sources),
                                 [args.ticks] * len(args.sources), [args.skip] * len(args.sources)))

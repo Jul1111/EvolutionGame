@@ -55,6 +55,25 @@ def build_settings(overrides, **extra):
     return config.Settings(**values, **extra)
 
 
+def population_settings(path, **extra):
+    """Settings of the run a population file comes from: every value its run.json recorded (two folders up:
+    results/<run>/seed_<n>/population_finale.npz), so it is continued in the world where it evolved, even if
+    config.py changed since. Names that are no longer settings (removed, or derived like WORLD_WIDTH) are skipped.
+    A file without run.json (saves/populations/) gets config.py. `extra` goes on top.
+    Returns (settings, where they come from)."""
+    import config
+    known = config.Settings().__dict__
+    meta_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(path))), "run.json")
+    values, source = {}, "config.py"
+    if os.path.exists(meta_path):
+        with open(meta_path, encoding="utf-8") as f:
+            recorded = json.load(f).get("config", {})
+        values = {n: v for n, v in recorded.items() if n in known and n != "SAVE_DIR"}
+        source = os.path.relpath(meta_path, ROOT)
+    values.update(extra)
+    return config.Settings(**values), source
+
+
 def run_seed(seed, out_dir, overrides, ticks, profiles, population_file):
     """One seed (run in its own process by main, to use every core)."""
     from evolution.continuous import ContinuousSimulation, save_population, load_population

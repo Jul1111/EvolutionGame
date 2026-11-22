@@ -2,6 +2,7 @@
 
 If a trait (here the speed) changes with the condition while the genomes are the same, it is a reaction of the
 behaviour to the surroundings (plasticity), not a genetic change. Classic test in biology.
+A population from experiments/results/ is placed in the world of its run (its run.json), only the density changes.
 
     python -m experiments.jardin experiments/results/<run>/seed_1/population_finale.npz --densities 30 280 --seeds 1 2 3
     python -m experiments.jardin aleatoire --densities 30 280          (random genomes, reference)
@@ -24,6 +25,7 @@ if ROOT not in sys.path:
 def garden(source, density, seed, ticks, warmup, profile):
     import config
     from evolution.continuous import ContinuousSimulation, load_population
+    from experiments.run import population_settings
     settings = {"REPRO_THRESHOLD": float("inf"),   # No births: the density stays what we set
                 "AGE_MAX": 0}
     rng = random.Random(seed)
@@ -34,7 +36,8 @@ def garden(source, density, seed, ticks, warmup, profile):
         pool = [f for fs in load_population(source).values() for f in fs]   # (genome, size)
         name = next(iter(load_population(source)))
         founders = {name: [pool[rng.randrange(len(pool))] for _ in range(density)]}
-    sim = ContinuousSimulation(rng, founders=founders, cfg=config.Settings(**settings))
+    cfg = config.Settings(**settings) if founders is None else population_settings(source, **settings)[0]
+    sim = ContinuousSimulation(rng, founders=founders, cfg=cfg)
     speed, alive_ticks, meals0 = 0.0, 0, None
     for t in range(ticks):
         if not sim.step():
@@ -62,6 +65,10 @@ def main(argv=None):
     parser.add_argument("--jobs", type=int, default=os.cpu_count())
     args = parser.parse_args(argv)
 
+    from experiments.run import population_settings
+    for src in args.sources:
+        if src != "aleatoire":
+            print(f"{os.path.relpath(src, ROOT)} : réglages de {population_settings(src)[1]}")
     jobs = [(src, d, s) for src in args.sources for d in args.densities for s in args.seeds]
     with ProcessPoolExecutor(max_workers=args.jobs) as pool:
         shared = [[v] * len(jobs) for v in (args.ticks, args.warmup, args.profile)]
