@@ -267,8 +267,13 @@ class World:
                         d2[idx, j] = edge * edge
             visible = d2 <= range2
             if not all_around:
-                rel = (np.arctan2(dy, dx) - heading[:, None] + math.pi) % (2 * math.pi) - math.pi
-                visible &= np.abs(rel) <= half_fov
+                # The angle (arctan2, the costly part) only for the pairs within range: a few percent of them in a
+                # big world. Same formula, same values as for the whole matrix
+                rows_in, cols_in = np.nonzero(visible)
+                rel = (np.arctan2(dy[rows_in, cols_in], dx[rows_in, cols_in]) - heading[rows_in] + math.pi) \
+                    % (2 * math.pi) - math.pi
+                outside = np.abs(rel) > half_fov
+                visible[rows_in[outside], cols_in[outside]] = False
             masked = np.where(visible & (cool <= 0)[None, :], d2, np.inf)
             in_view = np.isfinite(masked).any(axis=1)   # An available item in view
             j_best = m - 1 - np.argmin(masked[:, ::-1], axis=1)   # Last of equal minima, like nearest()
