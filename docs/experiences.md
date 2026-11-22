@@ -97,6 +97,21 @@ Même partie (2×2, 60°, `complet` + `complet_faim`, `FOOD_COUNT=60`) avec `POP
 - Le duel donne la même répartition qu'avec le plafond à 400 (`complet` 5 graines sur 8).
 - **Limites** : un seul monde (2×2) ; en 3×3, le plafond proportionnel vaudrait 3 600, jamais testé.
 
+### Plafond et pression de nourriture par écran (22/11/2026)
+
+Après le passage de `POP_MAX` et `FOOD_PRESSURE_POP` en valeurs par écran (`POP_CAP`, `FOOD_PRESSURE`), même partie (2×2, 60°, `complet` + `complet_faim`), 8 graines × 120 000 ticks. Résultats : `experiments/results/20261122_123117_mes_reglages_tout_par_ecran`.
+
+| Règle | Extinctions | Population | Naissances refusées | Temps par graine | Coût d'un tick (1 processus) |
+|---|---|---|---|---|---|
+| plafond 400, pression 300 (avant) | 0/8 | 400 | ~40 000 | ~720 s | ~6 ms |
+| plafond 1 600, pression 300 | 0/8 | 444 ± 29 | 0 | ~720 s | ~6 ms |
+| plafond 1 600, pression 1 200 (actuel) | 0/8 | 895 ± 13 | 0 | ~1 950 s | ~17,5 ms |
+
+- **Densité indépendante de la taille du monde** : 895 créatures sur 4 écrans, soit ~224 par écran, comme un monde 1×1 (204 ± 27). Le plafond n'est jamais atteint.
+- **Duel** : `complet` l'emporte dans 7 graines sur 8 (5 sur 8 avec l'ancienne règle) ; `complet_faim` s'éteint dans 7.
+- **Coût** : un tick coûte ~17,5 ms à 900 créatures (~24 ms à 1 600), contre ~6 ms à 400. C'est plus qu'une image à 60 i/s : dans le jeu, un monde 2×2 à l'équilibre tourne sous 60 images par seconde même en vitesse ×1, et les vitesses supérieures ne vont pas plus vite.
+- **Limites** : coût mesuré sur une seule machine (8 cœurs, un processus par graine) ; 3×3 non testé (densité attendue ~2 000 créatures).
+
 ### Mode générations (supprimé le 08/11, historique)
 
 Le monde durci (×2, 5 nourritures, 20 poisons à 80, 25 obstacles) avec une sélection sur l'âge d'abord menait au piège d'immobilité sur 4 graines sur 4. Dans le monde réparé (10 nourritures), l'évolution progressait sur 4 graines sur 4. Résultats dans `experiments/results/20261108_20*` (format de l'époque, lisible par `experiments.summary`).
