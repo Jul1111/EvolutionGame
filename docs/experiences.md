@@ -10,13 +10,31 @@ python -m experiments.jardin <population.npz> aleatoire --densities 30 280
 python -m experiments.gradient experiments/results/<run>/seed_*/population_finale.npz
 ```
 
-Chaque run écrit `experiments/results/<date>_<nom>/` : `run.json` (commande, commit, toutes les constantes), un `timeline.csv` par graine, `summary.csv` (moyenne et écart-type entre graines), et la population finale. Les `run.json` et les CSV sont versionnés dans git (de quoi retrouver les chiffres cités ici) ; les populations finales `.npz` ne le sont pas, à garder à part si une expérience doit être rejouée à partir d'elles. Compter environ 7 min par graine pour 120 000 ticks sur 2 cœurs : lancer les longs runs depuis un terminal.
+Chaque run écrit `experiments/results/<date>_<nom>/` : `run.json` (commande, commit, toutes les constantes), un `timeline.csv` par graine, `summary.csv` (moyenne et écart-type entre graines), et la population finale. Les `run.json` et les CSV sont versionnés dans git (de quoi retrouver les chiffres cités ici) ; les populations finales `.npz` ne le sont pas, à garder à part si une expérience doit être rejouée à partir d'elles. Durée d'une graine de 120 000 ticks (8 graines en parallèle sur 8 cœurs) : ~2 min en 1×1, ~12 min en 2×2 ; ~7 min en 1×1 sur 2 cœurs. Lancer les longs runs depuis un terminal.
+
+`experiments.jardin` et `experiments.gradient` reprennent une population avec les valeurs de `config.py` (le jardin ne change que la densité) : pas avec les `--set` du run d'où elle vient. Pour une population d'un run en 2×2 ou à réglages changés, les chiffres décrivent donc un autre monde que celui où elle a évolué.
 
 Deux expériences dont les intervalles (± écart-type) se recouvrent ne sont pas départagées : ajouter des graines avant de conclure.
 
 ## Résultats
 
-### Évolution continue (08/11/2026)
+### État actuel (22/11/2026)
+
+Réglages de `config.py` : `FOOD_COUNT = 60` (nourriture des petites populations), `FOOD_COUNT_MIN = 15`, `FOOD_PRESSURE_POP = 300` créatures nées pour le monde entier, `POP_MAX = 400` par écran (`POP_CAP`). Détails et protocoles dans les sections datées ci-dessous.
+
+| Cadre | Extinctions | Population à l'équilibre | Vitesse moyenne | Coût d'un tick |
+|---|---|---|---|---|
+| 1×1, une espèce (`complet`) | 0/8 | 204 ± 27 | 1,49 ± 1,03 (une graine à ~3,9, les autres ~1) | ~1,4 ms |
+| 2×2, 60°, `complet` + `complet_faim` | 0/8 | 444 ± 29 | 0,78 ± 0,08 | ~7,4 ms |
+
+- Le goulot de départ est passé dans 16 graines sur 16 (contre 8 sur 16 avec `FOOD_COUNT = 40`).
+- Le plafond ne bloque plus de naissances ; c'est la nourriture qui règle la population.
+- Duel en 2×2 : `complet` l'emporte dans 5 graines sur 8, `complet_faim` dans 3 : pas de vainqueur net.
+- **Pas encore revérifié avec ces règles** : la conclusion du 08/11 sur la vitesse (comportement appris qui dépend de la densité, sélection stabilisante). Le jardin commun et le gradient sont à refaire.
+
+### Évolution continue, ancienne règle de nourriture (08/11/2026, historique)
+
+Ces chiffres datent d'avant « la nourriture qui suit la population » (21/11), le calcul par lot (09/11), `FOOD_COUNT = 60` et le plafond par écran (22/11) : ils décrivent un autre réglage du monde. Avec la règle actuelle, la population d'équilibre en 1×1 est ~204 (pas 283) et la vitesse reste ~1 (pas ~0,4).
 
 - **Calibrage** : depuis des réseaux au hasard, seuil de reproduction 150 → extinction. Seuil 120 : 2 extinctions sur 8 graines avec 30 nourritures, 0 sur 8 avec 40.
 - **Équilibre** (4 graines × 120 000 ticks) : 0 extinction. Goulot au départ (200 → 20-50), puis population stable vers 283 ± 18 à partir de 60 000-80 000 ticks, sans que le plafond serve. À l'équilibre, ~2 repas par 1000 ticks de vie, soit à peu près la dépense d'une créature lente : la nourriture règle la population.
@@ -104,14 +122,25 @@ Après le passage de `POP_MAX` et `FOOD_PRESSURE_POP` en valeurs par écran (`PO
 | Règle | Extinctions | Population | Naissances refusées | Temps par graine | Coût d'un tick (1 processus) |
 |---|---|---|---|---|---|
 | plafond 400, pression 300 (avant) | 0/8 | 400 | ~40 000 | ~720 s | ~6 ms |
-| plafond 1 600, pression 300 | 0/8 | 444 ± 29 | 0 | ~720 s | ~6 ms |
-| plafond 1 600, pression 1 200 (actuel) | 0/8 | 895 ± 13 | 0 | ~1 950 s | ~17,5 ms |
+| plafond 1 600, pression 300 (retenu) | 0/8 | 444 ± 29 | 0 | ~720 s | ~6 ms |
+| plafond 1 600, pression 1 200 (essayé, annulé) | 0/8 | 895 ± 13 | 0 | ~1 950 s | ~17,5 ms |
 
 - **Densité indépendante de la taille du monde** : 895 créatures sur 4 écrans, soit ~224 par écran, comme un monde 1×1 (204 ± 27). Le plafond n'est jamais atteint.
 - **Duel** : `complet` l'emporte dans 7 graines sur 8 (5 sur 8 avec l'ancienne règle) ; `complet_faim` s'éteint dans 7.
 - **Coût** : un tick coûte ~17,5 ms à 900 créatures (~24 ms à 1 600), contre ~6 ms à 400. C'est plus qu'une image à 60 i/s : dans le jeu, un monde 2×2 à l'équilibre tourne sous 60 images par seconde même en vitesse ×1, et les vitesses supérieures ne vont pas plus vite.
 - **Limites** : coût mesuré sur une seule machine (8 cœurs, un processus par graine) ; 3×3 non testé (densité attendue ~2 000 créatures).
 - **Retenu** : la pression de nourriture redevient un nombre pour le monde entier (`FOOD_PRESSURE_POP = 300`), le plafond reste par écran : un 2×2 se fixe vers 440 créatures, à ~6 ms par tick.
+
+### Coût du calcul (22/11/2026)
+
+Les coûts par tick des sections précédentes datent d'avant l'optimisation de la vision (commit `ea4fc90` : l'angle n'est plus calculé que pour les objets à portée, résultat identique au bit près). Banc de 300 ticks, un processus :
+
+| Scène | Avant | Après |
+|---|---|---|
+| 2×2, ~900 créatures | 17,0 ms | 11,0 ms (−35 %) |
+| 1×1, 200 à 400 créatures | 1,63 ms | 1,38 ms (−15 %) |
+
+Dans la partie réelle (2×2, ~440 créatures), un tick coûte 7,4 ms une fois optimisé (les ~6 ms des tableaux précédents sont déduits de la durée des runs, pas mesurés de la même façon). Le temps va à la vision (42 %), aux contacts nourriture-créature (22 %) et aux réseaux et déplacements (22 %). Garder les coordonnées des objets dans un tableau n'a rien apporté (essayé, abandonné) : les objets réapparaissent presque à chaque tick.
 
 ### Mode générations (supprimé le 08/11, historique)
 
