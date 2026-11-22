@@ -74,3 +74,35 @@ def test_garden_takes_its_own_settings():
     scarce = garden("aleatoire", 20, 1, 30, 5, "complet", {"FOOD_COUNT": 5})
     assert scarce["foods"] == 5 and plain["foods"] == config.FOOD_COUNT
     assert config.FOOD_COUNT != 5   # The module is left alone
+
+
+def test_mixed_founders_take_an_equal_share_of_each_population(tmp_path):
+    import random
+    from evolution.continuous import ContinuousSimulation, save_population
+    paths = []
+    for profile, n in (("complet", 30), ("complet_faim", 8)):
+        sim = ContinuousSimulation(random.Random(1), cfg=config.Settings(ACTIVE_PROFILES=[profile],
+                                                                          INITIAL_POPULATION=n))
+        paths.append(str(tmp_path / f"{profile}.npz"))
+        save_population(sim, paths[-1])
+    founders = run_module.mixed_founders(paths, 20, random.Random(3))
+    assert len(founders["complet"]) == 10        # Half of 20, drawn from the 30
+    assert len(founders["complet_faim"]) == 8    # Only 8 in that file: all of them
+    again = run_module.mixed_founders(paths, 20, random.Random(3))
+    assert all((a[0] == b[0]).all() for a, b in zip(founders["complet"], again["complet"]))   # Same seed, same draw
+
+
+def test_run_seed_starts_a_duel_from_two_populations(tmp_path):
+    import random
+    from evolution.continuous import ContinuousSimulation, save_population
+    paths = []
+    for profile in ("complet", "complet_faim"):
+        sim = ContinuousSimulation(random.Random(1), cfg=config.Settings(ACTIVE_PROFILES=[profile],
+                                                                          INITIAL_POPULATION=20))
+        paths.append(str(tmp_path / f"{profile}_{{seed}}.npz"))
+        save_population(sim, paths[-1].format(seed=4))
+    run_module.run_seed(4, str(tmp_path / "out"), {"INITIAL_POPULATION": 20, "SAMPLE_TICKS": 10}, 20,
+                        ["complet", "complet_faim"], paths)
+    with open(os.path.join(tmp_path, "out", "seed_4", "timeline.csv"), newline="", encoding="utf-8") as f:
+        first = next(csv.DictReader(f))
+    assert float(first["pop__complet"]) > 0 and float(first["pop__complet_faim"]) > 0

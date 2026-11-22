@@ -5,6 +5,10 @@
     python -m experiments.run --name suite --from-population saves/populations/<fichier>.npz
     python -m experiments.run --name duel_faim --profiles complet complet_faim --ticks 120000     (duel d'espèces)
     python -m experiments.run --name suite --from-population experiments/results/<run>/seed_{seed}/population_finale.npz
+    python -m experiments.run --name duel_evolues --profiles complet complet_faim \
+        --from-population experiments/results/<run A>/seed_{seed}/population_finale.npz \
+                          experiments/results/<run B>/seed_{seed}/population_finale.npz
+        (duel of evolved populations: INITIAL_POPULATION founders, an equal share drawn from each file)
 
 Each run writes experiments/results/<date>_<name>/:
     run.json                    command, git commit, every constant of config.py (after --set)
@@ -74,12 +78,34 @@ def population_settings(path, **extra):
     return config.Settings(**values), source
 
 
+def mixed_founders(paths, total, rng):
+    """Founders taken from several saved populations, an equal share from each: total // len(paths) creatures drawn
+    without replacement from each file (all of them if it holds fewer). The species of the files are kept apart:
+    {profile: [(genome, size)]}. A duel of evolved populations starts this way, without the lottery of random
+    founders going through the first bottleneck."""
+    from evolution.continuous import load_population
+    founders = {}
+    share = total // len(paths)
+    for path in paths:
+        pool = [(name, f) for name, fs in load_population(path).items() for f in fs]
+        for name, f in rng.sample(pool, min(share, len(pool))):
+            founders.setdefault(name, []).append(f)
+    return founders
+
+
 def run_seed(seed, out_dir, overrides, ticks, profiles, population_file):
     """One seed (run in its own process by main, to use every core)."""
     from evolution.continuous import ContinuousSimulation, save_population, load_population
     cfg = build_settings(overrides, SEED=seed, ACTIVE_PROFILES=list(profiles))
     seed_dir = os.path.join(out_dir, f"seed_{seed}")
-    founders = load_population(population_file.format(seed=seed)) if population_file else None
+    if not population_file:
+        founders = None
+    elif isinstance(population_file, str) or len(population_file) == 1:   # One file: the whole population
+        path = population_file if isinstance(population_file, str) else population_file[0]
+        founders = load_population(path.format(seed=seed))
+    else:                                                                    # Several: an equal share of each
+        founders = mixed_founders([p.format(seed=seed) for p in population_file], cfg.INITIAL_POPULATION,
+                                  random.Random(seed))
     sim = ContinuousSimulation(random.Random(seed), os.path.join(seed_dir, "timeline.csv"), founders=founders,
                               cfg=cfg)
     start = time.time()
@@ -107,8 +133,10 @@ def main(argv=None):
     parser.add_argument("--seeds", type=int, nargs="+", default=[1, 2, 3, 4, 5])
     parser.add_argument("--ticks", type=int, default=60000, help="Durée (arrêt avant en cas d'extinction)")
     parser.add_argument("--profiles", nargs="+", default=None, help="Espèces fondatrices (défaut : ACTIVE_PROFILES)")
-    parser.add_argument("--from-population", default=None,
-                        help="Population sauvegardée de départ (.npz). {seed} est remplacé par le numéro de graine")
+    parser.add_argument("--from-population", nargs="+", default=None,
+                        help="Population sauvegardée de départ (.npz). {seed} est remplacé par le numéro de graine. "
+                             "Plusieurs fichiers : INITIAL_POPULATION fondateurs, à parts égales de chacun (duel "
+                             "de populations évoluées)")
     parser.add_argument("--set", nargs="*", default=[], metavar="NOM=VALEUR",
                         help="Remplace une constante de config.py")
     parser.add_argument("--jobs", type=int, default=os.cpu_count(), help="Graines lancées en parallèle")
