@@ -1,0 +1,79 @@
+# Capteur «faim» dans les 6 populations complet_faim gagnantes (22/11/2026, commit 54214ef)
+# Entrée mesurée 600-3000 ticks ; |Δsortie| = écart moyen des sorties (virage, vitesse cible) entre entrée forcée à 0 et à 1 ;
+# pop/vitesse : moyenne 5000-20000 ticks, même graine, capteur normal / forcé à 0.
+121405_mes_reglages_plafond1600/seed_3 n=43112  faim moy 0.02  >0,05  11%  =1   0%  |Δsortie| faim 0→1 : virage 0.467 vitesse 0.268   (énergie 0→1 : 0.203 0.256)  pop normal 585 / coupé 582   vitesse 0.63 / 0.65
+121405_mes_reglages_plafond1600/seed_7 n=39274  faim moy 0.02  >0,05  11%  =1   0%  |Δsortie| faim 0→1 : virage 0.238 vitesse 0.268   (énergie 0→1 : 0.153 0.213)  pop normal 545 / coupé 545   vitesse 0.72 / 0.73
+121405_mes_reglages_plafond1600/seed_8 n=38369  faim moy 0.02  >0,05  10%  =1   0%  |Δsortie| faim 0→1 : virage 0.282 vitesse 0.352   (énergie 0→1 : 0.155 0.423)  pop normal 531 / coupé 506   vitesse 0.85 / 0.88
+135654_duel_graines_9_16/seed_9        n=41361  faim moy 0.02  >0,05  10%  =1   0%  |Δsortie| faim 0→1 : virage 0.182 vitesse 0.255   (énergie 0→1 : 0.151 0.203)  pop normal 575 / coupé 563   vitesse 0.64 / 0.66
+135654_duel_graines_9_16/seed_14       n=36206  faim moy 0.02  >0,05   8%  =1   0%  |Δsortie| faim 0→1 : virage 0.147 vitesse 0.301   (énergie 0→1 : 0.085 0.143)  pop normal 505 / coupé 532   vitesse 0.75 / 0.71
+135654_duel_graines_9_16/seed_16       n=41036  faim moy 0.02  >0,05  10%  =1   0%  |Δsortie| faim 0→1 : virage 0.310 vitesse 0.326   (énergie 0→1 : 0.186 0.196)  pop normal 575 / coupé 593   vitesse 0.67 / 0.58
+
+# Script :
+# """Is the «faim» (hunger) sensor read and useful in the complet_faim populations that won their duel?"""
+# import random, statistics as st, sys
+# from concurrent.futures import ProcessPoolExecutor
+# ROOT = "/Users/jul/Documents/Dev/EvolutionGame"
+# sys.path.insert(0, ROOT)
+# import numpy as np
+# 
+# POPS = [f"{ROOT}/experiments/results/20261122_121405_mes_reglages_plafond1600/seed_{s}/population_finale.npz" for s in (3, 7, 8)] + \
+#        [f"{ROOT}/experiments/results/20261122_135654_duel_graines_9_16/seed_{s}/population_finale.npz" for s in (9, 14, 16)]
+# 
+# 
+# def _sim(path, seed):
+#     from evolution.continuous import ContinuousSimulation, load_population
+#     from experiments.run import population_settings
+#     return ContinuousSimulation(random.Random(seed), founders=load_population(path), cfg=population_settings(path)[0])
+# 
+# 
+# def probe(path):
+#     from brain.profiles import input_labels
+#     import core.sensors as sensors
+#     labels = input_labels("complet_faim")
+#     ih, ie = labels.index("Faim"), labels.index("Énergie")
+#     sim = _sim(path, 1)
+#     values, d_h, d_e = [], [], []
+#     for t in range(3000):
+#         sim.step()
+#         if t >= 600 and t % 20 == 0:
+#             w = sim.world
+#             for c in [c for c in w.creatures if c.alive][::4]:
+#                 x = np.array(w.sense(c), dtype=float)
+#                 values.append(x[ih])
+#                 for idx, acc in ((ih, d_h), (ie, d_e)):
+#                     lo, hi = x.copy(), x.copy()
+#                     lo[idx], hi[idx] = 0.0, 1.0
+#                     acc.append(np.abs(c.brain.forward(hi) - c.brain.forward(lo)))
+#     d_h, d_e = np.array(d_h), np.array(d_e)
+#     # Knockout: same seed, 20 000 ticks, hunger input normal vs always 0
+#     out = {}
+#     for name in ("normal", "coupé"):
+#         if name == "coupé":
+#             s = sensors.SENSORS["hunger"]
+#             sensors.SENSORS["hunger"] = s._replace(fn=lambda w, c, ctx: [0.0],
+#                                                    vec=lambda w, g: np.zeros((len(g["uid"]), 1)))
+#         sim = _sim(path, 7)
+#         speeds, pops = [], []
+#         eaten0 = None
+#         for t in range(20000):
+#             if not sim.step():
+#                 break
+#             if t == 5000:
+#                 eaten0, alive0 = sim.world.eaten, 0
+#             if t >= 5000 and t % 100 == 0:
+#                 cs = [c for c in sim.world.creatures if c.alive]
+#                 pops.append(len(cs)); speeds.append(st.mean(c.speed for c in cs) if cs else 0)
+#         out[name] = (st.mean(pops) if pops else 0, st.mean(speeds) if speeds else 0, sim.extinct)
+#     v = np.array(values)
+#     return (path.split("results/")[1][9:].replace("/population_finale.npz", ""), len(v), float(v.mean()),
+#             float((v > 0.05).mean()), float((v >= 1).mean()),
+#             d_h.mean(axis=0).tolist(), d_e.mean(axis=0).tolist(), out)
+# 
+# 
+# if __name__ == "__main__":
+#     with ProcessPoolExecutor(6) as pool:
+#         for name, n, mean, frac, sat, dh, de, out in pool.map(probe, POPS):
+#             print(f"{name:38s} n={n:5d}  faim moy {mean:.2f}  >0,05 {frac:4.0%}  =1 {sat:4.0%}  "
+#                   f"|Δsortie| faim 0→1 : virage {dh[0]:.3f} vitesse {dh[1]:.3f}   (énergie 0→1 : {de[0]:.3f} {de[1]:.3f})  "
+#                   f"pop normal {out['normal'][0]:.0f} / coupé {out['coupé'][0]:.0f}   vitesse {out['normal'][1]:.2f} / {out['coupé'][1]:.2f}"
+#                   f"{'  EXTINCTION coupé' if out['coupé'][2] else ''}")

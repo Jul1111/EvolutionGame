@@ -29,7 +29,7 @@ Réglages de `config.py` : `FOOD_COUNT = 60` (nourriture des petites populations
 
 - Le goulot de départ est passé dans 24 graines sur 24 (8 en 1×1, 16 en 2×2), contre 8 sur 16 avec `FOOD_COUNT = 40`.
 - Le plafond ne bloque plus de naissances ; c'est la nourriture qui règle la population.
-- Duel en 2×2 (16 graines) : `complet` l'emporte 10 fois, `complet_faim` 6 fois. Écart compatible avec le hasard (p = 0,45) : le capteur de faim ne donne ni avantage ni handicap mesurable. Une espèce élimine toujours l'autre, entre 6 000 et 70 000 ticks.
+- Duel en 2×2 (16 graines) : `complet` l'emporte 10 fois, `complet_faim` 6 fois. Écart compatible avec le hasard (p = 0,45) : le capteur de faim ne donne ni avantage ni handicap mesurable. Il n'est pas cassé, mais il vaut presque toujours 0 (une nourriture est presque toujours en vue). Une espèce élimine toujours l'autre, entre 6 000 et 70 000 ticks.
 - **Vitesse** (revérifiée le 22/11, section « La vitesse avec les règles actuelles ») : la conclusion du 08/11 ne tient plus. La densité ne ralentit que peu les créatures (−14 à −24 % de 30 à 280 créatures dans 5 populations sur 8, rien dans les 3 autres), les lignées diffèrent beaucoup entre elles (0,5 à 4), et la sélection favorise désormais les plus rapides (rho +0,27 ± 0,19, positif dans les 8 populations) au lieu des intermédiaires.
 
 ### Évolution continue, ancienne règle de nourriture (08/11/2026, historique)
@@ -177,6 +177,19 @@ Partie 2×2, 60°, règles actuelles, 120 000 ticks, 100 fondateurs de chaque es
 - **Toujours un seul survivant** : dans les 16 graines, une espèce disparaît, le plus souvent avant 30 000 ticks. Le vainqueur semble se décider tôt, à la sortie du goulot, plutôt que par un avantage durable.
 - Les 8 nouvelles graines reproduisent exactement la répartition des 8 premières (5 contre 3) ; population 439 ± 25, comme avant.
 - **Limites** : un seul monde (2×2, 60°) ; avec un écart réel de quelques points, il faudrait une centaine de graines pour le voir.
+
+**Le capteur de faim marche-t-il ?** Mesuré sur les 6 populations `complet_faim` gagnantes (sorties brutes et script : `experiments/results/20261122_135654_duel_graines_9_16/capteur_faim.txt`) :
+
+| Mesure | Résultat |
+|---|---|
+| Valeur de l'entrée « Faim » pendant une partie | 0,02 en moyenne ; au-dessus de 0,05 seulement 8 à 11 % du temps ; jamais à 1 |
+| Écart des sorties entre faim forcée à 0 et à 1 | virage 0,15 à 0,47, vitesse 0,26 à 0,35 : autant ou plus que pour l'énergie (0,09 à 0,20 ; 0,14 à 0,42) |
+| Capteur coupé (forcé à 0), même graine, 20 000 ticks | population et vitesse à ±5 % près, écarts dans les deux sens selon la population |
+
+- Le capteur n'est pas cassé, et le réseau réagirait à lui (ses poids ne sont pas nuls).
+- Mais l'entrée ne porte presque jamais d'information : elle repart à 0 dès qu'une nourriture est en vue, ce qui arrive presque tout le temps avec 60 nourritures par écran au départ et une portée de 200. Le temps sans rien voir dépasse rarement quelques dizaines de ticks, pour une échelle `HUNGER_SCALE` de 600.
+- D'où le duel nul : dans ce monde, savoir depuis combien de temps on n'a rien vu ne sert à rien. Il faudrait un monde où la nourriture est souvent hors de vue (moins de nourriture, vision plus courte) pour que le capteur ait une chance de compter.
+- Limite : la population monte au-dessus de l'équilibre (500 à 590) pendant ces 20 000 ticks, car les créatures rechargées ne comptent pas dans la pression de nourriture ; c'est le même biais dans les deux bras.
 
 ### Coût du calcul (22/11/2026)
 
