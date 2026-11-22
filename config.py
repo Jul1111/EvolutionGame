@@ -28,8 +28,9 @@ WORLD_SCALE = 1             # Side of the world in screens (a screen = SCREEN_WI
 
 # Configuration for food
 SEED = 42
-FOOD_COUNT = 40             # Food sources per screen when the population is small (and at the start: random
-                            # founders need plenty to get through the first bottleneck, at 25-30 they die out, 09/11)
+FOOD_COUNT = 60             # Food sources per screen when the population is small (and at the start: random
+                            # founders need plenty to get through the first bottleneck: 4 extinctions out of 8 seeds at
+                            # 40, 0 out of 8 at 60, docs/experiences.md, 22/11)
 FOOD_COUNT_MIN = 15         # Food sources per screen when the population is large: food follows the population, no
                             # calendar (evolution/continuous.py). Same value as FOOD_COUNT = food never changes
 FOOD_PRESSURE_POP = 300     # Living creatures (whole world) at which the food is down to FOOD_COUNT_MIN; in between,

@@ -2,7 +2,7 @@
 
 ## Comment ça marche
 
-**Le monde.** Un tore de 1280 × 720 : ce qui sort d'un côté rentre de l'autre. 40 sources de nourriture, 5 poisons et 6 obstacles (valeurs par écran, `WORLD_SCALE` multiplie la surface).
+**Le monde.** Un tore de 1280 × 720 : ce qui sort d'un côté rentre de l'autre. 60 sources de nourriture quand la population est petite (15 quand elle est grande), 5 poisons et 6 obstacles (valeurs par écran, `WORLD_SCALE` multiplie la surface).
 
 **La nourriture.** Une nourriture mangée disparaît 60 ticks puis réapparaît toujours ailleurs, au hasard : hors obstacles, jamais sur une créature ni à moins de 20 de son bord (`SPAWN_CLEARANCE`). L'endroit est tiré au moment où elle réapparaît ; s'il n'y a aucune place libre, elle attend le tick suivant. Quand plusieurs créatures la touchent, celle dont le bord est le plus proche gagne. Une créature ne mange que si le repas rentre en entier dans sa réserve.
 

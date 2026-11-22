@@ -66,6 +66,7 @@ Seule la quantité de nourriture fait une différence nette. Les autres (1 à 3 
 - `FOOD_ENERGY=45` change toute la partie (chaque repas vaut 50 % de plus) : population plus haute (+28 %) et homogène, moins de repas nécessaires.
 - Le plafond (400) ne bloque aucune naissance dans les trois cas.
 - **Limites** : 8 graines, une seule valeur testée par levier, pas de combinaison. 0/8 n'exclut pas un taux d'extinction de quelques pour cent.
+- **Retenu** : `FOOD_COUNT = 60` dans `config.py` (le changement le plus ciblé : il ne touche pas le plancher).
 
 ### Mode générations (supprimé le 08/11, historique)
 
