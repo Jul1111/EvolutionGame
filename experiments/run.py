@@ -167,7 +167,7 @@ def git_state():
         return None
 
 
-def main(argv=None):
+def build_parser():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--name", required=True, help="Nom court de l'expérience (dossier de résultats)")
     parser.add_argument("--seeds", type=int, nargs="+", default=[1, 2, 3, 4, 5])
@@ -184,13 +184,24 @@ def main(argv=None):
     parser.add_argument("--set", nargs="*", default=[], metavar="NOM=VALEUR",
                         help="Remplace une constante de config.py")
     parser.add_argument("--jobs", type=int, default=os.cpu_count(), help="Graines lancées en parallèle")
-    args = parser.parse_args(argv)
+    parser.add_argument("--out-dir", default=None, help=argparse.SUPPRESS)   # Chosen by experiments.lot
+    return parser
 
-    import config
+
+def parse_overrides(items):
+    """--set NAME=VALUE items -> {NAME: value}."""
     overrides = {}
-    for item in args.set:
+    for item in items:
         name, _, value = item.partition("=")
         overrides[name.strip().upper()] = parse_value(value)
+    return overrides
+
+
+def main(argv=None):
+    args = build_parser().parse_args(argv)
+
+    import config
+    overrides = parse_overrides(args.set)
     cfg = build_settings(overrides)   # Here too: run.json records the real values, and typos stop here
     profiles = args.profiles or cfg.ACTIVE_PROFILES
     from brain.profiles import PROFILES
@@ -198,7 +209,7 @@ def main(argv=None):
     if unknown:
         raise SystemExit(f"Profil inconnu : {', '.join(unknown)} (disponibles : {', '.join(PROFILES)})")
 
-    out_dir = os.path.join(RESULTS, time.strftime("%Y%m%d_%H%M%S") + "_" + args.name)
+    out_dir = args.out_dir or os.path.join(RESULTS, time.strftime("%Y%m%d_%H%M%S") + "_" + args.name)
     os.makedirs(out_dir)
     meta = {"name": args.name, "ticks": args.ticks, "from_population": args.from_population,
             "command": " ".join(sys.argv), "git": git_state(), "seeds": args.seeds, "profiles": list(profiles),

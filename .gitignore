@@ -13,3 +13,4 @@ saves/
 experiments/results/**/*.npz
 .pytest_cache/
 graphify-out/
+experiments/results/lots/*.log

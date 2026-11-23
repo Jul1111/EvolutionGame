@@ -154,3 +154,23 @@ def test_progress_reads_what_the_seeds_wrote(tmp_path):
     assert "62 %" in bar(fraction, done, total, 60) and "restantes" in bar(fraction, done, total, 60)
     (tmp_path / "summary.csv").touch()
     assert run_progress(str(tmp_path))[0] == 1.0
+
+
+def test_a_lot_is_planned_before_it_runs(tmp_path):
+    from experiments import lot
+    from experiments.progress import render
+    path = tmp_path / "lot.txt"
+    path.write_text("# comment\n--name a --seeds 1 2 --ticks 100 --set WORLD_SCALE=2\n"
+                    "--name b --seeds 1 --ticks 100 \\\n  --from-population {run:a}/seed_{seed}/x.npz\n",
+                    encoding="utf-8")
+    runs = lot.plan(lot.read_lot(str(path)))
+    assert [r["name"] for r in runs] == ["a", "b"]
+    assert runs[0]["weight"] == 2 * 100 * 4 and runs[1]["weight"] == 100 * config.WORLD_SCALE ** 2
+    assert lot.resolve(runs[1]["args"], {"a": os.path.join(lot.ROOT, "r", "a")})[-1] == "r/a/seed_{seed}/x.npz"
+    with pytest.raises(SystemExit):
+        lot.resolve(runs[1]["args"], {})                  # {run:a} before a is done
+    path.write_text("--name a\n--name a\n", encoding="utf-8")
+    with pytest.raises(SystemExit):
+        lot.plan(lot.read_lot(str(path)))                 # Two runs with the same name
+    text, fraction = render({"file": "lot.txt", "started": 0, "finished": None, "runs": runs})
+    assert fraction == 0 and text.splitlines()[1].startswith("    a ") and "en attente" in text

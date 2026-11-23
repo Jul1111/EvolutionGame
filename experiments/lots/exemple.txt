@@ -1,0 +1,7 @@
+# Exemple de lot : python -m experiments.lot experiments/lots/exemple.txt
+# Une ligne par run (arguments de experiments.run). {run:NOM} = dossier de résultats du run NOM de ce lot.
+--name seul_complet --profiles complet --seeds 1 2 3 4 --ticks 60000
+--name seul_complet_faim --profiles complet_faim --seeds 1 2 3 4 --ticks 60000
+--name duel_evolues --profiles complet complet_faim --seeds 1 2 3 4 --ticks 60000 \
+    --from-population {run:seul_complet}/seed_{seed}/population_finale.npz \
+                      {run:seul_complet_faim}/seed_{seed}/population_finale.npz

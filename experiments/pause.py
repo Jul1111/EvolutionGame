@@ -13,7 +13,7 @@ import signal
 import subprocess
 import sys
 
-MODULES = ("experiments.run", "experiments.jardin", "experiments.gradient")
+MODULES = ("experiments.lot", "experiments.run", "experiments.jardin", "experiments.gradient")
 
 
 def processes():

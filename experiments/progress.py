@@ -1,10 +1,11 @@
 """Progress of experiment runs, as a bar in %: read from what each seed has already written to disk.
 
-    python -m experiments.progress                 runs in progress (results/ folders without summary.csv)
+    python -m experiments.progress                 lots and runs in progress
     python -m experiments.progress <run folder>    that run
     python -m experiments.progress --suivre        refresh every 5 s until they are finished (Ctrl+C to quit)
 
-experiments.run shows the same bar while it waits for its seeds. A seed counts the ticks of its last timeline.csv
+A lot (experiments.lot) shows an overall bar, then one indented bar per run (finished, in progress, waiting).
+experiments.run shows the bar of its run while it waits for its seeds. A seed counts the ticks of its last timeline.csv
 line; it is complete once its final population is saved or it died out. A run is complete once summary.csv exists.
 """
 import argparse
@@ -67,6 +68,41 @@ def bar(fraction, done, total, elapsed, width=30):
     return text
 
 
+def render(lot):
+    """(text, overall fraction) of a lot state (experiments.lot): an overall bar, then one indented bar per run.
+    Runs are weighted by their cost estimate (seed-ticks times world surface)."""
+    total_w = sum(r["weight"] for r in lot["runs"]) or 1
+    width = max(len(r["name"]) for r in lot["runs"])
+    lines, done_w = [], 0.0
+    for r in lot["runs"]:
+        if r["status"] == "en attente" or not r["dir"] or not os.path.exists(os.path.join(r["dir"], "run.json")):
+            fraction, line = 0.0, f"[{'-' * 30}]   0 %  {r['status']}"
+        else:
+            fraction, finished, total, elapsed = run_progress(r["dir"])
+            line = bar(fraction, finished, total, elapsed)
+            if r["status"].startswith("échec"):
+                line += f"  {r['status']}"
+        done_w += r["weight"] * fraction
+        lines.append(f"    {r['name']:<{width}}  {line}")
+    fraction = 1.0 if lot.get("finished") else done_w / total_w
+    elapsed = (lot.get("finished") or time.time()) - lot["started"]
+    runs_done = sum(r["status"] == "fini" for r in lot["runs"])
+    head = bar(fraction, runs_done, len(lot["runs"]), elapsed).replace("graines", "runs")
+    return f"Lot {os.path.basename(lot['file'])}  {head}\n" + "\n".join(lines), fraction
+
+
+def running_lots():
+    """States of the lots not finished, oldest first (a lot whose process was killed stays here: its file says
+    so only by a run left "en cours")."""
+    out = []
+    for path in sorted(glob.glob(os.path.join(RESULTS, "lots", "*.json"))):
+        with open(path, encoding="utf-8") as f:
+            lot = json.load(f)
+        if not lot.get("finished") and not any(r["status"].startswith("échec") for r in lot["runs"]):
+            out.append(lot)
+    return out
+
+
 def running_runs():
     """Run folders not finished yet (no summary.csv), oldest first."""
     return [d for d in sorted(glob.glob(os.path.join(RESULTS, "*")))
@@ -79,23 +115,26 @@ def main(argv=None):
     parser.add_argument("--suivre", action="store_true", help="Rafraîchir toutes les 5 s jusqu'à la fin")
     args = parser.parse_args(argv)
     while True:
-        runs = args.runs or running_runs()
-        if not runs:
+        lots = [] if args.runs else running_lots()
+        in_lots = {os.path.abspath(r["dir"]) for lot in lots for r in lot["runs"] if r["dir"]}
+        runs = args.runs or [d for d in running_runs() if os.path.abspath(d) not in in_lots]
+        if not runs and not lots:
             print("Aucun run en cours.")
             return
-        lines = []
+        blocks = [render(lot)[0] for lot in lots]
         for d in runs:
             fraction, done, total, elapsed = run_progress(d)
-            lines.append(f"{os.path.basename(d)}\n  {bar(fraction, done, total, elapsed)}")
-        print("\n".join(lines))
-        if not args.suivre or all(run_progress(d)[0] >= 1 for d in runs):
+            blocks.append(f"{os.path.basename(d)}\n    {bar(fraction, done, total, elapsed)}")
+        text = "\n".join(blocks)
+        print(text)
+        if not args.suivre or (all(run_progress(d)[0] >= 1 for d in runs) and all(render(lot)[1] >= 1 for lot in lots)):
             return
         try:
             time.sleep(5)
         except KeyboardInterrupt:
             return
         if sys.stdout.isatty():
-            sys.stdout.write(f"\033[{2 * len(lines)}F\033[J")   # Redraw in place
+            sys.stdout.write(f"\033[{text.count(chr(10)) + 1}F\033[J")   # Redraw in place
 
 
 if __name__ == "__main__":
