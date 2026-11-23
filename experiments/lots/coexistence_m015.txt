@@ -1,0 +1,3 @@
+# Coexistence de deux espèces à régime (23/11, soir) : fondateurs spécialistes, mutation du régime 0,05 ou 0,15.
+--name coexist --profiles regime regime_faim --seeds 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 --ticks 120000 --jobs 8 \
+    --set FOOD_TYPES=2 FOOD_ENERGY=60.0 --varie DIET_MUTATION_STD=0.05,0.15

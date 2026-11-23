@@ -1,0 +1,4 @@
+goulot_regime_hasard               éteintes 4/16  creux médian 13  population à 30 000 ticks 113
+goulot_regime_specialistes         éteintes 0/16  creux médian 43  population à 30 000 ticks 135
+goulot_duel_hasard                 éteintes 2/16  creux médian 18  population à 30 000 ticks 111
+goulot_duel_specialistes           éteintes 0/16  creux médian 38  population à 30 000 ticks 124

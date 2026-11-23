@@ -1,6 +1,6 @@
 {
  "_nom": "Niches",
- "_note": "Deux sortes de nourriture, deux espèces à régime (regime, regime_faim), énergie doublée et mutation du régime à 0,15 : les créatures se partagent les deux nourritures (docs/experiences.md, 23/11). Couleur «régime» (touche C) pour voir les spécialistes. Environ 1 départ sur 4 s'éteint.",
+ "_note": "Deux sortes de nourriture, deux espèces à régime (regime, regime_faim), énergie doublée et mutation du régime à 0,15 : les créatures se partagent les deux nourritures (docs/experiences.md, 23/11). Couleur «régime» (touche C) pour voir les spécialistes. Fondateurs spécialistes : pas d'extinction au départ.",
  "FOOD_TYPES": 2,
  "FOOD_ENERGY": 60.0,
  "VISION_FOV_DEGREES": 120,
