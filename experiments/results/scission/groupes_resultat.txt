@@ -1,0 +1,20 @@
+12 populations scindées analysées (3000 ticks rejoués chacune)
+
+Distance entre génomes : dans le groupe vert 3.83, dans le jaune 3.93, entre les deux 8.95 (plus grand dans 12/12 populations)
+vert  : repas sur sa nourriture 78% (de 49% à 92%), vitesse 1.38, attirance (corrélation angle → virage) vers la sienne +0.47, vers l'autre +0.40
+jaune : repas sur sa nourriture 72% (de 50% à 88%), vitesse 1.28, attirance (corrélation angle → virage) vers la sienne +0.51, vers l'autre +0.42
+
+Sensibilité de la sortie à chaque entrée (moyenne des populations) :
+  entrée             vert  jaune
+  Distance          0.491  0.522
+  Angle             0.361  0.324
+  Énergie           0.119  0.158
+  Vitesse           0.239  0.261
+  Peut manger       0.230  0.187
+  Dist. poison      0.046  0.037
+  Angle poison      0.006  0.010
+  Dist. obstacle    0.077  0.073
+  Angle obstacle    0.047  0.038
+  Valeur nourr.     0.462  0.341
+
+Par population, vitesse vert / jaune : 1.39/1.71  1.09/0.98  1.02/1.33  3.80/2.04  1.23/1.47  0.94/1.08  1.41/0.94  1.00/1.20  1.57/1.48  0.94/1.00  1.08/1.41  1.06/0.72
