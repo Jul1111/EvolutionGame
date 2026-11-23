@@ -420,9 +420,12 @@ class Scene:
             frame = int(now / 110 + i * 5) % FOOD_FRAMES
             self._queue(batch, self.poison_sprites[frame], self._images(world, poison.x, poison.y, 14))
 
-        for c in world.creatures:
-            if not c.alive:
-                self._queue(batch, self.dead_sprite, self._images(world, c.x, c.y, 14))
+        # Creature fields read once per frame as lists (World.columns): item i = world.creatures[i]
+        alive, xs, ys, bodies_, speeds, energies, emaxes, sizes, angles, uids = world.columns(
+            "alive", "x", "y", "body", "speed", "energy", "energy_max", "size", "angle", "uid")
+        for i, a in enumerate(alive):
+            if not a:
+                self._queue(batch, self.dead_sprite, self._images(world, xs[i], ys[i], 14))
         screen.fblits(batch)
 
         if trail is not None:
@@ -430,45 +433,47 @@ class Scene:
 
         r0 = self.cfg.CREATURE_RADIUS * k
         nub_radius = max(1, round(2 * k))
-        max_food = max([c.food_eaten for c in world.creatures if c.alive] + [1])
+        max_food = max([c.food_eaten for c, a in zip(world.creatures, alive) if a] + [1])
         mode = COLOR_MODES[self.color_mode]
         bodies, nubs = [], []
-        for c in world.creatures:
-            if not c.alive:
+        founder = self.lineage.founder
+        for i, c in enumerate(world.creatures):
+            if not alive[i]:
                 continue
-            images = self._images(world, c.x, c.y, 14 * c.body + c.speed * 3)
+            body, speed = bodies_[i], speeds[i]
+            images = self._images(world, xs[i], ys[i], 14 * body + speed * 3)
             if not images:
                 continue
             if mode == "espèce":
                 color = PROFILES[c.profile]["color"]
                 sprite = self.species_sprites[c.profile]
             elif mode == "lignée":
-                color = lineage_color(self.lineage.of(c))
+                color = lineage_color(founder.get(uids[i], uids[i]))
                 sprite = self._lineage_sprites.get(color)
                 if sprite is None:
                     sprite = self._lineage_sprites[color] = self._build_body(color)
             else:
                 if mode == "énergie":
-                    ratio = c.energy / c.energy_max
+                    ratio = energies[i] / emaxes[i]
                 elif mode == "taille":
-                    ratio = (c.size - self.cfg.SIZE_MIN) / (self.cfg.SIZE_MAX - self.cfg.SIZE_MIN)
+                    ratio = (sizes[i] - self.cfg.SIZE_MIN) / (self.cfg.SIZE_MAX - self.cfg.SIZE_MIN)
                 elif mode == "vitesse":
-                    ratio = c.speed / self.cfg.CREATURE_MAX_SPEED
+                    ratio = speed / self.cfg.CREATURE_MAX_SPEED
                 else:
                     ratio = c.food_eaten / max_food
                 ratio = max(0.0, min(ratio, 1.0))
                 bucket = int(ratio * (ENERGY_BUCKETS - 1) + 0.5)
                 color = self.bucket_colors[bucket]
                 sprite = self.body_sprites[bucket]
-            sprite = self._sized_sprite(sprite, c.body)
-            r = r0 * c.body
-            cos_a, sin_a = math.cos(c.angle), math.sin(c.angle)
+            sprite = self._sized_sprite(sprite, body)
+            r = r0 * body
+            cos_a, sin_a = math.cos(angles[i]), math.sin(angles[i])
             tail_color, nub_color = self._shades(color)
             hw = sprite.get_width() / 2
             for px, py in images:
                 # Tail behind the creature: longer when it moves faster
-                if c.speed > 0.3:
-                    length = c.speed * 3.0 * k
+                if speed > 0.3:
+                    length = speed * 3.0 * k
                     p0 = (px - cos_a * r, py - sin_a * r)
                     p1 = (px - cos_a * (r + length), py - sin_a * (r + length))
                     screen.aaline(tail_color, p0, p1)

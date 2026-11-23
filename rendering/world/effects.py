@@ -19,7 +19,8 @@ class Effects:
 
     def update(self, world):
         now = pygame.time.get_ticks()
-        current = {c.uid: (c.x, c.y) for c in world.creatures if c.alive}
+        alive, uids, xs, ys = world.columns("alive", "uid", "x", "y")
+        current = {u: (x, y) for a, u, x, y in zip(alive, uids, xs, ys) if a}
         if world is not self._world:        # New world: nothing to show for the first frame
             self._world, self._last, self.items = world, current, []
             return

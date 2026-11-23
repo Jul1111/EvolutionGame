@@ -32,9 +32,9 @@ class LineageTracker:
             self.founder = {}
             self._summary_tick = None
         founder = self.founder
-        for c in world.creatures:
-            if c.uid not in founder:
-                founder[c.uid] = founder.get(c.parent_id, c.uid) if c.parent_id is not None else c.uid
+        for c, uid in zip(world.creatures, world.columns("uid")[0]):
+            if uid not in founder:
+                founder[uid] = founder.get(c.parent_id, uid) if c.parent_id is not None else uid
 
     def of(self, creature):
         return self.founder.get(creature.uid, creature.uid)
@@ -43,9 +43,10 @@ class LineageTracker:
         """(living lineages, share of the largest one, founder of the largest one). Recomputed once per tick."""
         if self._summary_tick != world.tick:
             counts = {}
-            for c in world.creatures:
-                if c.alive:
-                    f = self.of(c)
+            founder = self.founder
+            for alive, uid in zip(*world.columns("alive", "uid")):
+                if alive:
+                    f = founder.get(uid, uid)
                     counts[f] = counts.get(f, 0) + 1
             n = sum(counts.values())
             if counts:

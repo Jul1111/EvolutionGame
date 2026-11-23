@@ -57,6 +57,11 @@ class World:
                 c._i = i
         self._creatures = new
 
+    def columns(self, *names):
+        """Python lists of the given CreatureStore fields, item i = self.creatures[i]: for code that reads many
+        creatures (the drawing), much faster than one attribute at a time (each goes through the store)."""
+        return [self.store.col(n).tolist() for n in names]
+
     def living(self):
         """(living creatures, their rows in the store): rows is slice(None) when every creature is alive."""
         alive = self.store.col("alive")

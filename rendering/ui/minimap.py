@@ -37,9 +37,9 @@ class MiniMap:
         for o in world.obstacles:
             pygame.draw.circle(window, ANEMONE, (r.x + o.x * kx, r.y + o.y * ky), max(1.5, o.radius * kx))
         dot = max(1, round(1.2 * u))
-        for c in world.creatures:
-            if c.alive:
-                pygame.draw.circle(window, DOT, (r.x + c.x * kx, r.y + c.y * ky), dot)
+        for a, x, y in zip(*world.columns("alive", "x", "y")):
+            if a:
+                pygame.draw.circle(window, DOT, (r.x + x * kx, r.y + y * ky), dot)
         # Part of the world on screen: one frame, cut at the edges of the map (the torus repetition is not shown)
         if scene.size is not None and scene.scale:
             vw, vh = scene.size[0] / scene.scale, scene.size[1] / scene.scale
