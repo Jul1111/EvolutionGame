@@ -342,6 +342,23 @@ Hypothèse testée : une « tragédie des communs », où chaque créature gagne
 - **À la fin, la vitesse fixe presque la population** : corrélation −0,97 entre populations. Le coût du mouvement (0,03 par unité de vitesse, contre 0,04 à l'arrêt) fixe ce qu'une même nourriture peut faire vivre : un coureur à 4 dépense 2,3 fois plus qu'un marcheur à 1.
 - **Tension avec le gradient de sélection** (rho +0,27 vers la vitesse, section « La vitesse avec les règles actuelles ») : si les plus rapides laissaient vraiment plus de petits pour des raisons héritables, les populations s'accéléreraient. Or 51 sur 62 ralentissent. La vitesse d'une créature est sans doute surtout un effet de son état (une créature qui voit de la nourriture et a de l'énergie accélère et se reproduit), pas de ses gènes.
 
+### Coût du mouvement : un levier pour la vitesse (23/11/2026)
+
+`complet` seul, 1×1, 16 graines × 120 000 ticks, `ENERGY_MOVE_COST` de 0,015 à 0,06 (0,03 = réglage actuel, run `seul_complet`). Résultats : `experiments/results/20261123_0*_cout_mouvement_*` ; sorties et script : `experiments/results/20261123_015215_cout_mouvement_06/cout_mouvement.txt`.
+
+| Coût par unité de vitesse | Extinctions | Vitesse (médiane) | Population | Coureurs (> 2,5) | Population d'un coureur |
+|---|---|---|---|---|---|
+| 0,015 | 0/16 | 2,38 | 208 ± 10 | 7/16 | 190 à 210 |
+| **0,03** (actuel) | 1/16 | 1,18 | 205 ± 20 | 1/15 | 142 |
+| 0,045 | 3/16 | 0,87 | 197 ± 26 | 1/13 | 113 |
+| 0,06 | 6/16 | 0,73 | 188 ± 33 | 1/10 | 94 |
+
+- **Le coût règle la vitesse, pas la population** : la vitesse médiane est divisée par 3 de 0,015 à 0,06, la population des lignées lentes bouge peu (215 → 199).
+- **À bas coût, courir n'est plus un piège** : à 0,015, 7 lignées sur 16 courent, et elles tiennent presque autant de monde que les autres (190 à 210). Les vitesses varient sans que ça coûte de la population.
+- **À haut coût, le piège du coureur s'aggrave** : il en reste une par réglage, bloquée près de 4, qui tient de moins en moins de monde (142 → 94).
+- **Un coût élevé tue au départ** : toutes les extinctions ont lieu avant 13 000 ticks, dans le goulot (3/16 à 0,045, 6/16 à 0,06). Les fondateurs au hasard bougent beaucoup et s'épuisent avant d'apprendre.
+- **Pour le jeu** : 0,03 est un compromis. Moins (0,015-0,02) donne des mondes plus variés en vitesse et sans extinction ; plus donne des mondes lents mais des débuts risqués.
+
 ### Coût du calcul (22/11/2026)
 
 Les coûts par tick des sections précédentes datent d'avant l'optimisation de la vision (commit `ea4fc90` : l'angle n'est plus calculé que pour les objets à portée, résultat identique au bit près). Banc de 300 ticks, un processus :

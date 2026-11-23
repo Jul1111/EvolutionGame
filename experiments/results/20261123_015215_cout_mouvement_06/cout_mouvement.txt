@@ -1,0 +1,25 @@
+coût 0,015: éteintes 0/16 (ticks []), vitesse médiane 2.38 (moyenne 2.56 ± 0.58), population 208 ± 10, coureurs (v > 2,5) 7/16 [(2.65, 210), (2.62, 209), (3.5, 190), (3.16, 197), (3.81, 191), (2.95, 206), (3.18, 197)], population des autres 215
+coût 0,03: éteintes 1/16 (ticks [7902]), vitesse médiane 1.18 (moyenne 1.36 ± 0.76), population 205 ± 20, coureurs (v > 2,5) 1/15 [(3.94, 142)], population des autres 210
+coût 0,045: éteintes 3/16 (ticks [4404, 8958, 12046]), vitesse médiane 0.87 (moyenne 1.11 ± 0.82), population 197 ± 26, coureurs (v > 2,5) 1/13 [(3.87, 113)], population des autres 204
+coût 0,06: éteintes 6/16 (ticks [5798, 6000, 6000, 6001, 8523, 12791]), vitesse médiane 0.73 (moyenne 1.04 ± 0.97), population 188 ± 33, coureurs (v > 2,5) 1/10 [(3.93, 94)], population des autres 199
+
+--- cout.py
+"""Cost of movement (ENERGY_MOVE_COST) vs speed, population, runner lineages and extinctions (complet alone, 1x1)."""
+import csv, glob
+import numpy as np
+R = "/Users/jul/Documents/Dev/EvolutionGame/experiments/results"
+runs = {"0,015": "20261123_013721_cout_mouvement_015", "0,03": "20261122_150050_seul_complet",
+        "0,045": "20261123_014643_cout_mouvement_045", "0,06": "20261123_015215_cout_mouvement_06"}
+for c, d in runs.items():
+    ext, fast, other = [], [], []
+    for f in glob.glob(f"{R}/{d}/seed_*/timeline.csv"):
+        r = list(csv.DictReader(open(f)))
+        if float(r[-1]["population"]) == 0:
+            ext.append(int(r[-1]["tick"])); continue
+        last = r[-10:]
+        vv = np.mean([float(x["mean_speed"]) for x in last]); pp = np.mean([float(x["population"]) for x in last])
+        (fast if vv > 2.5 else other).append((round(float(vv), 2), round(float(pp))))
+    v = [x[0] for x in fast + other]; p = [x[1] for x in fast + other]
+    print(f"coût {c}: éteintes {len(ext)}/16 (ticks {sorted(ext)}), vitesse médiane {np.median(v):.2f} "
+          f"(moyenne {np.mean(v):.2f} ± {np.std(v):.2f}), population {np.mean(p):.0f} ± {np.std(p):.0f}, "
+          f"coureurs (v > 2,5) {len(fast)}/{len(v)} {fast}, population des autres {np.mean([x[1] for x in other]):.0f}")
