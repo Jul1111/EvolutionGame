@@ -214,3 +214,16 @@ def test_settings_map_scores_a_run(tmp_path):
     used, nonlin = complexity(os.path.join(out, "seed_1", "population_finale.npz"), creatures=5, ticks=300)
     assert 0 <= used <= 10 and nonlin == nonlin   # Not NaN
     assert complexity(os.path.join(out, "seed_9", "population_finale.npz")) is None
+
+
+def test_expand_keeps_every_option():
+    """Each option of experiments.run must survive expand (the argv of each run of a lot): a lost one is silently
+    left at its default."""
+    args = run_module.build_parser().parse_args(
+        ["--name", "x", "--seeds", "1", "2", "--ticks", "500", "--jobs", "2", "--photos", "100", "--profiles",
+         "complet", "--from-population", "a.npz", "--set", "FOOD_COUNT=30", "--replica", "1"])
+    (_, argv), = run_module.expand(args)
+    again = run_module.build_parser().parse_args(argv)
+    for key in ("seeds", "ticks", "jobs", "photos", "profiles", "from_population", "set"):
+        assert getattr(again, key) == getattr(args, key), key
+    assert again.replica == [1]

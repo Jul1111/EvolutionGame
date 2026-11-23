@@ -232,6 +232,8 @@ def expand(args):
         chosen = [pair for pair, _ in combo]
         sets = [*args.set, *(value for option, value in chosen if option == "--set")]
         argv = ["--name", name, "--seeds", *map(str, args.seeds), "--ticks", str(args.ticks), "--jobs", str(args.jobs)]
+        if args.photos:
+            argv += ["--photos", str(args.photos)]
         for option, value in chosen:
             if option != "--set":
                 argv += [option, value]
