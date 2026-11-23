@@ -1,0 +1,8 @@
+# Coexistence par niches (23/11) : deux espèces identiques sauf le capteur de faim, défauts de config.py.
+# Témoin : une sorte de nourriture. Niches : deux sortes, régime hérité (exposant 2 : les spécialistes gagnent).
+# Exposant 1 : deux sortes mais aucun avantage aux spécialistes (témoin du mécanisme).
+--name niches_temoin --profiles regime regime_faim --seeds 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 --ticks 120000 --jobs 8
+--name niches_exp2 --profiles regime regime_faim --seeds 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 --ticks 120000 --jobs 8 \
+    --set FOOD_TYPES=2 FOOD_ENERGY=60.0
+--name niches_exp1 --profiles regime regime_faim --seeds 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 --ticks 120000 --jobs 8 \
+    --set FOOD_TYPES=2 FOOD_ENERGY=60.0 DIET_EXPONENT=1.0

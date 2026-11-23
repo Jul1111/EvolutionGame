@@ -1,0 +1,7 @@
+# Cerveaux plus gros (23/11) : complet (6 neurones cachés) contre 12 et 16, défauts de config.py.
+# Seules (complexité et population, photos tous les 50 000 ticks), puis duels à fondateurs aléatoires.
+--name cerveau_6 --profiles complet --seeds 1 2 3 4 5 6 7 8 --ticks 200000 --jobs 8 --photos 50000
+--name cerveau_12 --profiles complet_12 --seeds 1 2 3 4 5 6 7 8 --ticks 200000 --jobs 8 --photos 50000
+--name cerveau_16 --profiles complet_16 --seeds 1 2 3 4 5 6 7 8 --ticks 200000 --jobs 8 --photos 50000
+--name duel_6_12 --profiles complet complet_12 --seeds 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 --ticks 120000 --jobs 8
+--name duel_6_16 --profiles complet complet_16 --seeds 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 --ticks 120000 --jobs 8

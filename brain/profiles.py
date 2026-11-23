@@ -26,6 +26,13 @@ PROFILES = {
     "complet_memoire": {"title": "Complet + mémoire", "sensors": ["food", "energy", "speed", "can_eat", "poison",
                                                                   "obstacle"],
                         "hidden": 6, "speed_output": True, "memory": 2, "color": (255, 214, 102)},
+    # Bigger brains (23/11): «complet» with 12 or 16 hidden neurons instead of 6 (is complexity capped by the size?)
+    "complet_12": {"title": "Complet 12 neurones", "sensors": ["food", "energy", "speed", "can_eat", "poison",
+                                                               "obstacle"],
+                   "hidden": 12, "speed_output": True, "memory": 0, "color": (255, 120, 80)},
+    "complet_16": {"title": "Complet 16 neurones", "sensors": ["food", "energy", "speed", "can_eat", "poison",
+                                                               "obstacle"],
+                   "hidden": 16, "speed_output": True, "memory": 0, "color": (200, 90, 60)},
     # Diets (FOOD_TYPES = 2): «complet» plus the value of the nearest food for its own diet; two species to duel
     "regime": {"title": "Régime", "sensors": ["food", "energy", "speed", "can_eat", "poison", "obstacle",
                                               "food_value"],
