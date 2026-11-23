@@ -36,4 +36,4 @@ fail_under = 80   # Safety net: current coverage is ~83%, a drop below means a n
 
 [tool.mypy]
 ignore_missing_imports = true   # pygame-ce and numpy are only partly typed
-exclude = ["graphify-out", ".venv"]
+exclude = ["graphify-out", ".venv", "experiments/results"]   # Archived analysis scripts, kept as they ran
