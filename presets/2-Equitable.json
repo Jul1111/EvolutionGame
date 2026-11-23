@@ -1,0 +1,14 @@
+{
+ "_nom": "Équitable",
+ "_note": "Duels plus longs entre espèces : repousse immédiate et mutation forte. Carte des réglages : l'espèce perdante tient 30 000 et 24 600 ticks (médiane), contre 14 400 de base.",
+ "VISION_FOV_DEGREES": 120,
+ "FOOD_COUNT": 60,
+ "FOOD_ENERGY": 30.0,
+ "FOOD_RESPAWN_DELAY": 0,
+ "POISON_COUNT": 5,
+ "OBSTACLE_COUNT": 6,
+ "MUTATION_STD": 0.3,
+ "REPRO_THRESHOLD": 120.0,
+ "AGE_MAX": 6000,
+ "SIZE_MODE": "actif"
+}

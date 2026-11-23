@@ -1,0 +1,14 @@
+{
+ "_nom": "Facile",
+ "_note": "Survie facile : nourriture riche (60) qui repousse aussitôt, pas de poison. Carte des réglages : énergie 60 -> 272 créatures, repousse 0 -> 385, aucune extinction.",
+ "VISION_FOV_DEGREES": 120,
+ "FOOD_COUNT": 60,
+ "FOOD_ENERGY": 60.0,
+ "FOOD_RESPAWN_DELAY": 0,
+ "POISON_COUNT": 0,
+ "OBSTACLE_COUNT": 6,
+ "MUTATION_STD": 0.1,
+ "REPRO_THRESHOLD": 120.0,
+ "AGE_MAX": 6000,
+ "SIZE_MODE": "actif"
+}

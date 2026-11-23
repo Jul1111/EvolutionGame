@@ -1,0 +1,14 @@
+{
+ "_nom": "Dur",
+ "_note": "Monde pauvre : peu de nourriture, lente à repousser, beaucoup de poison. Carte des réglages : repousse 300 -> 84 créatures sans extinction ; 30 nourritures -> 1 extinction sur 8. L'énergie 15 est trop dure (5 extinctions sur 8) : laissée à 30.",
+ "VISION_FOV_DEGREES": 120,
+ "FOOD_COUNT": 40,
+ "FOOD_ENERGY": 30.0,
+ "FOOD_RESPAWN_DELAY": 300,
+ "POISON_COUNT": 20,
+ "OBSTACLE_COUNT": 6,
+ "MUTATION_STD": 0.1,
+ "REPRO_THRESHOLD": 120.0,
+ "AGE_MAX": 6000,
+ "SIZE_MODE": "actif"
+}
