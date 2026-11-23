@@ -54,6 +54,7 @@ Réglages de `config.py` : `FOOD_COUNT = 60` (nourriture des petites populations
 - Le goulot de départ est passé dans 24 graines sur 24 (8 en 1×1, 16 en 2×2), contre 8 sur 16 avec `FOOD_COUNT = 40`.
 - Le plafond ne bloque plus de naissances ; c'est la nourriture qui règle la population.
 - Duels de populations évoluées (1×1) : une fois les fondateurs choisis, l'issue ne dépend presque pas du hasard du monde (même vainqueur dans 37 rejeux sur 40). En duels croisés (chaque lignée contre 4 adversaires), la qualité de la lignée adverse prédit 81 à 91 % des issues. Faim et bruit : aucun effet d'espèce. Mémoire : vrai handicap (13 lignées mémoire sur 16 perdent en majorité contre des `complet` variés, p = 0,02), bien que les réseaux s'en servent (la couper coûte 3 % de population et fait perdre les duels plus vite). Ce qui gagne : la population qu'une lignée tient seule (79 % des duels) ; les lignées rapides perdent presque tout. **Confirmé en 2×2 à 60°** : `complet` gagne 44 duels tranchés sur 45 contre la mémoire, les 16 lignées mémoire perdent en majorité.
+- **Deux espèces avec fondateurs spécialistes** : coexistence dans 9 graines sur 16 (mutation du régime 0,05), chaque espèce sur sa nourriture ; avec une mutation à 0,15, une seule espèce occupe plus souvent les deux nourritures en se scindant.
 - **Une espèce se scinde en deux** : avec deux nourritures et une mutation du régime à 0,15, une seule espèce garde deux groupes de spécialistes dans 12 graines sur 12, et en refait un par mutation quand il disparaît ; à 0,05, une seule nourriture finit mangée.
 - **Cerveaux plus gros** (12 ou 16 neurones cachés au lieu de 6) : pas plus non linéaires, même population, pas d'avantage en duel (9 et 11 victoires sur 16). La taille du réseau ne bride pas la complexité.
 - **Coexistence par niches** : avec deux sortes de nourriture et un gène de régime où les spécialistes sont avantagés, deux espèces coexistent de façon stable dans 3 graines sur 13 (0 sur 16 avec une seule nourriture), chaque fois sur des nourritures différentes. Sans avantage aux spécialistes, aucune niche ne se forme.
@@ -423,6 +424,19 @@ Résultats : `experiments/results/20261123_1*_carte_*`, tables dans `experiments
 | Compliqué | 25 obstacles, mutation 0,3 | 0/8 | ~100 | 7 entrées sur 9, non-linéarité 0,22 (30 000 ticks) |
 
 Ils sont dans `presets/` (versionnés) et apparaissent en tête des préréglages du panneau Paramètres (◀ ▶, puis Appliquer). Ils ne changent ni la taille du monde ni les espèces ; les nombres de nourritures, poisons et obstacles sont par écran, valables en 2×2. Limites : base en 1×1, vision 60° (choix arbitraire) ; Dur et Compliqué validés sur 30 000 ticks seulement.
+
+### Deux espèces, fondateurs spécialistes : coexistence ou une espèce partout (23/11/2026)
+
+Reprise de la coexistence par niches avec les fondateurs spécialistes (section suivante : plus d'extinction au départ) : `regime` + `regime_faim`, deux nourritures, énergie 60, 16 graines × 120 000 ticks, mutation du régime 0,05 ou 0,15. Lot `experiments/lots/coexistence_m015.txt` ; résultats `experiments/results/20261123_17*_coexist_*`, table par graine `experiments/results/niches/coexistence_fondateurs_specialistes.txt`.
+
+| Mutation du régime | Coexistence à la fin | Les graines à une espèce |
+|---|---|---|
+| 0,05 | **9/16**, chaque fois une espèce par nourriture | le gagnant ne mange qu'une nourriture (6 sur 7) |
+| 0,15 | 6/16, chaque fois une espèce par nourriture | le gagnant mange les deux : il s'est scindé (10 sur 10, ~50/50) |
+
+- **Avec des fondateurs spécialistes, la coexistence devient la règle à 0,05** : 9 graines sur 16, contre 3 sur 13 avec des régimes au hasard (p = 0,13 : tendance, pas encore prouvée). Chaque espèce part avec des spécialistes des deux nourritures ; celle qui perd le terrain sur une nourriture garde l'autre.
+- **Une mutation du régime plus forte ne fait pas coexister plus d'espèces, plutôt moins** (6/16, écart dans le bruit : p = 0,48). Ce qui change nettement, c'est l'issue quand une espèce gagne : à 0,15 elle occupe les deux nourritures à elle seule (10 graines sur 10, deux groupes de spécialistes en interne), à 0,05 elle se contente d'une (6 sur 7). Une espèce assez souple pour se scinder remplit les deux niches et ne laisse pas de place à l'autre.
+- Population totale à la fin : ~230 quand deux espèces coexistent ou qu'une espèce scindée occupe les deux nourritures, ~180 quand une seule nourriture est mangée. Le monde nourrit plus de monde quand les deux niches sont occupées, peu importe par qui.
 
 ### Une espèce qui se scinde en deux spécialistes (23/11/2026)
 
