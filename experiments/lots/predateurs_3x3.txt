@@ -1,7 +1,3 @@
 # Prédateurs (23/11) : durent-ils dans un monde plus grand ? Même run que pred_2x2, en 3×3 (45 prédateurs à l'arrivée).
 --name pred_3x3 --profiles proie --seeds 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 --ticks 120000 --jobs 8 \
     --set PREDATION=True WORLD_SCALE=3
-# Au tick 20 000 les proies du 3×3 ne sont que 30 par écran (52 en 2×2) : les prédateurs y meurent de faim. Même densité
-# que le 2×2 à leur arrivée : tick 60 000 (~50 par écran), puis 100 000 ticks avec prédateurs comme en 2×2.
---name pred_3x3_t60k --profiles proie --seeds 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 --ticks 160000 --jobs 8 \
-    --set PREDATION=True WORLD_SCALE=3 PREDATOR_START=60000
