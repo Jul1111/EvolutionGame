@@ -1,0 +1,9 @@
+run                      complet/faim gagne   élimination médiane (ticks)
+v_dur_a                  3/3 (deux 0, aucun 2)      13800
+v_dur_b                  2/3 (deux 0, aucun 3)       6600
+v_dur_c                  1/2 (deux 0, aucun 5)       6600
+v_compl_a                5/2 (deux 1, aucun 0)      10200
+v_compl_b                4/1 (deux 0, aucun 3)      10200
+v_compl_c                2/2 (deux 0, aucun 4)       9900
+v_equi_a                 5/3 (deux 0, aucun 0)      21900
+v_equi_b                 1/5 (deux 2, aucun 0)      21300

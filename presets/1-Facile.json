@@ -1,6 +1,6 @@
 {
  "_nom": "Facile",
- "_note": "Survie facile : nourriture riche (60) qui repousse aussitôt, pas de poison. Carte des réglages : énergie 60 -> 272 créatures, repousse 0 -> 385, aucune extinction.",
+ "_note": "Survie facile : nourriture riche (60) qui repousse aussitôt, pas de poison. Validé (8 graines, 120 000 ticks, 1x1) : aucune extinction, population au plafond (400 par écran), et les deux espèces coexistent encore dans 2 graines sur 8.",
  "VISION_FOV_DEGREES": 120,
  "FOOD_COUNT": 60,
  "FOOD_ENERGY": 60.0,

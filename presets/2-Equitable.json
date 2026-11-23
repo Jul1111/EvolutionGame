@@ -1,9 +1,9 @@
 {
  "_nom": "Équitable",
- "_note": "Duels plus longs entre espèces : repousse immédiate et mutation forte. Carte des réglages : l'espèce perdante tient 30 000 et 24 600 ticks (médiane), contre 14 400 de base.",
+ "_note": "Duels longs entre espèces : nourriture riche qui repousse aussitôt, mutation forte. Validé (8 graines, 120 000 ticks, 1x1) : aucune extinction, coexistence dans 2 graines sur 8, la perdante tient 21 300 ticks (médiane, contre 14 400 de base), réseaux les plus non linéaires (0,33).",
  "VISION_FOV_DEGREES": 120,
  "FOOD_COUNT": 60,
- "FOOD_ENERGY": 30.0,
+ "FOOD_ENERGY": 60.0,
  "FOOD_RESPAWN_DELAY": 0,
  "POISON_COUNT": 5,
  "OBSTACLE_COUNT": 6,

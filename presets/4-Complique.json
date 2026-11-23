@@ -1,14 +1,14 @@
 {
  "_nom": "Compliqué",
- "_note": "Cerveaux plus complexes : vision large, beaucoup d'obstacles et de poison, mutation forte, reproduction rapide. Carte des réglages : ce sont les réglages qui montent les entrées utilisées (7,1 / 6,7 / 6,4 sur 9) ou la non-linéarité (0,27 / 0,24 / 0,21).",
+ "_note": "Cerveaux plus complexes : 25 obstacles et mutation forte. Validé (8 graines, 30 000 ticks, 1x1) : aucune extinction, 7 entrées utilisées sur 9 (5,3 de base), non-linéarité 0,22. Avec 20 poisons et une reproduction à 80 en plus : 7 extinctions sur 8.",
  "VISION_FOV_DEGREES": 120,
  "FOOD_COUNT": 60,
  "FOOD_ENERGY": 30.0,
  "FOOD_RESPAWN_DELAY": 60,
- "POISON_COUNT": 20,
+ "POISON_COUNT": 5,
  "OBSTACLE_COUNT": 25,
  "MUTATION_STD": 0.3,
- "REPRO_THRESHOLD": 80.0,
+ "REPRO_THRESHOLD": 120.0,
  "AGE_MAX": 6000,
  "SIZE_MODE": "actif"
 }

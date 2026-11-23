@@ -53,6 +53,7 @@ Réglages de `config.py` : `FOOD_COUNT = 60` (nourriture des petites populations
 - Le goulot de départ est passé dans 24 graines sur 24 (8 en 1×1, 16 en 2×2), contre 8 sur 16 avec `FOOD_COUNT = 40`.
 - Le plafond ne bloque plus de naissances ; c'est la nourriture qui règle la population.
 - Duels de populations évoluées (1×1) : une fois les fondateurs choisis, l'issue ne dépend presque pas du hasard du monde (même vainqueur dans 37 rejeux sur 40). En duels croisés (chaque lignée contre 4 adversaires), la qualité de la lignée adverse prédit 81 à 91 % des issues. Faim et bruit : aucun effet d'espèce. Mémoire : vrai handicap (13 lignées mémoire sur 16 perdent en majorité contre des `complet` variés, p = 0,02), bien que les réseaux s'en servent (la couper coûte 3 % de population et fait perdre les duels plus vite). Ce qui gagne : la population qu'une lignée tient seule (79 % des duels) ; les lignées rapides perdent presque tout. **Confirmé en 2×2 à 60° (réglages de la partie)** : `complet` gagne 44 duels tranchés sur 45 contre la mémoire, les 16 lignées mémoire perdent en majorité.
+- **Carte des réglages** (section « Carte des réglages et préréglages ») : la nourriture décide de la survie, la vision et la mutation de la complexité des réseaux ; aucun réglage ne fait coexister deux espèces durablement, l'abondance retarde seulement l'élimination. Combinés, les réglages durs s'additionnent jusqu'à l'extinction : quatre préréglages validés (Facile, Équitable, Dur, Compliqué) sont dans `presets/`.
 - Duel en 2×2 (16 graines) : `complet` l'emporte 10 fois, `complet_faim` 6 fois. Écart compatible avec le hasard (p = 0,45) : le capteur de faim ne donne ni avantage ni handicap mesurable. Il n'est pas cassé, mais il vaut presque toujours ~0 : son échelle (600 ticks) est 50 fois plus longue que les moments typiques sans nourriture en vue. Avec une échelle de 60 ticks, l'entrée varie et le réseau s'en sert un peu (couper le capteur coûte ~2,5 % de population), mais le duel reste à 9 contre 6 (et une graine où les deux coexistent) : l'avantage est trop petit face au hasard du départ. Une espèce élimine toujours l'autre, entre 6 000 et 70 000 ticks.
 - **Vitesse** (revérifiée le 22/11, section « La vitesse avec les règles actuelles ») : la conclusion du 08/11 ne tient plus. C'est la quantité de nourriture qui règle la vitesse (×2 de 15 à 60 nourritures par écran, à densité égale), la densité ne la baisse que de 6 à 18 %. Les lignées diffèrent beaucoup entre elles (0,5 à 4), et la sélection favorise les plus rapides (rho +0,27 ± 0,19, positif dans les 8 populations) au lieu des intermédiaires.
 
@@ -374,6 +375,49 @@ Même protocole qu'en 1×1, avec les réglages de la partie : monde 2×2, champ 
 - **Ce qui prédit le vainqueur** : la population tenue seule, 82 % des duels (79 % en 1×1). Le plus lent gagne 71 % des duels.
 - **Pas de coureurs en 2×2 à 60°** : les 32 populations restent entre 0,49 et 1,05 de vitesse. Le piège du coureur vu en 1×1 à 120° n'apparaît pas avec les réglages de la partie.
 - **Durée** : 20 à 28 min par run de 16 graines. Le run `seul_complet_memoire` a duré 8 h 30 à cause d'une pause volontaire (`experiments.pause`) : les résultats n'en dépendent pas.
+
+### Carte des réglages et préréglages (23/11/2026)
+
+Quels réglages du menu donnent une évolution facile, dure, équitable ou complexe ? Base : 1×1, 60°, 60 nourritures, `complet` + `complet_faim`, 8 graines × 120 000 ticks. Puis chaque réglage changé seul, sur deux valeurs (21 runs, ~1 h 10, un lot). Scores calculés par `python -m experiments.carte <runs>` :
+
+- **Survie** : extinctions (au départ = avant 20 000 ticks), population sur les 10 derniers relevés.
+- **Progrès** : population finale divisée par celle de 10 000 à 20 000 ticks, générations atteintes.
+- **Variété** : écart de vitesse entre graines, écart relatif de taille.
+- **Équité** : graines où les deux espèces vivent encore à la fin, et durée de la perdante (élimination médiane).
+- **Complexité** : sur 30 créatures finales par graine, rejouées 1 500 ticks. *Entrées utilisées* : entrées dont le passage du 10e au 90e centile change la sortie de plus de 0,05 en moyenne (sur 9, 10 pour `complet_faim`). *Non-linéarité* : 1 − R² d'un ajustement linéaire des sorties sur les entrées (0 = une simple somme pondérée ; plus haut = seuils, tout ou rien).
+
+Résultats : `experiments/results/20261123_1*_carte_*`, tables dans `experiments/results/carte_reglages/`.
+
+| Réglage changé | Extinctions | Population | Générations | Vitesse ± graines | Entrées | Non-linéarité | Élimination médiane |
+|---|---|---|---|---|---|---|---|
+| base | 0/8 | 219 | 69 | 0,80 ± 0,21 | 5,3 | 0,18 | 14 400 |
+| vision 120° / 360° | 0 / 2 | 206 / 204 | 72 / 66 | 1,30 / 1,32 | 7,1 / 8,5 | 0,17 / 0,16 | 9 000 / 8 700 |
+| nourriture 30 / 40 | 1 / 0 | 160 / 186 | 60 / 62 | 0,95 / 0,96 | 5,5 / 5,6 | 0,15 / 0,19 | 10 800 / 12 000 |
+| énergie nourriture 15 / 60 | **5** / 0 | 136 / 272 | 57 / 65 | 1,07 / 0,68 | 6,4 / 4,9 | 0,15 / 0,18 | 9 600 / 18 000 |
+| repousse 0 / 300 | 0 / 0 | **385** / **84** | 63 / 60 | 1,65 ± 0,77 / 1,17 | 5,1 / 6,1 | 0,16 / 0,08 | **30 000** / 15 300 |
+| mutation 0,05 / 0,3 | 0 / 0 | 200 / 218 | 72 / 59 | 1,35 / 0,84 | 5,1 / 5,8 | 0,15 / **0,27** | 13 800 / 24 600 |
+| reproduction 80 / 180 | 0 / 0 | 221 / 170 | **98** / 49 | 0,81 / 1,70 | 5,3 / 5,2 | 0,21 / 0,15 | 9 300 / 13 800 |
+| âge max 3 000 / jamais | 0 / 0 | 197 / 220 | 85 / 57 | 1,18 / 0,86 | 5,9 / 5,3 | 0,17 / 0,19 | 11 100 / 15 600 |
+| poison 0 / 20 | 0 / 0 | 217 / 213 | 63 / 63 | 0,99 / 0,83 | 5,1 / 6,4 | 0,18 / 0,17 | 14 700 / 9 300 |
+| obstacles 0 / 25 | 0 / 1 | 217 / 208 | 61 / 66 | 0,89 / 1,15 | 5,4 / 6,7 | 0,19 / 0,24 | 12 000 / 13 200 |
+| taille fixe / neutre | 0 / 0 | 151 / 155 | 57 / 54 | 1,09 / 1,05 | 4,7 / 4,8 | 0,11 / 0,12 | 12 900 / 15 600 |
+
+- **Survie** : la nourriture décide. Repousse immédiate ou énergie 60 : bien plus de créatures (385, 272). Énergie 15 : 5 graines sur 8 s'éteignent au départ. Repousse 300 : 84 créatures, mais aucune extinction.
+- **Progrès** : les générations suivent le rythme des naissances (reproduction à 80 : 98 générations ; âge max 3 000 : 85).
+- **Variété** : la repousse immédiate disperse le plus les vitesses entre graines (± 0,77) ; le mode `neutre` laisse la taille dériver (écart 0,25 contre 0,01).
+- **Équité** : une espèce élimine toujours l'autre (1 coexistence en 168 graines), avec des victoires partagées (à peu près 4 contre 4). Seule la durée change : la perdante tient le plus longtemps avec une nourriture abondante (repousse 0 : 30 000 ticks) ou une mutation forte (24 600).
+- **Complexité** : une vision plus large fait utiliser plus d'entrées (8,5 sur 9 à 360°, en partie parce que les capteurs voient plus souvent quelque chose) ; mutation forte, obstacles nombreux et reproduction rapide rendent les réseaux moins linéaires. La taille fixe ou neutre les rend plus simples (0,11).
+
+**Les réglages ne s'additionnent pas.** Combinés, les meilleurs de chaque objectif (validation : 8 graines, vision 120°) donnent : « dur » (40 nourritures, repousse 300, 20 poisons) 8 extinctions sur 8 ; « compliqué » (20 poisons, 25 obstacles, mutation 0,3, reproduction 80) 7 sur 8. Des variantes plus douces (30 000 ticks, les extinctions arrivent tôt) ont donné les préréglages retenus :
+
+| Préréglage | Réglages (le reste : défauts, vision 120°) | Extinctions | Population | Résultat |
+|---|---|---|---|---|
+| Facile | énergie 60, repousse 0, pas de poison | 0/8 | 400 (plafond) | coexistence 2/8, la perdante tient 39 000 ticks |
+| Équitable | énergie 60, repousse 0, mutation 0,3 | 0/8 | 400 (plafond) | coexistence 2/8, 21 300 ticks, non-linéarité 0,33 |
+| Dur | repousse 300, 20 poisons | 2/8 | ~40 | (30 000 ticks) |
+| Compliqué | 25 obstacles, mutation 0,3 | 0/8 | ~100 | 7 entrées sur 9, non-linéarité 0,22 (30 000 ticks) |
+
+Ils sont dans `presets/` (versionnés) et apparaissent en tête des préréglages du panneau Paramètres (◀ ▶, puis Appliquer). Ils ne changent ni la taille du monde ni les espèces ; les nombres de nourritures, poisons et obstacles sont par écran, valables en 2×2. Limites : base en 1×1 (le jeu tourne en 2×2) ; Dur et Compliqué validés sur 30 000 ticks seulement.
 
 ### Coût du calcul (22/11/2026)
 

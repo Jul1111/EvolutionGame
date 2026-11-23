@@ -1,0 +1,5 @@
+run                      complet/faim gagne   élimination médiane (ticks)
+preset_facile            3/3 (deux 2, aucun 0)      39000
+preset_equitable         3/5 (deux 0, aucun 0)      10800
+preset_dur               0/0 (deux 0, aucun 8)        nan
+preset_complique         0/1 (deux 0, aucun 7)       5400
