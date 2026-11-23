@@ -38,6 +38,8 @@ PROFILES = {
     "scripte": {"title": "Scripté (référence)", "sensors": ["food", "can_eat", "poison", "obstacle"], "hidden": 0,
                 "speed_output": True, "memory": 0, "color": (200, 200, 200), "brain": "scripted"},
 }
+PROFILE_NAMES = list(PROFILES)                              # Species number (CreatureStore.species) → name
+PROFILE_INDEX = {name: i for i, name in enumerate(PROFILE_NAMES)}
 
 
 def spec(name):

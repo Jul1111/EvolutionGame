@@ -80,18 +80,23 @@ class ContinuousSimulation:
         if world.tick % FOOD_UPDATE_TICKS == 0:
             self.update_food(FOOD_UPDATE_TICKS)
         world.update()
-        living = [c for c in world.creatures if c.alive]
-        self.life_ticks += len(living)
-        for c in living:
-            if self.cfg.AGE_MAX and c.age >= self.cfg.AGE_MAX:
-                c.alive = False
-                c.death_cause = "vieillesse"
-        for parent in [c for c in living if c.alive and self._can_give_birth(c)]:
+        s, cs = world.store, world.creatures
+        alive = s.col("alive")
+        self.life_ticks += int(alive.sum())
+        if self.cfg.AGE_MAX:
+            for i in np.nonzero(alive & (s.col("age") >= self.cfg.AGE_MAX))[0].tolist():
+                cs[i].alive = False
+                cs[i].death_cause = "vieillesse"
+        # Births: energy and age tested on the columns, the cooldown (rarely set) on the few creatures that pass
+        ready = s.col("alive") & (s.col("energy") >= self.cfg.REPRO_THRESHOLD * s.col("body")) & \
+            (s.col("age") >= self.cfg.MATURITY_AGE)
+        for parent in [cs[i] for i in np.nonzero(ready)[0].tolist() if self._can_give_birth(cs[i])]:
             if len(world.creatures) >= self.pop_max:
                 self.cap_blocked += 1
                 continue
             self._give_birth(parent)
-        for c in world.creatures:
+        dead = np.nonzero(~s.col("alive"))[0].tolist()
+        for c in [world.creatures[i] for i in dead]:
             if not c.alive:
                 self.deaths[c.death_cause or "faim"] += 1
                 self.death_ages.append(c.age)
@@ -101,7 +106,8 @@ class ContinuousSimulation:
                                            "mean_speed": c.speed_sum / c.age if c.age else 0.0,
                                            "children": c.children, "food": c.food_eaten,
                                            "lineage_gen": c.lineage_gen, "cause": c.death_cause})
-        world.creatures = [c for c in world.creatures if c.alive]
+        if dead:
+            world.creatures = [world.creatures[i] for i in np.nonzero(s.col("alive"))[0].tolist()]
         if world.tick % self.cfg.SAMPLE_TICKS == 0:
             self._sample()
         if not world.creatures:

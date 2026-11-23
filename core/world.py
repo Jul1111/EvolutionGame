@@ -6,8 +6,8 @@ import config
 from core.food import Food
 from core.obstacle import Obstacle
 from core.physics import torus_delta, normalize_angle
-from core.creature import Creature
-from brain.profiles import PROFILES, needed_items, new_brain
+from core.creature import Creature, CreatureStore
+from brain.profiles import PROFILES, PROFILE_NAMES, needed_items, new_brain
 from core.sensors import SENSORS
 from core.batch import decide_and_move
 
@@ -17,7 +17,8 @@ class World:
         self.cfg = cfg   # Settings in force (see self.cfg.Settings)
         self.width = self.cfg.WORLD_WIDTH
         self.height = self.cfg.WORLD_HEIGHT
-        self.creatures = []
+        self.store = CreatureStore()   # Numeric state of the creatures, row i = self.creatures[i]
+        self._creatures = []
         # FOOD_COUNT, POISON_COUNT and OBSTACLE_COUNT are given per screen-sized area: a bigger world holds more
         self.area_factor = self.width * self.height / (self.cfg.SCREEN_WIDTH * self.cfg.SCREEN_HEIGHT)
         # Obstacles first: food, poison and creatures are never placed inside one
@@ -38,6 +39,29 @@ class World:
         # Every kind of item a creature can perceive, by name. A new kind of item: add it here, then a sensor
         # nearest_of("<kind>") in core/sensors.py
         self.items = {"food": self.foods, "poison": self.poisons, "obstacle": self.obstacles}
+
+    @property
+    def creatures(self):
+        return self._creatures
+
+    @creatures.setter
+    def creatures(self, new):
+        """A new list of this world's creatures (the dead removed, usually): their rows follow, in the same order."""
+        new = list(new)
+        rows = np.fromiter((c._i for c in new), np.int64, len(new))
+        if len(new) != self.store.n or (rows != np.arange(len(new))).any():
+            self.store.keep(rows)
+            for i, c in enumerate(new):
+                c._i = i
+        self._creatures = new
+
+    def living(self):
+        """(living creatures, their rows in the store): rows is slice(None) when every creature is alive."""
+        alive = self.store.col("alive")
+        if alive.all():
+            return list(self._creatures), slice(None)
+        rows = np.nonzero(alive)[0]
+        return [self._creatures[i] for i in rows], rows
 
     def _count(self, per_screen):
         return round(per_screen * self.area_factor)
@@ -81,13 +105,12 @@ class World:
         the edge of every living creature (never on one, never right next to one). Returns False when no such place
         was found in 100 tries (crowded world): the item then waits one more tick and tries again."""
         reach = self.cfg.CREATURE_RADIUS + self.cfg.FOOD_RADIUS
-        living = [c for c in self.creatures if c.alive]
-        n = len(living)
+        s = self.store
+        rows = s.col("alive")
+        n = int(rows.sum())
         if n:
-            cx = np.fromiter((c.x for c in living), float, n)
-            cy = np.fromiter((c.y for c in living), float, n)
-            keep = (np.fromiter((c.radius for c in living), float, n) + self.cfg.FOOD_RADIUS
-                    + self.cfg.SPAWN_CLEARANCE) ** 2
+            cx, cy = s.col("x")[rows], s.col("y")[rows]
+            keep = (s.col("radius")[rows] + self.cfg.FOOD_RADIUS + self.cfg.SPAWN_CLEARANCE) ** 2
         for _ in range(100):
             x, y = self.rng.uniform(0, self.width), self.rng.uniform(0, self.height)
             if self._blocked(x, y, reach):
@@ -135,18 +158,16 @@ class World:
 
         # Phase 1: every creature decides and moves (all at once, core/batch.py), then obstacles push it back
         if seeing:
-            decide_and_move(self, seeing, self._near)
-        alive = [c for c in self.creatures if c.alive]
+            decide_and_move(self, seeing, self._near_rows, self._near)
+        alive, rows = self.living()
         if alive:
-            n = len(alive)
-            X = np.fromiter((c.x for c in alive), float, n)
-            Y = np.fromiter((c.y for c in alive), float, n)
-            if self._collide_all(alive, X, Y):
-                X = np.fromiter((c.x for c in alive), float, n)   # Collisions moved some of them
-                Y = np.fromiter((c.y for c in alive), float, n)
-            E = np.fromiter((c.energy for c in alive), float, n)
-            body = (np.fromiter((c.radius for c in alive), float, n),       # Contact radius (body size)
-                    np.fromiter((c.energy_max for c in alive), float, n))   # Energy reserve (body size)
+            s = self.store
+            X, Y = s.col("x")[rows].copy(), s.col("y")[rows].copy()
+            if self._collide_all(alive, rows, X, Y):
+                X, Y = s.col("x")[rows].copy(), s.col("y")[rows].copy()   # Collisions moved some of them
+            E = s.col("energy")[rows].copy()
+            body = (s.col("radius")[rows].copy(),        # Contact radius (body size)
+                    s.col("energy_max")[rows].copy())    # Energy reserve (body size)
             # Phase 2: food goes to the closest creature in contact that still has room for the whole meal
             self._contacts(self.foods, alive, X, Y, E, body, self._eat, fits=True)
             # Phase 3: poison hurts the closest creature in contact, then moves to a new random place
@@ -199,18 +220,18 @@ class World:
         self.poisoned += 1
         poison.cooldown = max(1, self.cfg.FOOD_RESPAWN_DELAY)   # Placed elsewhere when it comes back (_item_returns)
 
-    def _collide_all(self, alive, X, Y):
+    def _collide_all(self, alive, rows, X, Y):
         """Obstacle collisions: a numpy test finds, for each creature, the obstacles whose bounding circle it
-        overlaps; only those go through the exact push of _collide. Returns True if at least one creature touched."""
+        overlaps; only those go through the exact push of _collide. Returns True if at least one creature touched.
+        `rows`: rows of `alive` in the store."""
         m = len(self.obstacles)
-        for c in alive:
-            c.touching = False
+        self.store.col("touching")[rows] = False
         if m == 0:
             return False
         ox = np.fromiter((o.x for o in self.obstacles), float, m)
         oy = np.fromiter((o.y for o in self.obstacles), float, m)
         orad = np.fromiter((o.radius for o in self.obstacles), float, m)
-        crad = np.fromiter((c.radius for c in alive), float, len(alive))
+        crad = self.store.col("radius")[rows]
         lim = (orad[None, :] + crad[:, None]) ** 2
         dx = (X[:, None] - ox[None, :] + self.width / 2) % self.width - self.width / 2
         dy = (Y[:, None] - oy[None, :] + self.height / 2) % self.height - self.height / 2
@@ -229,15 +250,14 @@ class World:
         Same rule as nearest(): within range, inside the field of view, available, closest wins (an exact tie goes
         to the last item of the list, like nearest). Keeps, for this tick, {kind: (distance², dx, dy)} arrays aligned
         with the returned list of living creatures (distance² = inf when nothing is seen); World.sense reads them."""
-        alive = [c for c in self.creatures if c.alive]
+        alive, alive_rows = self.living()
         n = len(alive)
-        self._near, self._near_tick = {}, self.tick
+        self._near, self._near_tick, self._near_rows = {}, self.tick, alive_rows
         if not n:
             return alive
-        needed = needed_items({c.profile for c in alive})
-        cx = np.fromiter((c.x for c in alive), float, n)
-        cy = np.fromiter((c.y for c in alive), float, n)
-        heading = np.fromiter((c.angle for c in alive), float, n)
+        s = self.store
+        needed = needed_items({PROFILE_NAMES[k] for k in np.unique(s.col("species")[alive_rows]).tolist()})
+        cx, cy, heading = s.col("x")[alive_rows], s.col("y")[alive_rows], s.col("angle")[alive_rows]
         range_ = self.cfg.VISION_RANGE
         range2 = range_ ** 2
         all_around = self.cfg.VISION_FOV_DEGREES >= 360
@@ -281,9 +301,9 @@ class World:
             self._near[key] = (best, dx[rows, j_best], dy[rows, j_best])
             if key == "food":
                 food_seen = in_view
-        for i, (c, seen) in enumerate(zip(alive, food_seen.tolist())):
-            c.food_nearby = seen
-            c._near_i, c._near_tick = i, self.tick
+        s.col("food_nearby")[alive_rows] = food_seen
+        s.col("near_i")[alive_rows] = rows
+        s.col("near_tick")[alive_rows] = self.tick
         return alive
 
     def _update_reference(self):
@@ -368,8 +388,9 @@ class World:
         x, y = self._free_position(margin) if near is None else self._free_near(*near, margin)
         angle = self.rng.uniform(-math.pi, math.pi)
         creature = Creature(x, y, angle, self.cfg.INITIAL_ENERGY if energy is None else energy, brain, profile,
-                            cfg=self.cfg, **lineage)
-        self.creatures.append(creature)
+                            cfg=self.cfg, store=self.store, **lineage)
+        assert creature._i == len(self._creatures), "store rows out of step with World.creatures"
+        self._creatures.append(creature)
         return creature
 
     def _free_near(self, x, y, margin=None):
@@ -438,8 +459,9 @@ class World:
         Uses what sense_all found for this tick when it is there, else looks up the nearest items itself
         (the interface calls it for the selected creature). The nearest food is always looked up: it feeds the
         `food_nearby` metric."""
-        if getattr(creature, "_near_tick", -1) == self.tick == getattr(self, "_near_tick", -2):
-            i = creature._near_i
+        if creature._s is self.store and creature._s.near_tick[creature._i] == self.tick == \
+                getattr(self, "_near_tick", -2):
+            i = int(creature._s.near_i[creature._i])
             ctx = {k: (float(d2[i]), float(dx[i]), float(dy[i])) if np.isfinite(d2[i]) else None
                    for k, (d2, dx, dy) in self._near.items()}
         else:

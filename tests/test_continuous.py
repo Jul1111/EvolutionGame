@@ -215,3 +215,21 @@ def test_cap_grows_with_the_world():
     small = ContinuousSimulation(random.Random(1), cfg=config.Settings(INITIAL_POPULATION=10, WORLD_SCALE=1))
     big = ContinuousSimulation(random.Random(1), cfg=config.Settings(INITIAL_POPULATION=10, WORLD_SCALE=2))
     assert big.pop_max == 4 * small.pop_max == 4 * config.POP_MAX
+
+
+def test_store_rows_follow_the_creature_list():
+    """Births grow the CreatureStore, deaths compact it: row i stays creature i, values travel with their creature."""
+    import random
+
+    import config
+    from evolution.continuous import ContinuousSimulation
+    cfg = config.Settings(AGE_MAX=800, INITIAL_POPULATION=60, ACTIVE_PROFILES=["scripte", "complet"])
+    sim = ContinuousSimulation(random.Random(3), cfg=cfg)
+    before = {}
+    for _ in range(1500):
+        sim.step()
+        cs = sim.world.creatures
+        assert sim.world.store.n == len(cs) and all(c._i == i for i, c in enumerate(cs))
+        assert all(before.get(c.uid, c.age - 1) == c.age - 1 for c in cs)   # Each creature kept its own age
+        before = {c.uid: c.age for c in cs}
+    assert sim.total_deaths > 0 and sim.total_births > 0

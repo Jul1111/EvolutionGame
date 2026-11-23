@@ -1,17 +1,104 @@
 import math
 
+import numpy as np
+
 import config
 from core.physics import normalize_angle
-from brain.profiles import PROFILES
+from brain.profiles import PROFILE_INDEX, PROFILES
+
+
+class CreatureStore:
+    """The numeric state of a world's creatures, one numpy array per field, one row per creature (row i = the i-th
+    creature of World.creatures). The tick works on whole columns (core/batch.py, World.update) instead of reading
+    and writing each creature object; a Creature reads and writes its own row through the fields below."""
+
+    FLOATS = ("x", "y", "angle", "speed", "energy", "speed_sum", "blind_speed_sum", "blind_turn_sum", "last_turn",
+              "size", "body", "radius", "energy_max", "base_cost", "move_cost")
+    INTS = ("age", "unseen_ticks", "blind_ticks", "uid", "near_i", "near_tick", "species")
+    BOOLS = ("alive", "touching", "food_nearby")
+
+    def __init__(self, capacity=16):
+        self.n = 0
+        for names, dtype in ((self.FLOATS, float), (self.INTS, np.int64), (self.BOOLS, bool)):
+            for name in names:
+                setattr(self, name, np.zeros(capacity, dtype))
+
+    def fields(self):
+        return self.FLOATS + self.INTS + self.BOOLS
+
+    def add(self):
+        """A new row at the end; returns its index. Arrays grow by doubling (views taken before are then stale)."""
+        if self.n == len(self.x):
+            for name in self.fields():
+                old = getattr(self, name)
+                new = np.zeros(2 * len(old), old.dtype)
+                new[:self.n] = old[:self.n]
+                setattr(self, name, new)
+        self.n += 1
+        return self.n - 1
+
+    def keep(self, rows):
+        """Keeps the rows `rows` (indices, in this order) and drops the others."""
+        for name in self.fields():
+            col = getattr(self, name)
+            col[:len(rows)] = col[rows]
+        self.n = len(rows)
+
+    def col(self, name):
+        """The live rows of a field (a view: writing to it writes the creatures)."""
+        return getattr(self, name)[:self.n]
+
+
+class _Field:
+    """Attribute of a Creature stored in its row of the CreatureStore (read back as a Python value)."""
+
+    def __set_name__(self, owner, name):
+        self.name = name
+
+    def __get__(self, obj, owner=None):
+        if obj is None:
+            return self
+        return getattr(obj._s, self.name)[obj._i].item()
+
+    def __set__(self, obj, value):
+        getattr(obj._s, self.name)[obj._i] = value
+
 
 class Creature:
+    # Numeric state, kept in the world's CreatureStore (see there)
+    x = _Field()
+    y = _Field()
+    angle = _Field()
+    speed = _Field()            # Current speed, decided by the network at each tick
+    energy = _Field()
+    speed_sum = _Field()        # Sum of its speed over its life: mean speed = speed_sum / age
+    blind_speed_sum = _Field()
+    blind_turn_sum = _Field()
+    last_turn = _Field()        # Turn output of the last tick (exploration measures)
+    size = _Field()
+    body = _Field()
+    radius = _Field()
+    energy_max = _Field()
+    base_cost = _Field()
+    move_cost = _Field()
+    age = _Field()
+    unseen_ticks = _Field()     # Ticks since it last saw an available food (sensor «faim»)
+    blind_ticks = _Field()
+    uid = _Field()
+    alive = _Field()
+    touching = _Field()         # Pressed against an obstacle at the last tick (a sensor of some profiles)
+    food_nearby = _Field()      # An available food in view (set by World.sense_all / World.sense each tick)
+
     def __init__(self, x, y, angle, energy, brain, profile, uid=0, parent_id=None, birth_tick=0, lineage_gen=0,
-                 size=1.0, cfg=config):
+                 size=1.0, cfg=config, store=None):
+        """`store`: the CreatureStore of the world it lives in (World.add_creature); its own one-row store if None."""
+        self._s = CreatureStore(1) if store is None else store
+        self._i = self._s.add()
         self.cfg = cfg   # Settings in force (see self.cfg.Settings)
         self.x = float(x)
         self.y = float(y)
         self.angle = angle
-        self.speed = 0.0  # Current speed, decided by the network at each tick
+        self.speed = 0.0
         self.energy = energy
         self.brain = brain
         self.profile = profile   # Name of its network profile (species), see brain/profiles.py
@@ -29,17 +116,19 @@ class Creature:
         self.food_eaten = 0
         self.poison_hits = 0
         self.obstacle_ticks = 0   # Ticks spent pressed against an obstacle
-        self.touching = False     # Pressed against an obstacle at the last tick (a sensor of some profiles)
+        self.touching = False
         self.memory = [0.0] * PROFILES[profile]["memory"]   # Extra network outputs, fed back as inputs at the next tick
         self.age = 0
         # Exploration metrics: what the creature does when it sees no food
-        self.food_nearby = True  # Set by World.sense each tick
+        self.food_nearby = True
         self.blind_ticks = 0
         self.blind_speed_sum = 0.0
         self.blind_turn_sum = 0.0
-        self.last_turn = 0.0     # Turn output of the last tick (exploration measures)
-        self.unseen_ticks = 0    # Ticks since it last saw an available food (sensor «faim»)
-        self.speed_sum = 0.0     # Sum of its speed over its life: mean speed = speed_sum / age
+        self.last_turn = 0.0
+        self.unseen_ticks = 0
+        self.speed_sum = 0.0
+        self._s.near_tick[self._i] = -1   # Not seen by World.sense_all yet
+        self._s.species[self._i] = PROFILE_INDEX[profile]
 
     def set_size(self, size):
         """Body gene. `body` is the size that acts (1 unless SIZE_MODE is "actif"); everything the body changes is
