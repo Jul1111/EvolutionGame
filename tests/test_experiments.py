@@ -214,6 +214,10 @@ def test_settings_map_scores_a_run(tmp_path):
     used, nonlin = complexity(os.path.join(out, "seed_1", "population_finale.npz"), creatures=5, ticks=300)
     assert 0 <= used <= 10 and nonlin == nonlin   # Not NaN
     assert complexity(os.path.join(out, "seed_9", "population_finale.npz")) is None
+    # One species only: the inputs of «complet_faim» (10) can be used, the measure stays in range
+    used_faim, _ = complexity(os.path.join(out, "seed_1", "population_finale.npz"), creatures=5, ticks=300,
+                              profile="complet_faim")
+    assert 0 <= used_faim <= 10
 
 
 def test_expand_keeps_every_option():

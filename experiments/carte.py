@@ -1,6 +1,7 @@
 """Settings map: five scores for each run (survival, progress, variety, fairness between species, complexity).
 
     python -m experiments.carte experiments/results/<run> [<run> ...]
+    python -m experiments.carte --espece proie <run> ...   (complexity of the creatures of one species only)
 
 Survival   extinctions out of the seeds, and the population held at the end.
 Progress   population at the end over population at 10-20 000 ticks (how much better the population lives once
@@ -70,14 +71,16 @@ def timeline_scores(run):
             "minority_share": np.mean(minority) if minority else float("nan")}
 
 
-def complexity(path, creatures=30, ticks=1500, every=10, threshold=0.05):
-    """(inputs used, non-linearity) of a saved population, see the module docstring. None if the file is missing."""
+def complexity(path, creatures=30, ticks=1500, every=10, threshold=0.05, profile=None):
+    """(inputs used, non-linearity) of a saved population, see the module docstring. None if the file is missing.
+    `profile`: only creatures of that species are watched (None: any)."""
     if not os.path.exists(path):
         return None
     from evolution.continuous import ContinuousSimulation, load_population
     from experiments.run import population_settings
     sim = ContinuousSimulation(random.Random(1), founders=load_population(path), cfg=population_settings(path)[0])
-    watched = random.Random(2).sample(sim.world.creatures, min(creatures, len(sim.world.creatures)))
+    pool = [c for c in sim.world.creatures if profile is None or c.profile == profile]
+    watched = random.Random(2).sample(pool, min(creatures, len(pool)))
     states = {id(c): [] for c in watched}
     for t in range(ticks):
         if not sim.step():
@@ -114,11 +117,11 @@ def complexity(path, creatures=30, ticks=1500, every=10, threshold=0.05):
     return (float(np.mean(used)) if used else float("nan"), float(np.mean(nonlin)) if nonlin else float("nan"))
 
 
-def _complexity_job(path):
-    return complexity(path)
+def _complexity_job(args):
+    return complexity(args[0], profile=args[1])
 
 
-def run_complexity(run, jobs=None):
+def run_complexity(run, jobs=None, profile=None):
     from concurrent.futures import ProcessPoolExecutor
 
     from core.kernels import worker_init
@@ -126,12 +129,17 @@ def run_complexity(run, jobs=None):
     if not paths:
         return float("nan"), float("nan")
     with ProcessPoolExecutor(jobs or os.cpu_count(), initializer=worker_init, initargs=(jobs,)) as pool:
-        res = [r for r in pool.map(_complexity_job, paths) if r]
+        res = [r for r in pool.map(_complexity_job, [(p, profile) for p in paths]) if r]
     return float(np.mean([r[0] for r in res])), float(np.mean([r[1] for r in res]))
 
 
 def main(argv=None):
-    runs = sys.argv[1:] if argv is None else argv
+    runs = list(sys.argv[1:] if argv is None else argv)
+    profile = None
+    if "--espece" in runs:
+        k = runs.index("--espece")
+        profile = runs[k + 1]
+        del runs[k:k + 2]
     if not runs:
         raise SystemExit(__doc__)
     width = max(len(os.path.basename(r).split("_", 2)[-1]) for r in runs)
@@ -139,7 +147,7 @@ def main(argv=None):
           f"taille (écart rel.)  coexistence  part minorité  entrées utilisées  non-linéarité")
     for run in runs:
         s = timeline_scores(run)
-        used, nonlin = run_complexity(run)
+        used, nonlin = run_complexity(run, profile=profile)
         name = os.path.basename(run).split("_", 2)[-1]
         print(f"{name:<{width}}  {s['extinctions']}/{s['seeds']} ({s['early_extinctions']})"
               f"          {s['population']:5.0f}      ×{s['growth']:.2f}   {s['generations']:6.0f}       "
