@@ -11,7 +11,10 @@ python -m experiments.gradient experiments/results/<run>/seed_*/population_final
 python -m experiments.run ... --replica 1         # mêmes fondateurs, autre hasard du monde
 python -m experiments.run ... --shift 1 --from-population <A>/seed_{seed}/... <B>/seed_{pair}/...   # duels croisés
 python -m experiments.pause [reprise|etat]        # mettre en pause / reprendre les expériences en cours
+python -m experiments.progress [--suivre]         # barre d'avancement des runs en cours
 ```
+
+**Avancement** : `experiments.run` affiche une barre pendant qu'il tourne (`[#########---] 75 %  12/16 graines  6 min 10 écoulées, ~2 min 03 restantes`), redessinée sur place dans un terminal, une ligne tous les 10 % dans un fichier de log. Pour un run lancé ailleurs (en fond, autre terminal) : `python -m experiments.progress` montre la barre de chaque run en cours, `--suivre` la rafraîchit toutes les 5 s. Elle est lue sur le disque (dernière ligne de `timeline.csv` de chaque graine) : précise à `SAMPLE_TICKS` près, et le temps restant compte aussi les pauses.
 
 **Pause** : `python -m experiments.pause` arrête net toutes les expériences en cours et leurs processus de graines (plus aucun calcul), `python -m experiments.pause reprise` les relance exactement où elles étaient (mêmes résultats que sans pause), `etat` les liste. Une pause ne survit pas à l'extinction ou au redémarrage de l'ordinateur : le run en cours est alors perdu (les graines déjà finies restent sur le disque).
 

@@ -137,3 +137,20 @@ def test_pause_finds_the_experiments_and_their_workers():
     table = {10: (1, "S", "python -m experiments.run --name x"), 11: (10, "R", "python -c spawn_main"),
              12: (11, "R", "python -c helper"), 20: (1, "S", "python -m pytest"), 21: (20, "R", "python worker")}
     assert experiments(table) == [10, 11, 12]
+
+
+def test_progress_reads_what_the_seeds_wrote(tmp_path):
+    import json
+    from experiments.progress import bar, run_progress
+    (tmp_path / "run.json").write_text(json.dumps({"ticks": 1000, "seeds": [1, 2, 3, 4]}), encoding="utf-8")
+    header = "tick,population\n"
+    for seed, text in ((1, header + "500,30\n"), (2, header + "300,0\n")):   # Half way; died out
+        (tmp_path / f"seed_{seed}").mkdir()
+        (tmp_path / f"seed_{seed}" / "timeline.csv").write_text(text, encoding="utf-8")
+    (tmp_path / "seed_3").mkdir()
+    (tmp_path / "seed_3" / "population_finale.npz").touch()                    # Finished; seed 4 not started
+    fraction, done, total, _ = run_progress(str(tmp_path))
+    assert (fraction, done, total) == (0.625, 2, 4)
+    assert "62 %" in bar(fraction, done, total, 60) and "restantes" in bar(fraction, done, total, 60)
+    (tmp_path / "summary.csv").touch()
+    assert run_progress(str(tmp_path))[0] == 1.0

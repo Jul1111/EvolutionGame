@@ -134,6 +134,28 @@ def run_seed(seed, out_dir, overrides, ticks, profiles, population_file, replica
     return f"graine {seed} : {played} ticks en {time.time() - start:.0f} s, {end}"
 
 
+def show_progress(out_dir, futures, every=2.0):
+    """Wait for the seeds, with a progress bar: redrawn in place in a terminal, one line per 10 % otherwise (a log).
+    The message of each seed is printed when it ends."""
+    from concurrent.futures import FIRST_COMPLETED, wait
+    from experiments.progress import bar, run_progress
+    tty = sys.stdout.isatty()
+    pending, last_step = set(futures), -1
+    while pending:
+        done, pending = wait(pending, timeout=every, return_when=FIRST_COMPLETED)
+        for fut in done:
+            print(("\r\033[K" if tty else "") + fut.result())
+        fraction, finished, total, elapsed = run_progress(out_dir)
+        if not pending:
+            fraction, finished = 1.0, total
+        line = bar(fraction, finished, total, elapsed)
+        if tty:
+            print("\r\033[K" + line, end="" if pending else "\n", flush=True)
+        elif int(fraction * 10) > last_step:
+            last_step = int(fraction * 10)
+            print(line, flush=True)
+
+
 def git_state():
     try:
         commit = subprocess.check_output(["git", "rev-parse", "--short", "HEAD"], cwd=ROOT, text=True,
@@ -192,8 +214,7 @@ def main(argv=None):
     with ProcessPoolExecutor(max_workers=max(1, args.jobs)) as pool:
         futures = [pool.submit(run_seed, s, out_dir, overrides, args.ticks, profiles, args.from_population,
                                args.replica, pairs[s]) for s in args.seeds]
-        for fut in futures:
-            print(fut.result())
+        show_progress(out_dir, futures)
 
     from experiments.summary import summarize_timeline, print_timeline_table, print_species_table
     summarize_timeline(out_dir)
