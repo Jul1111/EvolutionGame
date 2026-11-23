@@ -88,7 +88,7 @@ Résultats sur 8 à 16 graines par condition, détails et limites dans [docs/exp
 
 - **Coexistence par niches** : avec deux sortes de nourriture et un gène de régime (`FOOD_TYPES = 2`), deux espèces peuvent coexister durablement, chacune spécialisée sur une nourriture (45 % des graines avec des fondateurs spécialistes, sur 48 ; aucune avec une seule nourriture).
 - **Une espèce peut se scinder** : avec une mutation du régime assez forte (0,15), une seule espèce se partage en deux groupes de spécialistes, et en refait un quand il disparaît.
-- **Les prédateurs tiennent mal, mais façonnent les proies** : des créatures qui mangent les autres (`PREDATION`) s'éteignent presque toujours en 1×1 et dans 3 graines sur 4 en 2×2. Là où elles durent : cycles proies-prédateurs, proies qui fuient et vont deux fois plus vite, prédateurs qui accélèrent sur une proie en vue.
+- **Les prédateurs tiennent mal, mais façonnent les proies** : des créatures qui mangent les autres (`PREDATION`) s'éteignent presque toujours en 1×1 et dans 3 graines sur 4 en 2×2 ; un monde 3×3 n'aide pas, tout se joue juste après leur arrivée. Là où elles durent : cycles proies-prédateurs, proies qui fuient et vont deux fois plus vite, prédateurs qui accélèrent sur une proie en vue.
 - **La complexité vient du temps, pas de la taille du cerveau** : sur un million de ticks, la non-linéarité des réseaux triple puis plafonne ; des réseaux 2 à 3 fois plus gros ne sont pas plus complexes.
 - **Les réglages ne s'additionnent pas** : chacun pris seul reste vivable, mais combiner peu de nourriture, repousse lente et poison éteint tout. Quatre préréglages validés (Facile, Équitable, Dur, Compliqué, dossier `presets/`) sont proposés en tête du panneau Paramètres.
 

@@ -1,0 +1,24 @@
+
+20261123_205450_pred_3x3_t60k  (rendement 0.75, digestion 200, coût ×1.0, échelle 3)
+  coexistence à la fin 1/16, proies vivantes 16/16, prédateurs éteints 15/16 (ticks [66000, 66000, 66600, 67200, 69000, 71400, 73200, 76200, 76200, 76200, 76800, 78000, 81000, 87600, 92400])
+  pendant la présence des prédateurs : proies 616, prédateurs 17.1, CV prédateurs 1.13, oscillations 1.9
+  début : proies vitesse 2.04 avec / 1.97 sans prédateur en vue, virage vers lui -0.034, en vue 6.6% ; prédateurs vitesse 0.91 / 0.84, virage vers la proie +0.007, proies/1000 t 2.16
+  fin   : proies vitesse 2.70 avec / 3.01 sans prédateur en vue, virage vers lui -0.084, en vue 31.1% ; prédateurs vitesse 1.68 / 1.25, virage vers la proie +0.098, proies/1000 t 1.98
+    graine  1 : fin 159600  proies 1069  prédateurs 0  moy. 717/16.8  CV 0.95  oscill. 1  décalage 8 (r -0.86)  fuite fin +nan  poursuite fin +nan
+    graine 10 : fin 159600  proies 1093  prédateurs 0  moy. 868/8.5  CV 1.63  oscill. 3  décalage 10 (r -0.71)  fuite fin +nan  poursuite fin +nan
+    graine 11 : fin 159600  proies 1044  prédateurs 0  moy. 498/13.4  CV 1.04  oscill. 1  décalage 8 (r -0.80)  fuite fin +nan  poursuite fin +nan
+    graine 12 : fin 159600  proies 1073  prédateurs 0  moy. 596/17.2  CV 0.91  oscill. 1  décalage 4 (r -0.63)  fuite fin +nan  poursuite fin +nan
+    graine 13 : fin 159600  proies 1123  prédateurs 0  moy. 851/9.0  CV 1.29  oscill. 1  décalage 10 (r -0.68)  fuite fin +nan  poursuite fin +nan
+    graine 14 : fin 159600  proies 1059  prédateurs 0  moy. 434/16.9  CV 0.92  oscill. 1  décalage 4 (r -0.83)  fuite fin +nan  poursuite fin +nan
+    graine 15 : fin 159600  proies 1071  prédateurs 0  moy. 737/14.2  CV 0.83  oscill. 1  décalage 10 (r -0.90)  fuite fin +nan  poursuite fin +nan
+    graine 16 : fin 159600  proies 1083  prédateurs 0  moy. 646/10.9  CV 1.39  oscill. 1  décalage 8 (r -0.83)  fuite fin +nan  poursuite fin +nan
+    graine  2 : fin 159600  proies 1065  prédateurs 0  moy. 392/15.7  CV 0.99  oscill. 1  décalage 3 (r -0.03)  fuite fin +nan  poursuite fin +nan
+    graine  3 : fin 159600  proies 1075  prédateurs 0  moy. 413/17.2  CV 0.84  oscill. 1  décalage 8 (r -0.26)  fuite fin +nan  poursuite fin +nan
+    graine  4 : fin 159600  proies 1087  prédateurs 0  moy. 618/9.8  CV 1.37  oscill. 1  décalage 9 (r -0.39)  fuite fin +nan  poursuite fin +nan
+    graine  5 : fin 159600  proies 1115  prédateurs 0  moy. 749/19.0  CV 0.75  oscill. 1  décalage 3 (r -0.50)  fuite fin +nan  poursuite fin +nan
+    graine  6 : fin 159600  proies 1020  prédateurs 0  moy. 595/12.1  CV 1.15  oscill. 1  décalage 10 (r -0.65)  fuite fin +nan  poursuite fin +nan
+    graine  7 : fin 159600  proies 1092  prédateurs 0  moy. 654/9.1  CV 1.37  oscill. 1  décalage 5 (r -0.76)  fuite fin +nan  poursuite fin +nan
+    graine  8 : fin 159600  proies 203  prédateurs 177  moy. 479/76.8  CV 0.75  oscill. 13  décalage 4 (r -0.05)  fuite fin -0.084  poursuite fin +0.098
+    graine  9 : fin 159600  proies 1131  prédateurs 0  moy. 610/6.5  CV 1.83  oscill. 1  décalage 7 (r -0.30)  fuite fin +nan  poursuite fin +nan
+20261123_205450_pred_3x3_t60k
+  graine  8 :  99600 ticks avec prédateurs ; prédateurs après les proies : r +0.71 à +1800 ticks, r -0.91 à -1800 ; r -0.21 à 0
