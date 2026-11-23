@@ -188,3 +188,16 @@ def test_one_command_with_several_values_gives_several_runs():
     with pytest.raises(SystemExit):
         run_module.expand(parser.parse_args(["--name", "c", "--varie", "NOT_A_SETTING=1,2"]))
     assert len(plan([["--name", "l", "--shift", "0", "1", "2"]])) == 3   # A lot line expands the same way
+
+
+def test_settings_map_scores_a_run(tmp_path):
+    from experiments.carte import complexity, timeline_scores
+    out = str(tmp_path)
+    for seed in (1, 2):
+        run_module.run_seed(seed, out, {"INITIAL_POPULATION": 30, "SAMPLE_TICKS": 50}, 400,
+                            ["complet", "complet_faim"], None)
+    s = timeline_scores(out)
+    assert s["seeds"] == 2 and s["population"] > 0 and 0 <= s["minority_share"] <= 0.5
+    used, nonlin = complexity(os.path.join(out, "seed_1", "population_finale.npz"), creatures=5, ticks=300)
+    assert 0 <= used <= 10 and nonlin == nonlin   # Not NaN
+    assert complexity(os.path.join(out, "seed_9", "population_finale.npz")) is None
