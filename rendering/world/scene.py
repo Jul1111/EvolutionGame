@@ -6,7 +6,7 @@ import pygame
 import config
 from rendering import theme
 from core.physics import torus_delta
-from brain.profiles import PROFILES
+from brain.profiles import IS_PREDATOR, PROFILES
 from rendering.world.obstacles import draw_obstacle
 from rendering.world.lineage import LineageTracker, lineage_color
 from rendering.world.effects import Effects
@@ -130,6 +130,7 @@ class Scene:
             self.body_sprites = [self._build_body(c) for c in self.bucket_colors]
             self.species_sprites = {n: self._build_body(p["color"]) for n, p in PROFILES.items()}
             self.dead_sprite = self._build_dead()
+            self.predator_sprite = self._build_predator()
             self.food_sprites = [self._build_food(f) for f in range(FOOD_FRAMES)]
             # Second kind of food (FOOD_TYPES = 2, diets): same shape, another colour
             self.food_b_sprites = [self._build_food(f, theme.FOOD_B_COLOR) for f in range(FOOD_FRAMES)]
@@ -286,6 +287,23 @@ class Scene:
         pygame.draw.circle(big, (*dark, 255), (c, c), r * 0.42 * s)                  # nucleus
         return _shrink(big, size)
 
+    def _build_predator(self):
+        """Crown of spikes drawn under a predator's body, whatever the colour mode: predators stand out."""
+        k = self.sprite_scale
+        r = self.cfg.CREATURE_RADIUS * k
+        size, s, big = self._sprite_canvas(r + 5 * k)
+        c = size * s / 2
+        color = theme.PREDATOR_COLOR
+        spikes = 9
+        for j in range(spikes):
+            a = 2 * math.pi * j / spikes
+            tip = (c + math.cos(a) * (r + 4.5 * k) * s, c + math.sin(a) * (r + 4.5 * k) * s)
+            left = (c + math.cos(a - 0.32) * r * 0.9 * s, c + math.sin(a - 0.32) * r * 0.9 * s)
+            right = (c + math.cos(a + 0.32) * r * 0.9 * s, c + math.sin(a + 0.32) * r * 0.9 * s)
+            pygame.draw.polygon(big, (*color, 235), (left, tip, right))
+        pygame.draw.circle(big, (*color, 255), (c, c), (r + 0.8 * k) * s, max(1, int(1.6 * k * s)))
+        return _shrink(big, size)
+
     def _build_dead(self):
         k = self.sprite_scale
         r = self.cfg.CREATURE_RADIUS * k
@@ -426,6 +444,7 @@ class Scene:
         # Creature fields read once per frame as lists (World.columns): item i = world.creatures[i]
         alive, xs, ys, bodies_, speeds, energies, emaxes, sizes, angles, uids, diets = world.columns(
             "alive", "x", "y", "body", "speed", "energy", "energy_max", "size", "angle", "uid", "diet")
+        hunters = IS_PREDATOR[world.store.col("species")].tolist()
         for i, a in enumerate(alive):
             if not a:
                 self._queue(batch, self.dead_sprite, self._images(world, xs[i], ys[i], 14))
@@ -438,7 +457,7 @@ class Scene:
         nub_radius = max(1, round(2 * k))
         max_food = max([c.food_eaten for c, a in zip(world.creatures, alive) if a] + [1])
         mode = COLOR_MODES[self.color_mode]
-        bodies, nubs = [], []
+        bodies, nubs, crowns = [], [], []
         founder = self.lineage.founder
         for i, c in enumerate(world.creatures):
             if not alive[i]:
@@ -475,6 +494,10 @@ class Scene:
             cos_a, sin_a = math.cos(angles[i]), math.sin(angles[i])
             tail_color, nub_color = self._shades(color)
             hw = sprite.get_width() / 2
+            if hunters[i]:
+                crown = self._sized_sprite(self.predator_sprite, body)
+                cw = crown.get_width() / 2
+                crowns.extend((crown, (round(px - cw), round(py - cw))) for px, py in images)
             for px, py in images:
                 # Tail behind the creature: longer when it moves faster
                 if speed > 0.3:
@@ -485,7 +508,9 @@ class Scene:
                 bodies.append((sprite, (round(px - hw), round(py - hw))))
                 # Heading marker: small light dot towards the front
                 nubs.append((nub_color, (round(px + cos_a * r * 0.62), round(py + sin_a * r * 0.62))))
-        # Tails first (above), then every body in one call, then the heading dots on top of the bodies
+        # Tails first (above), then the predators' crowns, every body in one call, the heading dots on top of the bodies
+        if crowns:
+            screen.fblits(crowns)
         screen.fblits(bodies)
         for nub_color, nub in nubs:
             screen.circle(nub_color, nub, nub_radius)

@@ -140,3 +140,17 @@ def test_predator_cost_factor():
     w = World(random.Random(1), config.Settings(PREDATOR_COST_FACTOR=2.0))
     hunter, prey = _put(w, "predateur", 0, 0), _put(w, "proie", 50, 50)
     assert math.isclose(hunter.base_cost, 2.0 * prey.base_cost)
+
+
+def test_game_shows_predators(make_app):
+    """Predators in the game: crown sprite, Population panel per species, the predation curves, the settings."""
+    app = make_app(PREDATION=True, PREDATOR_START=3, PREDATOR_FOUNDERS=20, ACTIVE_PROFILES=["proie"], SAMPLE_TICKS=5)
+    app.run(max_frames=2)
+    app.do("chart")
+    for key in ("prey", "predators", "deaths_eaten", "kill_rate", "prey_threat_frac", "prey_speed_threat",
+                "prey_toward", "pred_toward"):
+        app.do("series:" + key)
+    app.run(max_frames=20)
+    assert any(c.profile == "predateur" for c in app.world.creatures)
+    assert "predateur" in app.hud.profiles and app.hud.rows and app.hud.rows[-1].get("predators") is not None
+    assert app.scene.predator_sprite.get_width() > 0

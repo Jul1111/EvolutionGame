@@ -29,6 +29,11 @@ def _col(name):
     return lambda row: row.get(name)
 
 
+def _centred(name):
+    """A value in [-1, 1] moved to [0, 1] (charts start at 0)."""
+    return lambda row: None if row.get(name) is None else (row[name] + 1.0) / 2.0
+
+
 # Curves that can be shown: (key, label, colour, value(row), fixed maximum or None = largest value seen, text format).
 # One point per line of timeline.csv. Each curve is scaled to its own range.
 SERIES = [
@@ -61,6 +66,22 @@ SERIES = [
      lambda v: f"{v:.0%}"),
     ("diet_mean", "Régime moyen (0 vert, 1 jaune)", (190, 210, 120), _col("diet_mean"), lambda cfg: 1.0,
      lambda v: f"{v:.2f}"),
+    # Predators (PREDATION): empty columns otherwise
+    ("prey", "Proies", (110, 210, 190), _col("prey"), None, lambda v: f"{v:.0f}"),
+    ("predators", "Prédateurs", (235, 60, 60), _col("predators"), None, lambda v: f"{v:.0f}"),
+    ("deaths_eaten", "Proies mangées (par relevé)", (200, 80, 90), _col("deaths_eaten"), None, lambda v: f"{v:.0f}"),
+    ("kill_rate", "Proies / 1000 ticks de prédateur", (240, 120, 100), _col("kill_rate"), None, lambda v: f"{v:.2f}"),
+    ("prey_threat_frac", "Part du temps avec un prédateur en vue", (236, 142, 72), _col("prey_threat_frac"),
+     lambda cfg: 1.0, lambda v: f"{v:.0%}"),
+    ("prey_speed_threat", "Vitesse des proies, prédateur en vue", (132, 132, 236), _col("prey_speed_threat"),
+     lambda cfg: cfg.CREATURE_MAX_SPEED, lambda v: f"{v:.2f}"),
+    ("prey_speed_calm", "Vitesse des proies, sans prédateur en vue", (120, 180, 236), _col("prey_speed_calm"),
+     lambda cfg: cfg.CREATURE_MAX_SPEED, lambda v: f"{v:.2f}"),
+    # Turn toward the target, in [-1, 1]: drawn from 0 to 1 (middle = 0, below = turns away)
+    ("prey_toward", "Virage des proies vers le prédateur (milieu 0)", (190, 150, 236), _centred("prey_toward"),
+     lambda cfg: 1.0, lambda v: f"{2 * v - 1:+.2f}"),
+    ("pred_toward", "Virage des prédateurs vers la proie (milieu 0)", (236, 110, 150), _centred("pred_toward"),
+     lambda cfg: 1.0, lambda v: f"{2 * v - 1:+.2f}"),
     ("cap_blocked", "Naissances bloquées (plafond)", (230, 122, 182), _col("cap_blocked"), None, lambda v: f"{v:.0f}"),
 ]
 SERIES_BY_KEY = {s[0]: s for s in SERIES}

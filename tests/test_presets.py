@@ -14,9 +14,9 @@ def test_builtin_presets_come_first_then_saved_ones(tmp_path):
     for _ in browser.files:
         names.append(browser.label().split("  ")[0])
         browser.move(1)
-    assert names == ["Facile", "Équitable", "Dur", "Compliqué", "Niches"]
+    assert names == ["Facile", "Équitable", "Dur", "Compliqué", "Niches", "Prédateurs"]
     saved = browser.save({"FOOD_COUNT": 30})
-    assert browser.index == 5 and browser.label().startswith(saved[:-5])
+    assert browser.index == 6 and browser.label().startswith(saved[:-5])
     assert browser.load() == {"FOOD_COUNT": 30}
 
 

@@ -24,11 +24,19 @@ PARAMS = {
     "food_types": ("FOOD_TYPES", [1, 2], lambda v: "une" if v == 1 else "deux (régimes)"),
     "diet_mutation": ("DIET_MUTATION_STD", [0.02, 0.05, 0.1, 0.15, 0.3], lambda v: f"{v:g}"),
     "world_scale": ("WORLD_SCALE", [1, 2, 3], lambda v: f"{v}×{v} écrans"),
+    "predation": ("PREDATION", [False, True], lambda v: "oui" if v else "non"),
+    "predator_start": ("PREDATOR_START", [0, 5000, 10000, 20000, 40000], format_time),
+    "predator_founders": ("PREDATOR_FOUNDERS", [5, 10, 20, 40], str),
+    "predation_efficiency": ("PREDATION_EFFICIENCY", [0.25, 0.5, 0.75, 1.0], lambda v: f"{v:.0%}"),
+    "predator_digest": ("PREDATOR_DIGEST", [0, 100, 300, 600, 1200], lambda v: f"{v} ticks"),
+    "predator_cost": ("PREDATOR_COST_FACTOR", [0.5, 1.0, 1.5, 2.0], lambda v: f"×{v:g}"),
 }
 # Settings that only take effect on a new world (obstacles are drawn when the world is created).
 # Every other setting applies at once.
-# size_mode: bodies are set at birth; food_types: the kind of each food and the diets are set at creation
-RESTART_PARAMS = {"obstacle_count", "world_scale", "size_mode", "founders", "food_types"}
+# size_mode: bodies are set at birth; food_types: the kind of each food and the diets are set at creation;
+# predation and its arrival: the predators come at a tick of the run, its species are set at creation
+RESTART_PARAMS = {"obstacle_count", "world_scale", "size_mode", "founders", "food_types", "predation",
+                  "predator_start", "predator_founders"}
 
 
 def next_step(steps, current):

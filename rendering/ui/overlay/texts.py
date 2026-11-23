@@ -32,6 +32,12 @@ PARAM_INFO = {
     "food_adapt": ("Réaction en", "Temps simulé pour que la nourriture suive un changement de population : progressif, pour éviter le yo-yo. «aussitôt» = immédiat."),
     "food_energy": ("Énergie d'une nourriture", "Énergie gagnée à chaque repas."),
     "diet_mutation": ("Mutation du régime", "Avec deux sortes de nourriture : de combien le régime d'un petit s'écarte de celui de son parent. À 0,05 une seule nourriture finit mangée ; à 0,15 l'espèce garde presque toujours deux groupes de spécialistes, et en refait un quand il disparaît."),
+    "predation": ("Prédateurs", "Oui : des prédateurs (contour à pointes rouges) arrivent pendant la partie. Ils ne mangent jamais de nourriture, seulement les créatures des autres espèces qu'ils touchent. Cocher l'espèce «Proie» pour des proies qui voient les prédateurs. Au prochain départ de zéro."),
+    "predator_start": ("Arrivée des prédateurs", "Temps de la partie où les prédateurs arrivent, avec des réseaux au hasard. Mieux vaut laisser les proies passer le goulot de départ (environ 4 minutes). Au prochain départ de zéro."),
+    "predator_founders": ("Prédateurs à l'arrivée", "Nombre de prédateurs qui arrivent, par écran. Au prochain départ de zéro."),
+    "predation_efficiency": ("Énergie tirée d'une proie", "Part de l'énergie de la proie que gagne le prédateur qui la mange ; le reste est perdu. Plus elle est haute, plus les prédateurs se multiplient vite."),
+    "predator_digest": ("Digestion", "Après un repas, le prédateur ne peut plus attaquer pendant ce temps : limite ce qu'il peut manger, et freine l'explosion des prédateurs."),
+    "predator_cost": ("Coût de base d'un prédateur", "Ce qu'un prédateur dépense à l'arrêt, par rapport à une autre créature de sa taille."),
     "food_types": ("Sortes de nourriture", "Deux : une nourriture sur deux est jaune, et chaque créature hérite d'un régime (0 = mange le vert, 1 = le jaune). Un spécialiste tire tout de sa nourriture et rien de l'autre : deux espèces peuvent se partager le monde. Doubler l'énergie d'une nourriture (60). Couleur «régime» : touche C. Au prochain départ de zéro."),
     "respawn": ("Délai de réapparition", "Temps avant qu'une nourriture mangée soit de nouveau disponible."),
     "poison_count": ("Nombre de poisons", "Sources de poison dans le monde. 0 = aucun."),
@@ -88,7 +94,9 @@ PARAM_COLUMNS = (
     (("Évolution", ("mutation", "repro", "age_max", "size_mode")), ("Perception", ("fov",)),
      ("Nourriture", ("food", "food_min", "food_pressure", "food_adapt", "food_energy", "respawn", "food_types",
                      "diet_mutation"))),
-    (("Dangers", ("poison_count", "poison_energy", "obstacle_count")), ("Monde", ("founders", "world_scale"))),
+    (("Dangers", ("poison_count", "poison_energy", "obstacle_count")), ("Monde", ("founders", "world_scale")),
+     ("Prédateurs", ("predation", "predator_start", "predator_founders", "predation_efficiency", "predator_digest",
+                     "predator_cost"))),
 )
 
 HELP_MOUSE = [

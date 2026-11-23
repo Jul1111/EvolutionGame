@@ -54,12 +54,13 @@ class Session:
         if os.path.exists(self.timeline):
             os.replace(self.timeline, self.timeline[:-4] + time.strftime("_ancien_%Y%m%d_%H%M%S.csv"))
 
-    def _begin(self, sim, reload_species):
-        """Common end of restart / resume: the new simulation replaces the old one, selection and trail are cleared."""
+    def _begin(self, sim):
+        """Common end of restart / resume: the new simulation replaces the old one, selection and trail are cleared.
+        The species shown are those of the run (predators included when they will arrive later)."""
         self.sim = sim
         self.selection.clear()
         self.state.paused = False
-        self.hud.reload_stats(reload_species)
+        self.hud.reload_stats(sim.species)
 
     def restart(self, founders=None):
         """New population: random founders of the ticked species, or a saved population (founders)."""
@@ -68,7 +69,7 @@ class Session:
         if self.cfg.WORLD_SCALE != old_scale:
             self.scene.world_changed()
         self._archive_timeline()
-        self._begin(self._new_sim(founders), list(founders) if founders else self.cfg.ACTIVE_PROFILES)
+        self._begin(self._new_sim(founders))
 
     def _resume_autosave(self):
         """Start from the population kept when the game was last closed, with its timeline."""
@@ -77,7 +78,7 @@ class Session:
             return False
         self.settings.apply_pending()
         self.scene.world_changed()
-        self._begin(self._new_sim(founders, start_tick=tick, append=True), list(founders))
+        self._begin(self._new_sim(founders, start_tick=tick, append=True))
         self.overlay.toast(f"Population reprise : {len(self.world.creatures)} créatures, temps {format_time(tick)}")
         return True
 
