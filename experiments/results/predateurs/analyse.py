@@ -87,7 +87,8 @@ def main(argv):
             seeds[int(f.split("seed_")[1].split(os.sep)[0])] = seed_stats(f, start, ticks)
         s = list(seeds.values())
         n = len(s)
-        both = sum(1 for x in s if x["prey_end"] and x["pred_end"] and x["tick_end"] >= ticks)
+        # The last line is the last multiple of SAMPLE_TICKS (79 800 for 80 000 ticks)
+        both = sum(1 for x in s if x["prey_end"] and x["pred_end"] and x["tick_end"] > ticks - cfg["SAMPLE_TICKS"])
         prey_ok = sum(1 for x in s if x["prey_end"])
         print(f"\n{os.path.basename(run)}  (rendement {cfg['PREDATION_EFFICIENCY']}, digestion {cfg['PREDATOR_DIGEST']},"
               f" coût ×{cfg['PREDATOR_COST_FACTOR']}, échelle {cfg['WORLD_SCALE']})")

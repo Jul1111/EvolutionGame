@@ -28,7 +28,7 @@ PARAMS = {
     "predator_start": ("PREDATOR_START", [0, 5000, 10000, 20000, 40000], format_time),
     "predator_founders": ("PREDATOR_FOUNDERS", [5, 10, 20, 40], str),
     "predation_efficiency": ("PREDATION_EFFICIENCY", [0.25, 0.5, 0.75, 1.0], lambda v: f"{v:.0%}"),
-    "predator_digest": ("PREDATOR_DIGEST", [0, 100, 300, 600, 1200], lambda v: f"{v} ticks"),
+    "predator_digest": ("PREDATOR_DIGEST", [0, 100, 200, 300, 600, 1200], lambda v: f"{v} ticks"),
     "predator_cost": ("PREDATOR_COST_FACTOR", [0.5, 1.0, 1.5, 2.0], lambda v: f"×{v:g}"),
 }
 # Settings that only take effect on a new world (obstacles are drawn when the world is created).
