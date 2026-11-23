@@ -33,7 +33,7 @@ La barre globale pèse chaque run par son coût estimé (graines × ticks × sur
 
 **Pause** : `python -m experiments.pause` arrête net toutes les expériences en cours et leurs processus de graines (plus aucun calcul), `python -m experiments.pause reprise` les relance exactement où elles étaient (mêmes résultats que sans pause), `etat` les liste. Une pause ne survit pas à l'extinction ou au redémarrage de l'ordinateur : le run en cours est alors perdu (les graines déjà finies restent sur le disque).
 
-Chaque run écrit `experiments/results/<date>_<nom>/` : `run.json` (commande, commit, toutes les constantes), un `timeline.csv` par graine, `summary.csv` (moyenne et écart-type entre graines), et la population finale. Les `run.json` et les CSV sont versionnés dans git (de quoi retrouver les chiffres cités ici) ; les populations finales `.npz` ne le sont pas, à garder à part si une expérience doit être rejouée à partir d'elles. Durée d'une graine de 120 000 ticks (8 graines en parallèle sur 8 cœurs) : ~2 min en 1×1, ~12 min en 2×2 ; ~7 min en 1×1 sur 2 cœurs. Lancer les longs runs depuis un terminal.
+Chaque run écrit `experiments/results/<date>_<nom>/` : `run.json` (commande, commit, toutes les constantes), un `timeline.csv` par graine, `summary.csv` (moyenne et écart-type entre graines), et la population finale. Les `run.json` et les CSV sont versionnés dans git (de quoi retrouver les chiffres cités ici) ; les populations finales `.npz` ne le sont pas, à garder à part si une expérience doit être rejouée à partir d'elles. Durée d'une graine de 120 000 ticks (8 graines en parallèle sur 8 cœurs), avant l'optimisation du 23/11 : ~2 min en 1×1, ~12 min en 2×2 ; ~7 min en 1×1 sur 2 cœurs. Depuis, environ 4 fois moins en 2×2 (section « Coût du calcul »). Lancer les longs runs depuis un terminal.
 
 `experiments.jardin` et `experiments.gradient` reprennent une population dans le monde de son run : toutes les valeurs de son `run.json` (le jardin ne change que la densité, sans naissances ni vieillesse). Une population sans `run.json` (sauvegardée depuis le jeu) prend `config.py`. Le script affiche la source des réglages utilisée. Avant le 22/11, ils prenaient toujours `config.py`.
 
@@ -50,6 +50,7 @@ Réglages de `config.py` : `FOOD_COUNT = 60` (nourriture des petites populations
 | 1×1, une espèce (`complet`) | 0/8 | 204 ± 27 | 1,49 ± 1,03 (une graine à ~3,9, les autres ~1) | ~1,4 ms |
 | 2×2, 60°, `complet` + `complet_faim` | 0/16 | 440 ± 27 | 0,77 ± 0,08 | ~7,4 ms |
 
+- Coût d'un tick : chiffres d'avant l'optimisation du 23/11 ; depuis, environ 4 fois moins en 2×2 (section « Optimisation du calcul »).
 - Le goulot de départ est passé dans 24 graines sur 24 (8 en 1×1, 16 en 2×2), contre 8 sur 16 avec `FOOD_COUNT = 40`.
 - Le plafond ne bloque plus de naissances ; c'est la nourriture qui règle la population.
 - Duels de populations évoluées (1×1) : une fois les fondateurs choisis, l'issue ne dépend presque pas du hasard du monde (même vainqueur dans 37 rejeux sur 40). En duels croisés (chaque lignée contre 4 adversaires), la qualité de la lignée adverse prédit 81 à 91 % des issues. Faim et bruit : aucun effet d'espèce. Mémoire : vrai handicap (13 lignées mémoire sur 16 perdent en majorité contre des `complet` variés, p = 0,02), bien que les réseaux s'en servent (la couper coûte 3 % de population et fait perdre les duels plus vite). Ce qui gagne : la population qu'une lignée tient seule (79 % des duels) ; les lignées rapides perdent presque tout. **Confirmé en 2×2 à 60° (réglages de la partie)** : `complet` gagne 44 duels tranchés sur 45 contre la mémoire, les 16 lignées mémoire perdent en majorité.
@@ -418,6 +419,24 @@ Résultats : `experiments/results/20261123_1*_carte_*`, tables dans `experiments
 | Compliqué | 25 obstacles, mutation 0,3 | 0/8 | ~100 | 7 entrées sur 9, non-linéarité 0,22 (30 000 ticks) |
 
 Ils sont dans `presets/` (versionnés) et apparaissent en tête des préréglages du panneau Paramètres (◀ ▶, puis Appliquer). Ils ne changent ni la taille du monde ni les espèces ; les nombres de nourritures, poisons et obstacles sont par écran, valables en 2×2. Limites : base en 1×1 (le jeu tourne en 2×2) ; Dur et Compliqué validés sur 30 000 ticks seulement.
+
+### Optimisation du calcul (23/11/2026)
+
+Trois changements, chacun vérifié **identique au bit près** : mêmes trajectoires sur 3 000 ticks (empreinte de toutes les positions, énergies et nourritures, trois mondes dont un avec toutes les espèces et 15 obstacles), et un run de 8 graines donne les mêmes `timeline.csv` octet pour octet. Banc : population évoluée en 2×2 à 60° (~1 350 créatures), 1 000 ticks, un processus.
+
+| Étape | 2×2 (~1 350 créatures) | 1×1 (400) |
+|---|---|---|
+| Avant | 10,7 ms | 2,10 ms |
+| 1. État des créatures dans des tableaux permanents (`CreatureStore`, `core/creature.py`) | 8,8 ms | |
+| 2. Grille spatiale pour la vision et les contacts (`core/grid.py`) | 4,0 ms | 1,74 ms |
+| 3. Numba pour la vision et les contacts (`core/kernels.py`) | **2,2 ms** | **1,08 ms** |
+
+- **Tableaux permanents** : la position, l'énergie, l'âge... de chaque créature vivent dans un tableau numpy par champ ; une créature lit et écrit sa ligne. Le tick ne recopie plus chaque objet dans des tableaux (~25 fois par tick) puis en retour.
+- **Grille** : le monde est découpé en cases au moins aussi larges que la vue ; une créature n'est comparée qu'aux objets des 9 cases autour d'elle (11 % des nourritures en 2×2, contre toutes). Gain surtout dans les grands mondes : en 1×1, les 9 cases couvrent presque tout.
+- **Numba** : la recherche de l'objet le plus proche en vue (nourriture, poison, obstacle et son contour) et le choix du gagnant de chaque nourriture sont compilés. Mêmes formules dans le même ordre que numpy, d'où des résultats identiques. Le multithreading (boucle parallèle sur les créatures) n'apporte presque rien : 3,0 ms sur un cœur, 2,2 ms sur 8. Le gain vient de la compilation. Dans les expériences, chaque graine prend un seul fil : les graines remplissent déjà les cœurs.
+- **Run réel** : 8 graines × 4 000 ticks en 2×2 à partir de populations évoluées : 110 s → 26 s (×4,2).
+- Numba est facultatif (`requirements.txt`, ou `pip install .[fast]`) : sans lui, ou avec `EVOLUTION_NUMBA=0`, le code numpy donne les mêmes résultats, plus lentement. Compilé au premier lancement (quelques secondes), puis gardé en cache dans `__pycache__`. `tests/test_world.py` compare les deux chemins.
+- Ce qui reste (2,2 ms) : contour des obstacles et poussées (~0,4 ms), contacts côté Python (~0,3 ms), réseaux et déplacements (~0,4 ms), naissances et morts.
 
 ### Coût du calcul (22/11/2026)
 

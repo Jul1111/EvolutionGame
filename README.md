@@ -121,7 +121,7 @@ Un mécanisme à la fois, validé sur 4 graines minimum. Voir [docs/contribuer.m
 ## Limites connues
 
 - Mémoire seulement pour l'espèce `complet_memoire` (2 cellules), pas encore étudiée.
-- Performances : un tick coûte ~1,4 ms en 1×1 (~200 créatures) et ~7 ms en 2×2 (~440). Vers 900 créatures, un tick coûte ~11 ms : avec le dessin, le jeu passe sous 60 images par seconde.
+- Performances : un tick coûte ~1,1 ms en 1×1 (400 créatures) et ~2,2 ms en 2×2 (~1 350), grâce à une grille spatiale et à numba (facultatif : sans lui, mêmes résultats en numpy, environ deux fois plus lent). Détails : section « Optimisation du calcul » de [docs/experiences.md](docs/experiences.md).
 
 ## Licence
 
