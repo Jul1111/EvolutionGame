@@ -132,6 +132,7 @@ def main(argv=None):
         try:
             time.sleep(5)
         except KeyboardInterrupt:
+            print()   # End the line of ^C
             return
         if sys.stdout.isatty():
             sys.stdout.write(f"\033[{text.count(chr(10)) + 1}F\033[J")   # Redraw in place
