@@ -10,6 +10,7 @@ from core.creature import Creature, CreatureStore
 from brain.profiles import PROFILES, PROFILE_NAMES, needed_items, new_brain
 from core.sensors import SENSORS
 from core.batch import decide_and_move
+from core.grid import near_pairs
 
 class World:
     def __init__(self, rng, cfg=config):
@@ -191,22 +192,31 @@ class World:
         reach2 = (radius + self.cfg.FOOD_RADIUS) ** 2   # One value per creature
         ix = np.fromiter((i.x for i in items), float, m)
         iy = np.fromiter((i.y for i in items), float, m)
-        dx = (ix[:, None] - X[None, :] + self.width / 2) % self.width - self.width / 2
-        dy = (iy[:, None] - Y[None, :] + self.height / 2) % self.height - self.height / 2
+        # Only the pairs of neighbouring grid cells (core/grid.py), with the same distance formula as a full matrix
+        pj, pi = near_pairs(ix, iy, X, Y, float(np.sqrt(reach2.max())), self.width, self.height)
+        dx = (ix[pj] - X[pi] + self.width / 2) % self.width - self.width / 2
+        dy = (iy[pj] - Y[pi] + self.height / 2) % self.height - self.height / 2
         d2 = dx * dx + dy * dy
-        touching = (d2 < reach2[None, :]).any(axis=1)
+        contact = d2 < reach2[pi]
+        pj, pi, d2 = pj[contact], pi[contact], d2[contact]
+        order = np.lexsort((pi, pj))   # By item, then by creature (argmin then keeps the first creature, as before)
+        pj, pi, d2 = pj[order], pi[order], d2[order]
+        bounds = np.searchsorted(pj, np.arange(m + 1)).tolist()
         for j, item in enumerate(items):
             if item.cooldown > 0:
                 self._item_returns(item)   # May place it: it is only available from the next tick
                 continue
-            if not touching[j]:
-                continue
+            lo, hi = bounds[j], bounds[j + 1]
+            if lo == hi:
+                continue   # Nobody touches it
             # Closest creature in contact; the distance is measured to its edge, as the bodies differ in size
-            gap = np.where(d2[j] < reach2, np.sqrt(d2[j]) - radius, np.inf)
+            who = pi[lo:hi]
+            gap = np.sqrt(d2[lo:hi]) - radius[who]
             if fits:
-                gap = np.where(E + item.energy <= emax, gap, np.inf)
-            i = int(np.argmin(gap))
-            if gap[i] < np.inf:
+                gap = np.where(E[who] + item.energy <= emax[who], gap, np.inf)
+            k = int(np.argmin(gap))
+            if gap[k] < np.inf:
+                i = int(who[k])
                 effect(item, alive[i])
                 E[i] = alive[i].energy
 
@@ -258,10 +268,6 @@ class World:
         s = self.store
         needed = needed_items({PROFILE_NAMES[k] for k in np.unique(s.col("species")[alive_rows]).tolist()})
         cx, cy, heading = s.col("x")[alive_rows], s.col("y")[alive_rows], s.col("angle")[alive_rows]
-        range_ = self.cfg.VISION_RANGE
-        range2 = range_ ** 2
-        all_around = self.cfg.VISION_FOV_DEGREES >= 360
-        half_fov = math.radians(self.cfg.VISION_FOV_DEGREES) / 2.0
         rows = np.arange(n)
         food_seen = np.zeros(n, dtype=bool)
         for key in sorted(needed):
@@ -273,38 +279,71 @@ class World:
             ix = np.fromiter((i.x for i in items), float, m)
             iy = np.fromiter((i.y for i in items), float, m)
             cool = np.fromiter((i.cooldown for i in items), float, m)
-            dx = (ix[None, :] - cx[:, None]) % self.width
-            dx = np.where(dx > self.width / 2, dx - self.width, dx)
-            dy = (iy[None, :] - cy[:, None]) % self.height
-            dy = np.where(dy > self.height / 2, dy - self.height, dy)
-            d2 = dx * dx + dy * dy
             if getattr(items[0], "radius", 0):
-                # Item with an extent (obstacle): distance to its real outline, only for the creatures in reach
-                for j, o in enumerate(items):
-                    idx = np.nonzero(d2[:, j] <= (range_ + o.radius) ** 2)[0]
-                    if idx.size:
-                        edge = o.edge_distance_np(-dx[idx, j], -dy[idx, j])
-                        d2[idx, j] = edge * edge
-            visible = d2 <= range2
-            if not all_around:
-                # The angle (arctan2, the costly part) only for the pairs within range: a few percent of them in a
-                # big world. Same formula, same values as for the whole matrix
-                rows_in, cols_in = np.nonzero(visible)
-                rel = (np.arctan2(dy[rows_in, cols_in], dx[rows_in, cols_in]) - heading[rows_in] + math.pi) \
-                    % (2 * math.pi) - math.pi
-                outside = np.abs(rel) > half_fov
-                visible[rows_in[outside], cols_in[outside]] = False
-            masked = np.where(visible & (cool <= 0)[None, :], d2, np.inf)
-            in_view = np.isfinite(masked).any(axis=1)   # An available item in view
-            j_best = m - 1 - np.argmin(masked[:, ::-1], axis=1)   # Last of equal minima, like nearest()
-            best = masked[rows, j_best]
-            self._near[key] = (best, dx[rows, j_best], dy[rows, j_best])
+                best, bdx, bdy = self._nearest_shapes(items, cx, cy, ix, iy, cool, heading)
+            else:
+                best, bdx, bdy = self._nearest_points(cx, cy, ix, iy, cool, heading)
+            self._near[key] = (best, bdx, bdy)
+            in_view = np.isfinite(best)   # An available item in view
             if key == "food":
                 food_seen = in_view
         s.col("food_nearby")[alive_rows] = food_seen
         s.col("near_i")[alive_rows] = rows
         s.col("near_tick")[alive_rows] = self.tick
         return alive
+
+    def _vision_filter(self, dx, dy, d2, heading):
+        """In view: within range, and inside the field of view (the angle, arctan2 the costly part, only for the
+        pairs within range)."""
+        visible = d2 <= self.cfg.VISION_RANGE ** 2
+        if self.cfg.VISION_FOV_DEGREES < 360:
+            idx = np.nonzero(visible)[0]
+            rel = (np.arctan2(dy[idx], dx[idx]) - heading[idx] + math.pi) % (2 * math.pi) - math.pi
+            visible[idx[np.abs(rel) > math.radians(self.cfg.VISION_FOV_DEGREES) / 2.0]] = False
+        return visible
+
+    def _best_per_creature(self, n, pi, pj, d2, dx, dy):
+        """Per creature, the pair of smallest distance² (an exact tie goes to the last item, like nearest()):
+        (distance², dx, dy) arrays, distance² = inf when it has no pair."""
+        best, bdx, bdy = np.full(n, np.inf), np.zeros(n), np.zeros(n)
+        if len(pi):
+            order = np.lexsort((-pj, d2, pi))
+            first = order[np.r_[True, pi[order][1:] != pi[order][:-1]]]
+            rows = pi[first]
+            best[rows], bdx[rows], bdy[rows] = d2[first], dx[first], dy[first]
+        return best, bdx, bdy
+
+    def _nearest_points(self, cx, cy, ix, iy, cool, heading):
+        """Nearest available point item (food, poison) in view of each creature, from the pairs of neighbouring grid
+        cells only (core/grid.py): same values as the full creatures × items matrix."""
+        pi, pj = near_pairs(cx, cy, ix, iy, self.cfg.VISION_RANGE, self.width, self.height)
+        dx = (ix[pj] - cx[pi]) % self.width
+        dx = np.where(dx > self.width / 2, dx - self.width, dx)
+        dy = (iy[pj] - cy[pi]) % self.height
+        dy = np.where(dy > self.height / 2, dy - self.height, dy)
+        d2 = dx * dx + dy * dy
+        keep = self._vision_filter(dx, dy, d2, heading[pi]) & (cool[pj] <= 0)
+        return self._best_per_creature(len(cx), pi[keep], pj[keep], d2[keep], dx[keep], dy[keep])
+
+    def _nearest_shapes(self, items, cx, cy, ix, iy, cool, heading):
+        """Nearest available obstacle in view of each creature (distance to its real outline). Few obstacles: the
+        full creatures × obstacles matrix."""
+        n, m = len(cx), len(items)
+        dx = (ix[None, :] - cx[:, None]) % self.width
+        dx = np.where(dx > self.width / 2, dx - self.width, dx)
+        dy = (iy[None, :] - cy[:, None]) % self.height
+        dy = np.where(dy > self.height / 2, dy - self.height, dy)
+        d2 = dx * dx + dy * dy
+        range_ = self.cfg.VISION_RANGE
+        for j, o in enumerate(items):   # Distance to the outline, only for the creatures in reach
+            idx = np.nonzero(d2[:, j] <= (range_ + o.radius) ** 2)[0]
+            if idx.size:
+                edge = o.edge_distance_np(-dx[idx, j], -dy[idx, j])
+                d2[idx, j] = edge * edge
+        pi, pj = np.repeat(np.arange(n), m), np.tile(np.arange(m), n)
+        dx, dy, d2 = dx.ravel(), dy.ravel(), d2.ravel()
+        keep = self._vision_filter(dx, dy, d2, heading[pi]) & (cool[pj] <= 0)
+        return self._best_per_creature(n, pi[keep], pj[keep], d2[keep], dx[keep], dy[keep])
 
     def _update_reference(self):
         """Plain loop version of update(), one creature at a time. Slow: kept as the reference the tests compare to."""
