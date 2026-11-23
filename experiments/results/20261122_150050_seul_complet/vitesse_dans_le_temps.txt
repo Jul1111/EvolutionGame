@@ -1,0 +1,101 @@
+62 populations ; relevés tous les 600 ticks
+espèce     graine  vitesse 10-20k / 40-60k / 100-120k   population 10-20k / 40-60k / 100-120k   corr(v,pop) après 20k   v>2,5 dès
+complet           2   2.85 / 3.79 / 3.96                81 /  108 /  143                +0.70        3000
+complet_bruit    16   3.54 / 3.77 / 3.96                77 /  108 /  142                +0.83        4200
+complet_memoire  16   3.15 / 3.80 / 3.94                66 /   95 /  141                +0.75        3000
+complet_faim     16   3.43 / 3.90 / 3.93                91 /  138 /  143                +0.56        3000
+complet_bruit     8   2.60 / 3.63 / 3.91                83 /  129 /  140                +0.79        10200
+complet_bruit    14   2.60 / 3.22 / 3.85                97 /  134 /  143                +0.68        10200
+complet_faim     15   2.22 / 3.71 / 3.55                97 /  139 /  148                +0.67        21000
+complet_bruit     3   2.74 / 3.15 / 3.28                78 /  114 /  156                +0.49        6600
+complet_faim      1   3.47 / 3.94 / 3.02                75 /  100 /  161                -0.64        3000
+complet_faim     13   3.30 / 3.92 / 2.93               104 /  136 /  166                -0.82        3000
+complet_bruit     5   2.49 / 3.85 / 2.64                90 /  120 /  162                -0.43        5400
+complet          14   3.42 / 3.90 / 2.30                80 /  101 /  178                -0.80        3600
+complet_bruit     1   3.38 / 3.93 / 2.24                92 /  126 /  180                -0.82        3000
+complet_faim     10   3.46 / 2.59 / 2.15                95 /  154 /  183                -0.71        3000
+complet_faim      9   2.66 / 3.70 / 2.08                93 /   98 /  181                -0.92        12000
+complet_bruit     4   2.91 / 3.32 / 1.80                82 /  117 /  192                -0.76        3000
+complet_bruit     6   3.05 / 3.80 / 1.77                89 /  123 /  187                -0.85        3600
+complet_memoire   6   3.47 / 3.75 / 1.75                86 /  120 /  189                -0.90        4200
+complet_bruit    12   2.82 / 3.62 / 1.75               107 /  144 /  193                -0.90        13200
+complet           6   1.80 / 1.49 / 1.67                86 /  165 /  195                -0.28        
+complet_memoire  12   2.80 / 2.70 / 1.66                82 /  112 /  181                -0.95        3600
+complet_faim      8   3.54 / 3.69 / 1.65                78 /  126 /  197                -0.90        7800
+complet_faim      2   2.89 / 3.17 / 1.61               102 /  154 /  197                -0.85        10200
+complet_faim      6   3.68 / 3.25 / 1.56                83 /  123 /  197                -0.96        2400
+complet_faim     14   3.70 / 3.84 / 1.55                73 /   99 /  199                -0.96        3600
+complet          15   3.57 / 3.03 / 1.52                88 /  150 /  196                -0.91        3000
+complet_memoire   9   2.92 / 2.30 / 1.45                67 /  143 /  200                -0.95        3000
+complet_memoire  15   1.94 / 1.34 / 1.35                98 /  169 /  192                -0.58        
+complet_bruit    15   2.87 / 3.17 / 1.35                88 /  114 /  200                -0.93        3000
+complet_bruit    13   3.74 / 2.88 / 1.35                74 /  125 /  208                -0.97        3000
+complet_bruit     9   3.18 / 3.46 / 1.34                60 /  120 /  206                -0.89        2400
+complet_memoire  11   2.60 / 1.38 / 1.34                86 /  173 /  203                -0.74        10200
+complet          16   2.27 / 1.57 / 1.30                92 /  148 /  203                -0.54        
+complet_bruit     2   3.22 / 2.38 / 1.29                79 /  152 /  211                -0.97        4800
+complet           9   1.91 / 2.72 / 1.28               117 /  133 /  205                -0.85        25800
+complet_memoire   5   2.00 / 1.35 / 1.28               112 /  185 /  205                -0.64        
+complet_memoire  14   3.06 / 3.74 / 1.27                79 /  114 /  204                -0.94        4200
+complet          11   2.61 / 1.36 / 1.25               104 /  160 /  201                -0.69        5400
+complet_memoire   8   3.28 / 1.80 / 1.22                99 /  163 /  209                -0.81        3000
+complet           8   2.95 / 3.74 / 1.22                81 /  117 /  212                -0.95        3000
+complet           1   3.30 / 3.09 / 1.22               104 /  138 /  206                -0.97        3600
+complet_memoire   7   2.94 / 2.03 / 1.22                86 /  159 /  207                -0.95        10800
+complet_memoire   3   2.39 / 2.46 / 1.20                77 /  121 /  204                -0.91        17400
+complet_faim      7   2.37 / 1.75 / 1.19                85 /  135 /  190                -0.82        5400
+complet_faim     11   2.60 / 1.47 / 1.18                88 /  141 /  206                -0.81        13200
+complet_bruit    11   1.36 / 1.57 / 1.17               101 /  172 /  206                -0.85        
+complet_faim     12   3.19 / 1.32 / 1.17               103 /  206 /  211                -0.93        5400
+complet           4   3.55 / 1.39 / 1.15                91 /  179 /  214                -0.93        3000
+complet_memoire  10   3.34 / 2.92 / 1.14                93 /  135 /  208                -0.97        3000
+complet_memoire   1   2.19 / 1.59 / 1.12                98 /  185 /  213                -0.84        19800
+complet_faim      4   2.90 / 2.82 / 1.11                90 /  114 /  209                -0.96        3000
+complet           5   1.62 / 1.07 / 1.11               129 /  179 /  213                -0.73        
+complet_memoire  13   2.44 / 2.10 / 1.06               110 /  160 /  210                -0.89        15600
+complet_bruit    10   3.66 / 2.69 / 0.96                74 /  148 /  219                -0.97        3000
+complet_memoire   2   3.04 / 2.70 / 0.95                94 /  156 /  216                -0.96        3600
+complet_memoire   4   3.00 / 1.76 / 0.94                91 /  133 /  192                -0.91        5400
+complet_faim      3   2.31 / 2.00 / 0.88               104 /  138 /  221                -0.96        17400
+complet           3   3.40 / 3.01 / 0.88                82 /  147 /  220                -0.97        4800
+complet          13   2.36 / 1.65 / 0.86               100 /  148 /  221                -0.92        9600
+complet           7   3.26 / 1.93 / 0.82                97 /  179 /  222                -0.96        3000
+complet          12   2.88 / 1.81 / 0.72               101 /  162 /  225                -0.96        5400
+complet_faim      5   2.37 / 0.94 / 0.71               131 /  210 /  225                -0.74        3600
+rapides: n=11  vitesse 2.94 -> 3.70 -> 3.54  population 85 -> 120 -> 149  corr moyenne +0.33
+autres: n=51  vitesse 2.87 -> 2.49 -> 1.34  population 92 -> 145 -> 203  corr moyenne -0.86
+corr(vitesse, population) dans le temps : moyenne -0.65, négative dans 54/62
+entre populations (100-120k) : corr(vitesse, population) = -0.97
+
+--- tragedie.py
+"""Speed paradox over time: do fast lineages speed up gradually while their population falls?"""
+import csv, glob
+import numpy as np
+R = "/Users/jul/Documents/Dev/EvolutionGame/experiments/results"
+rows_all = []
+for d in sorted(glob.glob(f"{R}/20261122_15*_seul_*")):
+    sp = d.split("_seul_")[1]
+    for f in sorted(glob.glob(f"{d}/seed_*/timeline.csv"), key=lambda f: int(f.split("seed_")[1].split("/")[0])):
+        s = int(f.split("seed_")[1].split("/")[0])
+        r = list(csv.DictReader(open(f)))
+        if float(r[-1]["population"]) == 0: continue
+        t = np.array([float(x["tick"]) for x in r]); v = np.array([float(x["mean_speed"]) for x in r])
+        p = np.array([float(x["population"]) for x in r]); fr = np.array([float(x["food_rate"]) for x in r])
+        def win(a, b): m = (t >= a) & (t < b); return v[m].mean(), p[m].mean()
+        late = t >= 20000
+        rho = np.corrcoef(v[late], p[late])[0, 1]
+        rows_all.append((sp, s, *win(10000, 20000), *win(40000, 60000), *win(100000, 120001), rho,
+                         t[np.argmax(v > 2.5)] if (v > 2.5).any() else None))
+print(f"{len(rows_all)} populations ; relevés tous les {int(t[1]-t[0])} ticks")
+print("espèce     graine  vitesse 10-20k / 40-60k / 100-120k   population 10-20k / 40-60k / 100-120k   corr(v,pop) après 20k   v>2,5 dès")
+for sp, s, v1, p1, v2, p2, v3, p3, rho, first in sorted(rows_all, key=lambda x: -x[6]):
+    print(f"{sp:16s} {s:2d}   {v1:4.2f} / {v2:4.2f} / {v3:4.2f}              {p1:4.0f} / {p2:4.0f} / {p3:4.0f}                {rho:+.2f}        {'' if first is None else int(first)}")
+fast = [x for x in rows_all if x[6] > 2.5]; slow = [x for x in rows_all if x[6] <= 2.5]
+for name, g in (("rapides", fast), ("autres", slow)):
+    print(f"{name}: n={len(g)}  vitesse {np.mean([x[2] for x in g]):.2f} -> {np.mean([x[4] for x in g]):.2f} -> {np.mean([x[6] for x in g]):.2f}"
+          f"  population {np.mean([x[3] for x in g]):.0f} -> {np.mean([x[5] for x in g]):.0f} -> {np.mean([x[7] for x in g]):.0f}"
+          f"  corr moyenne {np.mean([x[8] for x in g]):+.2f}")
+allr = np.array([x[8] for x in rows_all])
+print(f"corr(vitesse, population) dans le temps : moyenne {allr.mean():+.2f}, négative dans {(allr < 0).sum()}/{len(allr)}")
+v3 = np.array([x[6] for x in rows_all]); p3 = np.array([x[7] for x in rows_all])
+print(f"entre populations (100-120k) : corr(vitesse, population) = {np.corrcoef(v3, p3)[0,1]:+.2f}")

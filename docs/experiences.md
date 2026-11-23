@@ -308,6 +308,22 @@ Suite de la section précédente, mêmes populations évoluées seules, mêmes r
 - **Donc la mémoire n'est pas un poids mort** : les réseaux qui l'ont s'en servent et en dépendent. Le handicap de l'espèce vient de ce que l'évolution en fait : avec 2 entrées et 2 sorties de plus qui se rebouclent, elle trouve des réseaux moins bons dans l'ensemble que ceux de `complet`, même s'ils tirent parti de leur mémoire. Le gain de la mémoire (quelques %) ne compense pas.
 - **Limites** : la coupure ne montre que la dépendance d'un réseau à sa mémoire, pas ce qu'aurait donné une espèce sans mémoire partie du même point ; 1×1.
 
+### La vitesse dans le temps : coureurs et économes (23/11/2026)
+
+Les 62 populations évoluées seules de la section précédente (4 espèces, 1×1), relevé tous les 600 ticks. Sorties et script : `experiments/results/20261122_150050_seul_complet/vitesse_dans_le_temps.txt`.
+
+Hypothèse testée : une « tragédie des communs », où chaque créature gagnerait à courir et où la population s'accélérerait peu à peu en tenant de moins en moins de monde. **Elle ne tient pas.**
+
+| | Lignées | Vitesse 10-20k / 40-60k / 100-120k ticks | Population 10-20k / 40-60k / 100-120k |
+|---|---|---|---|
+| Rapides à la fin (> 2,5) | 11 | 2,94 / 3,70 / 3,54 | 85 / 120 / 149 |
+| Les autres | 51 | 2,87 / 2,49 / 1,34 | 92 / 145 / 203 |
+
+- **Presque toutes les populations partent vite** (~2,9 au début, 55 sur 62 dépassent 2,5 dans les 25 000 premiers ticks), **puis la plupart ralentissent** pendant que leur population monte : corrélation vitesse-population dans le temps négative dans 54 sur 62 (−0,65 en moyenne).
+- **Les lignées rapides sont celles qui restent bloquées** dans le régime du départ, presque à la vitesse maximale (4) : elles ne s'accélèrent pas au fil du temps, elles ne ralentissent jamais.
+- **À la fin, la vitesse fixe presque la population** : corrélation −0,97 entre populations. Le coût du mouvement (0,03 par unité de vitesse, contre 0,04 à l'arrêt) fixe ce qu'une même nourriture peut faire vivre : un coureur à 4 dépense 2,3 fois plus qu'un marcheur à 1.
+- **Tension avec le gradient de sélection** (rho +0,27 vers la vitesse, section « La vitesse avec les règles actuelles ») : si les plus rapides laissaient vraiment plus de petits pour des raisons héritables, les populations s'accéléreraient. Or 51 sur 62 ralentissent. La vitesse d'une créature est sans doute surtout un effet de son état (une créature qui voit de la nourriture et a de l'énergie accélère et se reproduit), pas de ses gènes.
+
 ### Coût du calcul (22/11/2026)
 
 Les coûts par tick des sections précédentes datent d'avant l'optimisation de la vision (commit `ea4fc90` : l'angle n'est plus calculé que pour les objets à portée, résultat identique au bit près). Banc de 300 ticks, un processus :
