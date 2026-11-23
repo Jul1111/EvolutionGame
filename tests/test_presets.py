@@ -3,6 +3,7 @@ import os
 
 import config
 from app.settings import PARAMS
+from brain.profiles import PROFILES
 from utils.presets import BUILTIN_DIR, PresetBrowser
 
 
@@ -13,9 +14,9 @@ def test_builtin_presets_come_first_then_saved_ones(tmp_path):
     for _ in browser.files:
         names.append(browser.label().split("  ")[0])
         browser.move(1)
-    assert names == ["Facile", "Équitable", "Dur", "Compliqué"]
+    assert names == ["Facile", "Équitable", "Dur", "Compliqué", "Niches"]
     saved = browser.save({"FOOD_COUNT": 30})
-    assert browser.index == 4 and browser.label().startswith(saved[:-5])
+    assert browser.index == 5 and browser.label().startswith(saved[:-5])
     assert browser.load() == {"FOOD_COUNT": 30}
 
 
@@ -26,6 +27,9 @@ def test_builtin_presets_hold_menu_values_only():
             values = json.load(fh)
         for key, value in values.items():
             if key.startswith("_"):
+                continue
+            if key == "ACTIVE_PROFILES":
+                assert value and set(value) <= set(PROFILES), (f, value)
                 continue
             assert key in known and value in known[key], (f, key, value)
     browser = PresetBrowser(config.Settings(SAVE_DIR="/nonexistent"))

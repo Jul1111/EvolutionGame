@@ -21,11 +21,13 @@ PARAMS = {
     "obstacle_count": ("OBSTACLE_COUNT", [0, 3, 6, 10, 15, 25, 35], str),
     "founders": ("INITIAL_POPULATION", [50, 100, 200, 300, 400], str),
     "size_mode": ("SIZE_MODE", ["fixe", "neutre", "actif"], str),
+    "food_types": ("FOOD_TYPES", [1, 2], lambda v: "une" if v == 1 else "deux (régimes)"),
     "world_scale": ("WORLD_SCALE", [1, 2, 3], lambda v: f"{v}×{v} écrans"),
 }
 # Settings that only take effect on a new world (obstacles are drawn when the world is created).
 # Every other setting applies at once.
-RESTART_PARAMS = {"obstacle_count", "world_scale", "size_mode", "founders"}   # size_mode: bodies are set at birth
+# size_mode: bodies are set at birth; food_types: the kind of each food and the diets are set at creation
+RESTART_PARAMS = {"obstacle_count", "world_scale", "size_mode", "founders", "food_types"}
 
 
 def next_step(steps, current):

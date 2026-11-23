@@ -61,6 +61,7 @@ MENUS = [
         ("food", "Nombre de nourritures : {food}", "action", None, ""),
         ("food_energy", "Énergie d'une nourriture : {food_energy}", "action", None, ""),
         ("respawn", "Délai de réapparition : {respawn}", "action", None, ""),
+        ("food_types", "Sortes de nourriture : {food_types}", "action", None, ""),
         None,
         ("poison_count", "Nombre de poisons : {poison_count}", "action", None, ""),
         ("poison_energy", "Dégâts d'un poison : {poison_energy}", "action", None, ""),

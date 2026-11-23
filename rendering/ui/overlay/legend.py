@@ -11,13 +11,16 @@ from rendering.world.obstacles import PALETTES
 from rendering.world.scene import body_color
 
 
-def legend_entries(label):
-    """Rows of the legend: (icon kind, colour, text), for the colour mode `label`."""
-    entries = [("dot", theme.FOOD_COLOR, "Nourriture : redonne de l'énergie"),
-               ("diamond", theme.POISON_COLOR, "Poison : retire de l'énergie"),
+def legend_entries(label, two_foods=False):
+    """Rows of the legend: (icon kind, colour, text), for the colour mode `label`. two_foods: FOOD_TYPES = 2."""
+    entries = [("dot", theme.FOOD_COLOR, "Nourriture : redonne de l'énergie")] if not two_foods else [
+        ("dot", theme.FOOD_COLOR, "Nourriture verte : nourrit les régimes proches de 0"),
+        ("dot", theme.FOOD_B_COLOR, "Nourriture jaune : nourrit les régimes proches de 1")]
+    entries += [("diamond", theme.POISON_COLOR, "Poison : retire de l'énergie"),
                ("anemone", None, "Anémone : obstacle infranchissable")]
     low, high = {"énergie": ("vide", "pleine"), "vitesse": ("à l'arrêt", "vitesse max"),
-                 "nourriture": ("rien mangé", "le plus mangé")}.get(label, ("bas", "haut"))
+                 "nourriture": ("rien mangé", "le plus mangé"),
+                 "régime": ("mange le vert", "mange le jaune")}.get(label, ("bas", "haut"))
     entries += [("gradient", None, f"Couleur d'une créature = {label}  ({low} → {high})")
                 if label not in ("lignée", "espèce") else
                 ("ring", (230, 236, 244), "Couleur d'une créature = sa " + label),
@@ -43,10 +46,11 @@ class Legend:
         ctx = self.ctx
         u, f, w = ctx.u, ctx.fonts, ctx.area
         label = self.scene.color_label()
-        key = ("legend", label)
+        two_foods = self.scene.cfg.FOOD_TYPES > 1
+        key = ("legend", label, two_foods)
         if key not in self._cache:
             row_h, pad, icon_w = round(24 * u), round(12 * u), round(40 * u)
-            entries = legend_entries(label)
+            entries = legend_entries(label, two_foods)
             text_w = max(f["small"].size(t)[0] for _, _, t in entries)
             size = (pad * 2 + icon_w + text_w, pad * 2 + row_h * len(entries) - round(4 * u))
             surf = pygame.Surface(size, pygame.SRCALPHA)

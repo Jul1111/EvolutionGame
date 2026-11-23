@@ -15,7 +15,8 @@ ENERGY_BUCKETS = 16   # Number of pre-rendered creature sprites (one per energy 
 FOOD_FRAMES = 12      # Number of pre-rendered food pulsation frames
 MIN_ZOOM_RATIO = 0.25   # Zooming out stops at a quarter of the zoom that fits the whole world
 COPY_VEIL_ALPHA = 120   # Darkening of the torus copies around the real map (0-255)
-COLOR_MODES = ("espèce", "énergie", "vitesse", "nourriture", "taille", "lignée")   # What the colour encodes (key C)
+# What the colour encodes (key C); «régime» only with two kinds of food
+COLOR_MODES = ("espèce", "énergie", "vitesse", "nourriture", "taille", "lignée", "régime")
 TRAIL_COLOR = (255, 226, 140)
 TRAIL_FADE = (24, 30, 34)
 SUPERSAMPLE = 4       # Sprites are drawn 4x bigger then shrunk, for smooth edges
@@ -107,6 +108,8 @@ class Scene:
 
     def cycle_color_mode(self):
         self.color_mode = (self.color_mode + 1) % len(COLOR_MODES)
+        if COLOR_MODES[self.color_mode] == "régime" and self.cfg.FOOD_TYPES < 2:   # One kind of food: no diets
+            self.color_mode = 0
 
     def color_label(self):
         return COLOR_MODES[self.color_mode]
@@ -421,8 +424,8 @@ class Scene:
             self._queue(batch, self.poison_sprites[frame], self._images(world, poison.x, poison.y, 14))
 
         # Creature fields read once per frame as lists (World.columns): item i = world.creatures[i]
-        alive, xs, ys, bodies_, speeds, energies, emaxes, sizes, angles, uids = world.columns(
-            "alive", "x", "y", "body", "speed", "energy", "energy_max", "size", "angle", "uid")
+        alive, xs, ys, bodies_, speeds, energies, emaxes, sizes, angles, uids, diets = world.columns(
+            "alive", "x", "y", "body", "speed", "energy", "energy_max", "size", "angle", "uid", "diet")
         for i, a in enumerate(alive):
             if not a:
                 self._queue(batch, self.dead_sprite, self._images(world, xs[i], ys[i], 14))
@@ -459,6 +462,8 @@ class Scene:
                     ratio = (sizes[i] - self.cfg.SIZE_MIN) / (self.cfg.SIZE_MAX - self.cfg.SIZE_MIN)
                 elif mode == "vitesse":
                     ratio = speed / self.cfg.CREATURE_MAX_SPEED
+                elif mode == "régime":
+                    ratio = diets[i]
                 else:
                     ratio = c.food_eaten / max_food
                 ratio = max(0.0, min(ratio, 1.0))

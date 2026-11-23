@@ -79,3 +79,27 @@ def test_fast_update_matches_reference_with_two_kinds():
         assert a.alive == b.alive and a.food_eaten == b.food_eaten
         assert abs(torus_delta(a.x, b.x, fast.width)) < 1e-3 and abs(a.energy - b.energy) < 1e-3
     assert sum(c.food_eaten for c in fast.creatures) > 0
+
+
+def test_game_shows_diets(make_app):
+    """Two kinds of food in the game: colour «régime», the diet curves (and the 0-1 curves, once broken), legend."""
+    app = make_app(FOOD_TYPES=2, FOOD_ENERGY=60.0, ACTIVE_PROFILES=["regime", "regime_faim"], SAMPLE_TICKS=5)
+    app.run(max_frames=2)   # First frame: the layout
+    while app.scene.color_label() != "régime":
+        app.do("color")
+    app.do("legend")
+    app.do("chart")
+    for key in ("diet_low", "diet_high", "diet_mean", "blind_frac", "blind_turn"):
+        app.do("series:" + key)
+    app.run(max_frames=20)
+    assert {f.kind for f in app.world.foods} == {0, 1}
+    assert app.sim.diets and app.hud.rows and app.hud.rows[-1].get("diet_mean") is not None
+
+
+def test_color_mode_skips_diet_with_one_kind_of_food(make_app):
+    app = make_app()
+    seen = set()
+    for _ in range(10):
+        app.do("color")
+        seen.add(app.scene.color_label())
+    assert "régime" not in seen and "lignée" in seen

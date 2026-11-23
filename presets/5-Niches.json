@@ -1,0 +1,19 @@
+{
+ "_nom": "Niches",
+ "_note": "Deux sortes de nourriture et deux espèces à régime (regime, regime_faim), énergie doublée : dans 3 graines sur 13, les deux espèces coexistent, chacune spécialisée sur sa nourriture (docs/experiences.md, 23/11). Couleur «régime» (touche C) pour voir les spécialistes. Environ 1 départ sur 5 s'éteint.",
+ "FOOD_TYPES": 2,
+ "FOOD_ENERGY": 60.0,
+ "VISION_FOV_DEGREES": 120,
+ "FOOD_COUNT": 60,
+ "FOOD_RESPAWN_DELAY": 60,
+ "POISON_COUNT": 5,
+ "OBSTACLE_COUNT": 6,
+ "MUTATION_STD": 0.1,
+ "REPRO_THRESHOLD": 120.0,
+ "AGE_MAX": 6000,
+ "SIZE_MODE": "actif",
+ "ACTIVE_PROFILES": [
+  "regime",
+  "regime_faim"
+ ]
+}
