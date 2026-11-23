@@ -373,7 +373,7 @@ Même protocole qu'en 1×1, avec les réglages de la partie : monde 2×2, champ 
 - **Le handicap de la mémoire est donc confirmé, et bien plus net qu'en 1×1** (75 % des duels). Seule, la mémoire tient 5 % de créatures en moins (430 contre 455). En duel, elle perd même quand sa lignée était plus nombreuse seule (8 duels sur 44).
 - **Ce qui prédit le vainqueur** : la population tenue seule, 82 % des duels (79 % en 1×1). Le plus lent gagne 71 % des duels.
 - **Pas de coureurs en 2×2 à 60°** : les 32 populations restent entre 0,49 et 1,05 de vitesse. Le piège du coureur vu en 1×1 à 120° n'apparaît pas avec les réglages de la partie.
-- **Durée** : 20 à 28 min par run de 16 graines. Le run `seul_complet_memoire` a duré 8 h 30, sans doute parce que l'ordinateur s'est mis en veille.
+- **Durée** : 20 à 28 min par run de 16 graines. Le run `seul_complet_memoire` a duré 8 h 30 à cause d'une pause volontaire (`experiments.pause`) : les résultats n'en dépendent pas.
 
 ### Coût du calcul (22/11/2026)
 
