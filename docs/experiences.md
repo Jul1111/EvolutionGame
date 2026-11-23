@@ -54,6 +54,7 @@ Réglages de `config.py` : `FOOD_COUNT = 60` (nourriture des petites populations
 - Le goulot de départ est passé dans 24 graines sur 24 (8 en 1×1, 16 en 2×2), contre 8 sur 16 avec `FOOD_COUNT = 40`.
 - Le plafond ne bloque plus de naissances ; c'est la nourriture qui règle la population.
 - Duels de populations évoluées (1×1) : une fois les fondateurs choisis, l'issue ne dépend presque pas du hasard du monde (même vainqueur dans 37 rejeux sur 40). En duels croisés (chaque lignée contre 4 adversaires), la qualité de la lignée adverse prédit 81 à 91 % des issues. Faim et bruit : aucun effet d'espèce. Mémoire : vrai handicap (13 lignées mémoire sur 16 perdent en majorité contre des `complet` variés, p = 0,02), bien que les réseaux s'en servent (la couper coûte 3 % de population et fait perdre les duels plus vite). Ce qui gagne : la population qu'une lignée tient seule (79 % des duels) ; les lignées rapides perdent presque tout. **Confirmé en 2×2 à 60°** : `complet` gagne 44 duels tranchés sur 45 contre la mémoire, les 16 lignées mémoire perdent en majorité.
+- **Un million de ticks** : la non-linéarité des réseaux continue de monter (0,13 à 50 000 ticks → 0,36, plateau vers 700 000), pas le nombre d'entrées utilisées (~6 sur 9) ; la vitesse baisse encore (1,44 → 0,56). Les runs de 120 000 ticks voient des populations encore en train de changer.
 - **Carte des réglages** (section « Carte des réglages et préréglages ») : la nourriture décide de la survie, la vision et la mutation de la complexité des réseaux ; aucun réglage ne fait coexister deux espèces durablement, l'abondance retarde seulement l'élimination. Combinés, les réglages durs s'additionnent jusqu'à l'extinction : quatre préréglages validés (Facile, Équitable, Dur, Compliqué) sont dans `presets/`.
 - Duel en 2×2 (16 graines) : `complet` l'emporte 10 fois, `complet_faim` 6 fois. Écart compatible avec le hasard (p = 0,45) : le capteur de faim ne donne ni avantage ni handicap mesurable. Il n'est pas cassé, mais il vaut presque toujours ~0 : son échelle (600 ticks) est 50 fois plus longue que les moments typiques sans nourriture en vue. Avec une échelle de 60 ticks, l'entrée varie et le réseau s'en sert un peu (couper le capteur coûte ~2,5 % de population), mais le duel reste à 9 contre 6 (et une graine où les deux coexistent) : l'avantage est trop petit face au hasard du départ. Une espèce élimine toujours l'autre, entre 6 000 et 70 000 ticks.
 - **Vitesse** (revérifiée le 22/11, section « La vitesse avec les règles actuelles ») : la conclusion du 08/11 ne tient plus. C'est la quantité de nourriture qui règle la vitesse (×2 de 15 à 60 nourritures par écran, à densité égale), la densité ne la baisse que de 6 à 18 %. Les lignées diffèrent beaucoup entre elles (0,5 à 4), et la sélection favorise les plus rapides (rho +0,27 ± 0,19, positif dans les 8 populations) au lieu des intermédiaires.
@@ -419,6 +420,25 @@ Résultats : `experiments/results/20261123_1*_carte_*`, tables dans `experiments
 | Compliqué | 25 obstacles, mutation 0,3 | 0/8 | ~100 | 7 entrées sur 9, non-linéarité 0,22 (30 000 ticks) |
 
 Ils sont dans `presets/` (versionnés) et apparaissent en tête des préréglages du panneau Paramètres (◀ ▶, puis Appliquer). Ils ne changent ni la taille du monde ni les espèces ; les nombres de nourritures, poisons et obstacles sont par écran, valables en 2×2. Limites : base en 1×1, vision 60° (choix arbitraire) ; Dur et Compliqué validés sur 30 000 ticks seulement.
+
+### Un million de ticks : la complexité continue-t-elle de monter ? (23/11/2026)
+
+Défauts de `config.py` (1×1, vision 120°, `complet` seule), 8 graines × 1 000 000 ticks (44 min), une photo de la population tous les 50 000 ticks (`experiments.run --photos 50000`). Chaque photo est mesurée comme dans la carte des réglages (30 créatures rejouées 1 500 ticks). Résultats : `experiments/results/20261123_144515_long_1M/` ; table et script : `complexite_dans_le_temps.txt`, `long_analyse.py`.
+
+| Tick | Entrées utilisées (sur 9) | Non-linéarité | Population | Vitesse | Générations |
+|---|---|---|---|---|---|
+| 50 000 | 6,1 ± 0,5 | 0,13 ± 0,02 | 148 | 2,50 | 27 |
+| 100 000 | 6,2 ± 0,7 | 0,21 ± 0,08 | 200 | 1,44 | 52 |
+| 200 000 | 6,1 ± 0,6 | 0,26 ± 0,09 | 213 | 1,18 | 99 |
+| 400 000 | 6,0 ± 0,5 | 0,30 ± 0,08 | 217 | 1,00 | 188 |
+| 600 000 | 5,8 ± 1,1 | 0,33 ± 0,09 | 234 | 0,65 | 278 |
+| 800 000 | 5,9 ± 0,7 | 0,36 ± 0,08 | 230 | 0,67 | 365 |
+| 1 000 000 | 5,8 ± 0,8 | 0,36 ± 0,06 | 233 | 0,56 | 452 |
+
+- **La non-linéarité continue de monter**, presque trois fois plus à la fin qu'à 50 000 ticks (0,13 → 0,36), plus vite au début, puis un plateau à partir de ~700 000 ticks. Elle monte dans 7 graines sur 8 (moyenne 50 000-200 000 contre 800 000-1 000 000) ; la graine 2, déjà haute tôt (0,34), redescend un peu (0,29).
+- **Le nombre d'entrées utilisées, lui, ne monte pas** : ~6 sur 9 du début à la fin. Les réseaux ne se servent pas de plus de capteurs ; ils se servent de façon plus fine (seuils, combinaisons) de ceux qu'ils utilisent déjà.
+- **La population monte lentement** (200 → 233 de 100 000 à 1 000 000 ticks) **et la vitesse baisse** (1,44 → 0,56) : la tendance « les populations commencent vite et ralentissent » continue bien au-delà des 120 000 ticks des autres expériences.
+- Conséquence : les runs de 120 000 ticks mesurent des populations encore en train de changer (non-linéarité à mi-chemin, vitesse deux fois plus haute qu'à la fin).
 
 ### Optimisation du calcul (23/11/2026)
 
