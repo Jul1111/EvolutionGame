@@ -113,9 +113,10 @@ def paired_seeds(seeds, shift):
     return {s: seeds[(i + shift) % len(seeds)] for i, s in enumerate(seeds)}
 
 
-def run_seed(seed, out_dir, overrides, ticks, profiles, population_file, replica=0, pair=None):
+def run_seed(seed, out_dir, overrides, ticks, profiles, population_file, replica=0, pair=None, photos=0):
     """One seed (run in its own process by main, to use every core). In population paths {seed} is the seed and
-    {pair} its paired seed (crossed duels, default: the seed itself)."""
+    {pair} its paired seed (crossed duels, default: the seed itself). photos > 0: the population is also saved every
+    `photos` ticks (seed_<n>/population_<tick>.npz), to follow it over the run."""
     from evolution.continuous import ContinuousSimulation, save_population, load_population
     cfg = build_settings(overrides, SEED=seed, ACTIVE_PROFILES=list(profiles))
     seed_dir = os.path.join(out_dir, f"seed_{seed}")
@@ -133,7 +134,12 @@ def run_seed(seed, out_dir, overrides, ticks, profiles, population_file, replica
     sim = ContinuousSimulation(world_rng(seed, replica), os.path.join(seed_dir, "timeline.csv"), founders=founders,
                               cfg=cfg)
     start = time.time()
-    played = sim.run(ticks)
+    played = 0
+    while played < ticks and not sim.extinct:
+        step = min(ticks - played, photos - sim.world.tick % photos) if photos else ticks - played
+        played += sim.run(step)
+        if photos and not sim.extinct and sim.world.tick % photos == 0 and played < ticks:
+            save_population(sim, os.path.join(seed_dir, f"population_{sim.world.tick}.npz"))
     if not sim.extinct:
         save_population(sim, os.path.join(seed_dir, "population_finale.npz"))
     end = f"EXTINCTION au tick {sim.world.tick}" if sim.extinct else f"population {len(sim.world.creatures)}"
@@ -178,6 +184,8 @@ def build_parser():
     parser.add_argument("--name", required=True, help="Nom court de l'expérience (dossier de résultats)")
     parser.add_argument("--seeds", type=int, nargs="+", default=[1, 2, 3, 4, 5])
     parser.add_argument("--ticks", type=int, default=60000, help="Durée (arrêt avant en cas d'extinction)")
+    parser.add_argument("--photos", type=int, default=0, metavar="TICKS",
+                        help="Sauver aussi la population tous les TICKS ticks (population_<tick>.npz)")
     parser.add_argument("--profiles", nargs="+", default=None, help="Espèces fondatrices (défaut : ACTIVE_PROFILES)")
     parser.add_argument("--from-population", nargs="+", default=None,
                         help="Population sauvegardée de départ (.npz). {seed} est remplacé par le numéro de graine. "
@@ -259,7 +267,7 @@ def main(argv=None):
     os.makedirs(out_dir)
     meta = {"name": args.name, "ticks": args.ticks, "from_population": args.from_population,
             "command": " ".join(sys.argv), "git": git_state(), "seeds": args.seeds, "profiles": list(profiles),
-            "overrides": overrides, "replica": args.replica, "shift": args.shift,
+            "overrides": overrides, "replica": args.replica, "shift": args.shift, "photos": args.photos,
             "config": {n: getattr(cfg, n) for n in [*cfg.__dict__, *config.DERIVED] if n.isupper() and n != "SAVE_DIR"
                        and isinstance(getattr(cfg, n), (int, float, str, bool, list, tuple))}}
     with open(os.path.join(out_dir, "run.json"), "w", encoding="utf-8") as f:
@@ -272,7 +280,7 @@ def main(argv=None):
     with ProcessPoolExecutor(max_workers=max(1, args.jobs), initializer=worker_init,
                              initargs=(args.jobs,)) as pool:
         futures = [pool.submit(run_seed, s, out_dir, overrides, args.ticks, profiles, args.from_population,
-                               args.replica, pairs[s]) for s in args.seeds]
+                               args.replica, pairs[s], args.photos) for s in args.seeds]
         show_progress(out_dir, futures)
 
     from experiments.summary import summarize_timeline, print_timeline_table, print_species_table

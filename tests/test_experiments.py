@@ -35,6 +35,19 @@ def test_run_seed_writes_its_timeline_with_its_own_settings(tmp_path):
     assert config.INITIAL_POPULATION != 20 and config.SAMPLE_TICKS != 20   # The module was not changed
 
 
+def test_run_seed_photos(tmp_path):
+    """--photos: the population every N ticks, the last one as population_finale; same run as without photos."""
+    import shutil
+    settings = {"INITIAL_POPULATION": 30, "SAMPLE_TICKS": 50}
+    run_module.run_seed(4, str(tmp_path / "a"), settings, 250, ["scripte"], None, photos=100)
+    run_module.run_seed(4, str(tmp_path / "b"), settings, 250, ["scripte"], None)
+    files = sorted(os.listdir(tmp_path / "a" / "seed_4"))
+    assert files == ["population_100.npz", "population_200.npz", "population_finale.npz", "timeline.csv"]
+    with open(tmp_path / "a" / "seed_4" / "timeline.csv") as fa, open(tmp_path / "b" / "seed_4" / "timeline.csv") as fb:
+        assert fa.read() == fb.read()
+    shutil.rmtree(tmp_path)
+
+
 def test_two_seeds_in_one_process_do_not_share_settings(tmp_path):
     run_module.run_seed(1, str(tmp_path), {"INITIAL_POPULATION": 10, "SAMPLE_TICKS": 10}, 20, ["complet"], None)
     run_module.run_seed(2, str(tmp_path), {"INITIAL_POPULATION": 40, "SAMPLE_TICKS": 10}, 20, ["complet"], None)
