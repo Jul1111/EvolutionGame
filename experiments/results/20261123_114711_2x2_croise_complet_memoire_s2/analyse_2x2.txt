@@ -1,0 +1,89 @@
+Seules (moyenne des 10 derniers relevés)
+  complet  éteintes 0/16  population 455 ± 26  vitesse 0.71 ± 0.12  coureurs (>2,5) 0
+  memoire  éteintes 0/16  population 430 ± 24  vitesse 0.80 ± 0.11  coureurs (>2,5) 0
+
+Duels croisés (décalages 0, 1, 2)
+  décalage 0 : {'C': 15, 'M': 1}
+  décalage 1 : {'C': 16}
+  décalage 2 : {'C': 13, '=': 3}
+  tranchés : complet 44/45 (p duels, optimiste = 0.000) ; coexistence 3 ; élimination médiane 40200 ticks
+  coexistences : part de complet à la fin [0.15, 0.53, 0.97]
+  lignées complet : gagnent en majorité 15, perdent en majorité 0, à égalité 1 (test du signe p = 0.000)
+  lignées memoire : gagnent en majorité 0, perdent en majorité 16, à égalité 0 (test du signe p = 0.000)
+  population seule prédit le vainqueur : 36/44 = 82%
+  le plus lent gagne : 32/45 = 71%
+
+--- analyse_2x2.py
+"""2x2, 60 degrees: complet and complet_memoire evolved alone, then crossed duels (shift 0, 1, 2)."""
+import csv, glob, json
+from math import comb
+import numpy as np
+R = "/Users/jul/Documents/Dev/EvolutionGame/experiments/results"
+ALONE = {"complet": "20261123_015949_2x2_seul_complet", "memoire": "20261123_022002_2x2_seul_complet_memoire"}
+DUELS = [f"{R}/{d}" for d in ("20261123_105017_2x2_croise_complet_memoire_s0",
+                               "20261123_111842_2x2_croise_complet_memoire_s1",
+                               "20261123_114711_2x2_croise_complet_memoire_s2")]
+
+def p2(k, n):
+    k = max(k, n - k)
+    return min(1.0, 2 * sum(comb(n, x) for x in range(k, n + 1)) / 2 ** n)
+
+def last_rows(f, n=10):
+    r = list(csv.DictReader(open(f)))
+    return r, r[-n:]
+
+T = {}
+print("Seules (moyenne des 10 derniers relevés)")
+for sp, d in ALONE.items():
+    pops, speeds, ext = [], [], 0
+    for f in glob.glob(f"{R}/{d}/seed_*/timeline.csv"):
+        s = int(f.split("seed_")[1].split("/")[0])
+        r, last = last_rows(f)
+        if float(r[-1]["population"]) == 0:
+            ext += 1; continue
+        T[(sp, s)] = {k: np.mean([float(x[k]) for x in last]) for k in ("population", "mean_speed")}
+        pops.append(T[(sp, s)]["population"]); speeds.append(T[(sp, s)]["mean_speed"])
+    print(f"  {sp:8s} éteintes {ext}/16  population {np.mean(pops):.0f} ± {np.std(pops):.0f}  "
+          f"vitesse {np.mean(speeds):.2f} ± {np.std(speeds):.2f}  coureurs (>2,5) {sum(v > 2.5 for v in speeds)}")
+
+duels = []
+for k, d in enumerate(DUELS):
+    seeds = json.load(open(f"{d}/run.json"))["seeds"]
+    pair = {s: seeds[(i + k) % len(seeds)] for i, s in enumerate(seeds)}
+    for f in glob.glob(f"{d}/seed_*/timeline.csv"):
+        s = int(f.split("seed_")[1].split("/")[0])
+        r, _ = last_rows(f)
+        c, m = float(r[-1]["pop__complet"]), float(r[-1]["pop__complet_memoire"])
+        w = "C" if c > 0 and m == 0 else "M" if m > 0 and c == 0 else "=" if c > 0 else "E"
+        elim = next((int(x["tick"]) for x in r if float(x["pop__complet"]) == 0 or float(x["pop__complet_memoire"]) == 0), None)
+        duels.append((k, s, pair[s], w, elim, c / (c + m) if c + m else None))
+from collections import Counter
+print("\nDuels croisés (décalages 0, 1, 2)")
+for k in range(3):
+    print(f"  décalage {k} :", dict(Counter(w for kk, *_ , w, e, sh in [(x[0], x[1], x[2], x[3], x[4], x[5]) for x in duels] if kk == k)))
+dec = [x for x in duels if x[3] in "CM"]
+c = sum(x[3] == "C" for x in dec)
+print(f"  tranchés : complet {c}/{len(dec)} (p duels, optimiste = {p2(c, len(dec)):.3f}) ; coexistence {sum(x[3] == '=' for x in duels)} ; "
+      f"élimination médiane {np.median([x[4] for x in dec]):.0f} ticks")
+coex = [x for x in duels if x[3] == "="]
+if coex:
+    print(f"  coexistences : part de complet à la fin {[round(x[5], 2) for x in coex]}")
+for role, idx, win in (("complet", 1, "C"), ("memoire", 2, "M")):
+    st = {}
+    for x in dec:
+        st.setdefault(x[idx], []).append(x[3] == win)
+    better = sum(np.mean(v) > 0.5 for v in st.values()); worse = sum(np.mean(v) < 0.5 for v in st.values())
+    print(f"  lignées {role} : gagnent en majorité {better}, perdent en majorité {worse}, à égalité "
+          f"{len(st) - better - worse} (test du signe p = {p2(better, better + worse):.3f})")
+ok = n = 0
+for k, s, j, w, e, sh in dec:
+    a, b = T.get(("complet", s)), T.get(("memoire", j))
+    if a and b and a["population"] != b["population"]:
+        n += 1; ok += (a["population"] > b["population"]) == (w == "C")
+print(f"  population seule prédit le vainqueur : {ok}/{n} = {ok / n:.0%}")
+ok = n = 0
+for k, s, j, w, e, sh in dec:
+    a, b = T.get(("complet", s)), T.get(("memoire", j))
+    if a and b:
+        n += 1; ok += (a["mean_speed"] < b["mean_speed"]) == (w == "C")
+print(f"  le plus lent gagne : {ok}/{n} = {ok / n:.0%}")
