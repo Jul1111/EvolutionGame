@@ -40,6 +40,7 @@ Lancer une expérience sans affichage :
 ```bash
 python -m experiments.run --name essai --seeds 1 2 3 4 --ticks 120000
 python -m experiments.summary experiments/results/<run>
+python -m experiments.pause            # pause des expériences en cours (reprise : python -m experiments.pause reprise)
 ```
 
 Les résultats sont écrits dans `experiments/results/<date>_<nom>/`. Méthode, autres outils d'analyse et résultats obtenus : [docs/experiences.md](docs/experiences.md).

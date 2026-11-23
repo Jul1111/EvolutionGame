@@ -8,7 +8,12 @@ python -m experiments.run --name suite --from-population saves/populations/<fich
 python -m experiments.summary experiments/results/<run A> experiments/results/<run B>
 python -m experiments.jardin <population.npz> aleatoire --densities 30 280
 python -m experiments.gradient experiments/results/<run>/seed_*/population_finale.npz
+python -m experiments.run ... --replica 1         # mêmes fondateurs, autre hasard du monde
+python -m experiments.run ... --shift 1 --from-population <A>/seed_{seed}/... <B>/seed_{pair}/...   # duels croisés
+python -m experiments.pause [reprise|etat]        # mettre en pause / reprendre les expériences en cours
 ```
+
+**Pause** : `python -m experiments.pause` arrête net toutes les expériences en cours et leurs processus de graines (plus aucun calcul), `python -m experiments.pause reprise` les relance exactement où elles étaient (mêmes résultats que sans pause), `etat` les liste. Une pause ne survit pas à l'extinction ou au redémarrage de l'ordinateur : le run en cours est alors perdu (les graines déjà finies restent sur le disque).
 
 Chaque run écrit `experiments/results/<date>_<nom>/` : `run.json` (commande, commit, toutes les constantes), un `timeline.csv` par graine, `summary.csv` (moyenne et écart-type entre graines), et la population finale. Les `run.json` et les CSV sont versionnés dans git (de quoi retrouver les chiffres cités ici) ; les populations finales `.npz` ne le sont pas, à garder à part si une expérience doit être rejouée à partir d'elles. Durée d'une graine de 120 000 ticks (8 graines en parallèle sur 8 cœurs) : ~2 min en 1×1, ~12 min en 2×2 ; ~7 min en 1×1 sur 2 cœurs. Lancer les longs runs depuis un terminal.
 

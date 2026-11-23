@@ -130,3 +130,10 @@ def test_a_crossed_duel_reads_the_paired_seed(tmp_path):
     message = run_module.run_seed(5, str(tmp_path), {"SAMPLE_TICKS": 10}, 20, ["complet"],
                                   [str(tmp_path / "a_{seed}.npz"), str(tmp_path / "b_{pair}.npz")], pair=8)
     assert "b_8.npz" in message   # ...{pair} for the second
+
+
+def test_pause_finds_the_experiments_and_their_workers():
+    from experiments.pause import experiments
+    table = {10: (1, "S", "python -m experiments.run --name x"), 11: (10, "R", "python -c spawn_main"),
+             12: (11, "R", "python -c helper"), 20: (1, "S", "python -m pytest"), 21: (20, "R", "python worker")}
+    assert experiments(table) == [10, 11, 12]
