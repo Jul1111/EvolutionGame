@@ -53,7 +53,7 @@ Réglages de `config.py` : `FOOD_COUNT = 60` (nourriture des petites populations
 - Coût d'un tick : chiffres d'avant l'optimisation du 23/11 ; depuis, environ 4 fois moins en 2×2 (section « Optimisation du calcul »).
 - Le goulot de départ est passé dans 24 graines sur 24 (8 en 1×1, 16 en 2×2), contre 8 sur 16 avec `FOOD_COUNT = 40`.
 - Le plafond ne bloque plus de naissances ; c'est la nourriture qui règle la population.
-- Duels de populations évoluées (1×1) : une fois les fondateurs choisis, l'issue ne dépend presque pas du hasard du monde (même vainqueur dans 37 rejeux sur 40). En duels croisés (chaque lignée contre 4 adversaires), la qualité de la lignée adverse prédit 81 à 91 % des issues. Faim et bruit : aucun effet d'espèce. Mémoire : vrai handicap (13 lignées mémoire sur 16 perdent en majorité contre des `complet` variés, p = 0,02), bien que les réseaux s'en servent (la couper coûte 3 % de population et fait perdre les duels plus vite). Ce qui gagne : la population qu'une lignée tient seule (79 % des duels) ; les lignées rapides perdent presque tout. **Confirmé en 2×2 à 60° (réglages de la partie)** : `complet` gagne 44 duels tranchés sur 45 contre la mémoire, les 16 lignées mémoire perdent en majorité.
+- Duels de populations évoluées (1×1) : une fois les fondateurs choisis, l'issue ne dépend presque pas du hasard du monde (même vainqueur dans 37 rejeux sur 40). En duels croisés (chaque lignée contre 4 adversaires), la qualité de la lignée adverse prédit 81 à 91 % des issues. Faim et bruit : aucun effet d'espèce. Mémoire : vrai handicap (13 lignées mémoire sur 16 perdent en majorité contre des `complet` variés, p = 0,02), bien que les réseaux s'en servent (la couper coûte 3 % de population et fait perdre les duels plus vite). Ce qui gagne : la population qu'une lignée tient seule (79 % des duels) ; les lignées rapides perdent presque tout. **Confirmé en 2×2 à 60°** : `complet` gagne 44 duels tranchés sur 45 contre la mémoire, les 16 lignées mémoire perdent en majorité.
 - **Carte des réglages** (section « Carte des réglages et préréglages ») : la nourriture décide de la survie, la vision et la mutation de la complexité des réseaux ; aucun réglage ne fait coexister deux espèces durablement, l'abondance retarde seulement l'élimination. Combinés, les réglages durs s'additionnent jusqu'à l'extinction : quatre préréglages validés (Facile, Équitable, Dur, Compliqué) sont dans `presets/`.
 - Duel en 2×2 (16 graines) : `complet` l'emporte 10 fois, `complet_faim` 6 fois. Écart compatible avec le hasard (p = 0,45) : le capteur de faim ne donne ni avantage ni handicap mesurable. Il n'est pas cassé, mais il vaut presque toujours ~0 : son échelle (600 ticks) est 50 fois plus longue que les moments typiques sans nourriture en vue. Avec une échelle de 60 ticks, l'entrée varie et le réseau s'en sert un peu (couper le capteur coûte ~2,5 % de population), mais le duel reste à 9 contre 6 (et une graine où les deux coexistent) : l'avantage est trop petit face au hasard du départ. Une espèce élimine toujours l'autre, entre 6 000 et 70 000 ticks.
 - **Vitesse** (revérifiée le 22/11, section « La vitesse avec les règles actuelles ») : la conclusion du 08/11 ne tient plus. C'est la quantité de nourriture qui règle la vitesse (×2 de 15 à 60 nourritures par écran, à densité égale), la densité ne la baisse que de 6 à 18 %. Les lignées diffèrent beaucoup entre elles (0,5 à 4), et la sélection favorise les plus rapides (rho +0,27 ± 0,19, positif dans les 8 populations) au lieu des intermédiaires.
@@ -112,7 +112,7 @@ Seule la quantité de nourriture fait une différence nette. Les autres (1 à 3 
 - **Limites** : 8 graines, une seule valeur testée par levier, pas de combinaison. 0/8 n'exclut pas un taux d'extinction de quelques pour cent.
 - **Retenu** : `FOOD_COUNT = 60` dans `config.py` (le changement le plus ciblé : il ne touche pas le plancher).
 
-### Goulot dans une partie réelle : monde 2×2, duel d'espèces (22/11/2026)
+### Goulot en monde 2×2, duel d'espèces (22/11/2026)
 
 Vérification du calibrage hors du cadre où il a été fait : réglages d'une partie jouée (`WORLD_SCALE=2`, `VISION_FOV_DEGREES=60`, espèces `complet` et `complet_faim`), 8 graines × 120 000 ticks. Résultats : `experiments/results/20261122_02*_mes_reglages_*`.
 
@@ -361,9 +361,9 @@ Hypothèse testée : une « tragédie des communs », où chaque créature gagne
 - **Un coût élevé tue au départ** : toutes les extinctions ont lieu avant 13 000 ticks, dans le goulot (3/16 à 0,045, 6/16 à 0,06). Les fondateurs au hasard bougent beaucoup et s'épuisent avant d'apprendre.
 - **Pour le jeu** : 0,03 est un compromis. Moins (0,015-0,02) donne des mondes plus variés en vitesse et sans extinction ; plus donne des mondes lents mais des débuts risqués.
 
-### Mémoire contre `complet` dans la partie réelle : 2×2, 60° (23/11/2026)
+### Mémoire contre `complet` en 2×2 à 60° (23/11/2026)
 
-Même protocole qu'en 1×1, avec les réglages de la partie : monde 2×2, champ de vision 60°. `complet` et `complet_memoire` évoluent seules (16 graines × 120 000 ticks), puis duels croisés 100 + 100 aux décalages 0, 1 et 2 (48 duels, chaque lignée contre 3 adversaires). Lancé comme un lot (`experiments.lot`). Résultats : `experiments/results/20261123_*_2x2_*` ; sorties et script : `experiments/results/20261123_114711_2x2_croise_complet_memoire_s2/analyse_2x2.txt`.
+Même protocole qu'en 1×1, dans un autre cadre : monde 2×2, champ de vision 60°. `complet` et `complet_memoire` évoluent seules (16 graines × 120 000 ticks), puis duels croisés 100 + 100 aux décalages 0, 1 et 2 (48 duels, chaque lignée contre 3 adversaires). Lancé comme un lot (`experiments.lot`). Résultats : `experiments/results/20261123_*_2x2_*` ; sorties et script : `experiments/results/20261123_114711_2x2_croise_complet_memoire_s2/analyse_2x2.txt`.
 
 | Seules | Extinctions | Population | Vitesse | Coureurs (> 2,5) |
 |---|---|---|---|---|
@@ -374,7 +374,7 @@ Même protocole qu'en 1×1, avec les réglages de la partie : monde 2×2, champ 
 - **Au niveau des lignées** : 15 lignées `complet` sur 16 gagnent la majorité de leurs duels (une à égalité), et les 16 lignées mémoire perdent la majorité des leurs (test du signe p < 0,001).
 - **Le handicap de la mémoire est donc confirmé, et bien plus net qu'en 1×1** (75 % des duels). Seule, la mémoire tient 5 % de créatures en moins (430 contre 455). En duel, elle perd même quand sa lignée était plus nombreuse seule (8 duels sur 44).
 - **Ce qui prédit le vainqueur** : la population tenue seule, 82 % des duels (79 % en 1×1). Le plus lent gagne 71 % des duels.
-- **Pas de coureurs en 2×2 à 60°** : les 32 populations restent entre 0,49 et 1,05 de vitesse. Le piège du coureur vu en 1×1 à 120° n'apparaît pas avec les réglages de la partie.
+- **Pas de coureurs en 2×2 à 60°** : les 32 populations restent entre 0,49 et 1,05 de vitesse. Le piège du coureur vu en 1×1 à 120° n'apparaît pas dans ce cadre.
 - **Durée** : 20 à 28 min par run de 16 graines. Le run `seul_complet_memoire` a duré 8 h 30 à cause d'une pause volontaire (`experiments.pause`) : les résultats n'en dépendent pas.
 
 ### Carte des réglages et préréglages (23/11/2026)
@@ -418,7 +418,7 @@ Résultats : `experiments/results/20261123_1*_carte_*`, tables dans `experiments
 | Dur | repousse 300, 20 poisons | 2/8 | ~40 | (30 000 ticks) |
 | Compliqué | 25 obstacles, mutation 0,3 | 0/8 | ~100 | 7 entrées sur 9, non-linéarité 0,22 (30 000 ticks) |
 
-Ils sont dans `presets/` (versionnés) et apparaissent en tête des préréglages du panneau Paramètres (◀ ▶, puis Appliquer). Ils ne changent ni la taille du monde ni les espèces ; les nombres de nourritures, poisons et obstacles sont par écran, valables en 2×2. Limites : base en 1×1 (le jeu tourne en 2×2) ; Dur et Compliqué validés sur 30 000 ticks seulement.
+Ils sont dans `presets/` (versionnés) et apparaissent en tête des préréglages du panneau Paramètres (◀ ▶, puis Appliquer). Ils ne changent ni la taille du monde ni les espèces ; les nombres de nourritures, poisons et obstacles sont par écran, valables en 2×2. Limites : base en 1×1, vision 60° (choix arbitraire) ; Dur et Compliqué validés sur 30 000 ticks seulement.
 
 ### Optimisation du calcul (23/11/2026)
 
@@ -447,7 +447,7 @@ Les coûts par tick des sections précédentes datent d'avant l'optimisation de 
 | 2×2, ~900 créatures | 17,0 ms | 11,0 ms (−35 %) |
 | 1×1, 200 à 400 créatures | 1,63 ms | 1,38 ms (−15 %) |
 
-Dans la partie réelle (2×2, ~440 créatures), un tick coûte 7,4 ms une fois optimisé (les ~6 ms des tableaux précédents sont déduits de la durée des runs, pas mesurés de la même façon). Le temps va à la vision (42 %), aux contacts nourriture-créature (22 %) et aux réseaux et déplacements (22 %). Garder les coordonnées des objets dans un tableau n'a rien apporté (essayé, abandonné) : les objets réapparaissent presque à chaque tick.
+En 2×2 (~440 créatures), un tick coûte 7,4 ms une fois optimisé (les ~6 ms des tableaux précédents sont déduits de la durée des runs, pas mesurés de la même façon). Le temps va à la vision (42 %), aux contacts nourriture-créature (22 %) et aux réseaux et déplacements (22 %). Garder les coordonnées des objets dans un tableau n'a rien apporté (essayé, abandonné) : les objets réapparaissent presque à chaque tick.
 
 ### Mode générations (supprimé le 08/11, historique)
 
