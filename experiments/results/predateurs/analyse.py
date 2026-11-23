@@ -1,4 +1,4 @@
-"""Runs with predators (24/11): survival, cycles, flight and pursuit, seed by seed.
+"""Runs with predators (23/11): survival, cycles, flight and pursuit, seed by seed.
 
     python experiments/results/predateurs/analyse.py <run> [<run> ...] [--detail]
 

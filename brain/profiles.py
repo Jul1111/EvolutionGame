@@ -54,7 +54,7 @@ PROFILES = {
     # Reference point, not evolved: see brain/scripted.py
     "scripte": {"title": "Scripté (référence)", "sensors": ["food", "can_eat", "poison", "obstacle"], "hidden": 0,
                 "speed_output": True, "memory": 0, "color": (200, 200, 200), "brain": "scripted"},
-    # Predators (24/11, config.PREDATION). «predateur» eats the creatures of the other profiles, never food; «proie»
+    # Predators (23/11, config.PREDATION). «predateur» eats the creatures of the other profiles, never food; «proie»
     # is «complet» plus the nearest predator in view (without predators that input never sees anything)
     "predateur": {"title": "Prédateur", "sensors": ["prey", "energy", "speed", "obstacle"], "hidden": 6,
                   "speed_output": True, "memory": 0, "color": (235, 60, 60), "predator": True},

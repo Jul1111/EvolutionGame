@@ -119,12 +119,12 @@ DIET_MUTATION_STD = 0.05   # 0.15: one species keeps two specialist groups (12/1
 # while ready (not digesting) and the meal fits in its reserve, the prey dies and the predator gets
 # PREDATION_EFFICIENCY × the prey's energy. PREDATION = True: PREDATOR_FOUNDERS (per screen) random predators of
 # PREDATOR_PROFILE arrive at tick PREDATOR_START, once the prey got through the first bottleneck.
-# PREDATION = False: no predator arrives (the runs before 24/11). Starting values, to tune
+# PREDATION = False: no predator arrives (the runs before 23/11). Starting values, to tune
 PREDATION = False
 PREDATOR_PROFILE = "predateur"
 PREDATOR_START = 20000      # Tick at which the predators arrive (the prey bottleneck is over by ~15 000)
 PREDATOR_FOUNDERS = 5       # Random predators per screen. 20: they crash the naive prey, then starve (2×2: they last
-                            # in 1 seed out of 8, 3 out of 8 with 5; docs/experiences.md, 24/11)
+                            # in 1 seed out of 8, 3 out of 8 with 5; docs/experiences.md, 23/11)
 PREDATION_EFFICIENCY = 0.75 # Share of the prey's energy the predator gets (the rest is lost). 0.5: a predator barely
                             # replaces itself, they all die out; 1.0: they eat the prey to extinction
 PREDATOR_DIGEST = 200       # Ticks after a kill during which the predator cannot attack (caps what it can eat).

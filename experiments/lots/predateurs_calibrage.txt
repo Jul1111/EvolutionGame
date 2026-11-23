@@ -1,4 +1,4 @@
-# Prédateurs (24/11) : quel rendement et quelle digestion laissent proies et prédateurs coexister ? 1×1, espèce proie,
+# Prédateurs (23/11) : quel rendement et quelle digestion laissent proies et prédateurs coexister ? 1×1, espèce proie,
 # 20 prédateurs au hasard arrivent au tick 20 000. 4 graines par condition.
 --name calib_pred_e050_d300 --profiles proie --seeds 1 2 3 4 --ticks 80000 --jobs 8 \
     --set PREDATION=True PREDATION_EFFICIENCY=0.5 PREDATOR_DIGEST=300

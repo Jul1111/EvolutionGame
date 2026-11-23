@@ -1,4 +1,4 @@
-# Prédateurs (24/11) : (a) le système tient-il, (b) fuite et poursuite, (c) complexité des proies contre un monde sans
+# Prédateurs (23/11) : (a) le système tient-il, (b) fuite et poursuite, (c) complexité des proies contre un monde sans
 # prédateur. Espèce proie, valeurs par défaut de config.py (prédateurs : 5 par écran au tick 20 000, rendement 0,75,
 # digestion 200). 16 graines × 120 000 ticks, en 1×1 et 2×2.
 --name pred_1x1 --profiles proie --seeds 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 --ticks 120000 --jobs 8 \

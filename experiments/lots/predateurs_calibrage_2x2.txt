@@ -1,4 +1,4 @@
-# Prédateurs (24/11), second tour : en 1×1 les prédateurs (~15) s'éteignent tous. Monde 2×2, 8 graines.
+# Prédateurs (23/11), second tour : en 1×1 les prédateurs (~15) s'éteignent tous. Monde 2×2, 8 graines.
 --name calib2_pred_e075_d100 --profiles proie --seeds 1 2 3 4 5 6 7 8 --ticks 80000 --jobs 8 \
     --set WORLD_SCALE=2 PREDATION=True PREDATION_EFFICIENCY=0.75 PREDATOR_DIGEST=100
 --name calib2_pred_e075_d300 --profiles proie --seeds 1 2 3 4 5 6 7 8 --ticks 80000 --jobs 8 \

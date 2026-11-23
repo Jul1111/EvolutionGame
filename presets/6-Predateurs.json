@@ -1,6 +1,6 @@
 {
  "_nom": "Prédateurs",
- "_note": "Des prédateurs (contour à pointes rouges) arrivent au bout de 5 min 33 et ne mangent que les proies qu'ils touchent. L'espèce «Proie» voit le prédateur le plus proche. Courbes «Proies» et «Prédateurs» pour suivre les deux populations (docs/experiences.md, 24/11).",
+ "_note": "Des prédateurs (contour à pointes rouges) arrivent au bout de 5 min 33 et ne mangent que les proies qu'ils touchent. L'espèce «Proie» voit le prédateur le plus proche. Courbes «Proies» et «Prédateurs» pour suivre les deux populations (docs/experiences.md, 23/11).",
  "PREDATION": true,
  "PREDATOR_START": 20000,
  "PREDATOR_FOUNDERS": 5,
