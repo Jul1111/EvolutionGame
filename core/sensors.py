@@ -36,6 +36,17 @@ def nearest_of(kind):
     return fn, vec
 
 
+def nearest_creature_of(kind):
+    """Sensor: [distance, relative angle] to the nearest creature in view that is a «prey» (of a non-predator profile)
+    or a «predator» (config.PREDATION). Same rule and same vec as nearest_of; the viewer never sees its own kind
+    (a predator only sees prey, a prey only predators: 1, 0 for the other)."""
+    def fn(world, c, ctx):
+        if kind not in ctx:
+            ctx[kind] = world.nearest_creature(c, kind)
+        return world.direction(c, ctx[kind])
+    return fn, nearest_of(kind)[1]
+
+
 def _energy(world, c, ctx):
     return [max(0.0, min(c.energy / c.energy_max, 1.0))]   # Share of its own reserve (depends on its size)
 
@@ -131,4 +142,6 @@ SENSORS = {
     "hunger": _sensor(["Faim"], (_hunger, _hunger_v)),
     "noise": _sensor(["Bruit"], (_noise, _noise_v)),
     "food_value": _sensor(["Valeur nourr."], (_food_value, _food_value_v), {"food"}),
+    "prey": _sensor(["Dist. proie", "Angle proie"], nearest_creature_of("prey"), {"prey"}),
+    "predator": _sensor(["Dist. prédateur", "Angle prédateur"], nearest_creature_of("predator"), {"predator"}),
 }

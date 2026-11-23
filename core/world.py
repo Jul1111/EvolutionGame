@@ -7,7 +7,7 @@ from core.food import Food
 from core.obstacle import Obstacle
 from core.physics import torus_delta, normalize_angle
 from core.creature import Creature, CreatureStore
-from brain.profiles import PROFILES, PROFILE_NAMES, needed_items, new_brain
+from brain.profiles import IS_PREDATOR, PROFILES, PROFILE_NAMES, needed_items, new_brain
 from core.sensors import SENSORS
 from core.batch import decide_and_move
 from core import kernels
@@ -38,6 +38,14 @@ class World:
         self.blind_turn = 0.0
         self.eaten = 0             # Meals and poison hits since the start (continuous measures)
         self.poisoned = 0
+        self.predated = 0          # Prey eaten since the start (config.PREDATION)
+        self.hunting = False       # Predators and prey alive at this tick (World.sense_all)
+        # Hunting measures since the start (core/batch.py): «prey» = the predators and the prey they see, «predator»
+        # = the prey and the predators they see. Ticks of life, ticks with one in view, speed with and without one in
+        # view, turn toward it (turn × side of the target: > 0 = turns toward, < 0 = turns away)
+        self.hunt = {k: dict.fromkeys(("ticks", "seen", "speed_seen", "speed_unseen", "toward"), 0.0)
+                     for k in ("prey", "predator")}
+        self._points = None        # Creatures as points while _update_reference runs (positions at the tick start)
         # Every kind of item a creature can perceive, by name. A new kind of item: add it here, then a sensor
         # nearest_of("<kind>") in core/sensors.py
         self.items = {"food": self.foods, "poison": self.poisons, "obstacle": self.obstacles}
@@ -176,16 +184,87 @@ class World:
             body = (s.col("radius")[rows].copy(),        # Contact radius (body size)
                     s.col("energy_max")[rows].copy())    # Energy reserve (body size)
             # Phase 2: food goes to the closest creature in contact that still has room for the whole meal (its share
-            # of it, with two kinds of food)
+            # of it, with two kinds of food). Predators never eat food: left out
             gains = self.gains(s.col("diet")[rows])
-            self._contacts(self.foods, alive, X, Y, E, body, self._eat, fits=True, gains=gains)
+            hunters = IS_PREDATOR[s.col("species")[rows]]
+            if hunters.any():
+                k = np.nonzero(~hunters)[0]
+                if len(k):
+                    self._contacts(self.foods, [alive[i] for i in k.tolist()], X[k], Y[k], E[k],
+                                   (body[0][k], body[1][k]), self._eat, fits=True,
+                                   gains=None if gains is None else gains[k])
+                else:
+                    self._countdown(self.foods)
+            else:
+                self._contacts(self.foods, alive, X, Y, E, body, self._eat, fits=True, gains=gains)
             # Phase 3: poison hurts the closest creature in contact, then moves to a new random place
             self._contacts(self.poisons, alive, X, Y, E, body, self._poisoned, fits=False)
+            # Phase 4: predators kill the prey they touch (config.PREDATION)
+            if hunters.any():
+                self._predation(alive, rows, hunters)
         else:
-            for item in self.foods + self.poisons:
-                if item.cooldown > 0:
-                    self._item_returns(item)
+            self._countdown(self.foods + self.poisons)
         self.tick += 1
+
+    def _countdown(self, items):
+        """Items not available yet count down (nobody can take them this tick)."""
+        for item in items:
+            if item.cooldown > 0:
+                self._item_returns(item)
+
+    def _predation(self, alive, rows, hunters):
+        """Phase 4. Each prey (creature of a non-predator profile), in list order, is killed by the closest predator
+        that touches it (centres closer than the sum of the radii; distance measured to the predator's edge), is not
+        digesting, and has room for the meal: PREDATION_EFFICIENCY × the prey's energy. `hunters`: which creatures of
+        `alive` are predators. Their digestion counts down first."""
+        s = self.store
+        idx = np.arange(s.n)[rows]
+        pred, k = idx[hunters], np.nonzero(hunters)[0]
+        s.digest[pred] = np.maximum(s.digest[pred] - 1, 0)
+        prey = np.nonzero(~hunters)[0]
+        if not len(prey):
+            return
+        q = idx[prey]
+        px, py, pr = s.x[q], s.y[q], s.radius[q]
+        gain = self.cfg.PREDATION_EFFICIENCY * np.maximum(s.energy[q], 0.0)
+        X, Y, E, R, emax = s.x[pred], s.y[pred], s.energy[pred].copy(), s.radius[pred], s.energy_max[pred]
+        ready = s.digest[pred] == 0
+        if kernels.ENABLED:
+            win = kernels.prey_winners(px, py, pr, gain, X, Y, E, R, emax, ready, self.width, self.height)
+        else:
+            win = self._prey_winners(px, py, pr, gain, X, Y, E, R, emax, ready)
+        for j in np.nonzero(win >= 0)[0].tolist():
+            alive[k[win[j]]].eat_prey(alive[prey[j]], float(gain[j]))
+            self.predated += 1
+
+    def _prey_winners(self, px, py, pr, gain, X, Y, E, R, emax, ready):
+        """numpy version of kernels.prey_winners: same formulas, same order (prey in list order, a tie goes to the
+        first predator), from the pairs of neighbouring grid cells."""
+        m = len(px)
+        win = np.full(m, -1, np.int64)
+        pj, pi = near_pairs(px, py, X, Y, float(R.max() + pr.max()), self.width, self.height)
+        dx = (px[pj] - X[pi] + self.width / 2) % self.width - self.width / 2
+        dy = (py[pj] - Y[pi] + self.height / 2) % self.height - self.height / 2
+        d2 = dx * dx + dy * dy
+        contact = d2 < (R[pi] + pr[pj]) ** 2
+        pj, pi, d2 = pj[contact], pi[contact], d2[contact]
+        order = np.lexsort((pi, pj))
+        pj, pi, d2 = pj[order], pi[order], d2[order]
+        bounds = np.searchsorted(pj, np.arange(m + 1)).tolist()
+        for j in range(m):
+            lo, hi = bounds[j], bounds[j + 1]
+            if lo == hi:
+                continue
+            who = pi[lo:hi]
+            ok = ready[who] & (E[who] + gain[j] <= emax[who])
+            if not ok.any():
+                continue
+            gap = np.where(ok, np.sqrt(d2[lo:hi]) - R[who], np.inf)
+            i = int(who[int(np.argmin(gap))])
+            win[j] = i
+            E[i] = E[i] + gain[j]
+            ready[i] = False
+        return win
 
     def _contacts(self, items, alive, X, Y, E, body, effect, fits, gains=None):
         """For each available item, in list order: the closest living creature in contact gets `effect`.
@@ -302,11 +381,19 @@ class World:
         if not n:
             return alive
         s = self.store
-        needed = needed_items({PROFILE_NAMES[k] for k in np.unique(s.col("species")[alive_rows]).tolist()})
+        species = s.col("species")[alive_rows]
+        needed = needed_items({PROFILE_NAMES[k] for k in np.unique(species).tolist()})
+        hunt = IS_PREDATOR[species]
+        self.hunting = bool(hunt.any()) and not hunt.all()
+        if self.hunting:   # Both are measured (World.hunt) whatever the sensors of the profiles
+            needed |= {"prey", "predator"}
         cx, cy, heading = s.col("x")[alive_rows], s.col("y")[alive_rows], s.col("angle")[alive_rows]
         rows = np.arange(n)
         food_seen = np.zeros(n, dtype=bool)
         for key in sorted(needed):
+            if key in ("prey", "predator"):
+                self._near[key] = self._nearest_creatures(key, hunt, cx, cy, heading)
+                continue
             items = self.items[key]
             m = len(items)
             if m == 0:
@@ -334,6 +421,37 @@ class World:
         s.col("near_i")[alive_rows] = rows
         s.col("near_tick")[alive_rows] = self.tick
         return alive
+
+    def _nearest_creatures(self, kind, hunt, cx, cy, heading):
+        """(distance², dx, dy) of the nearest prey («prey», seen by the predators) or predator («predator», seen by
+        the prey) in view; inf for the others (a creature never sees its own kind). `hunt`: predator or not, for
+        the creatures at cx, cy."""
+        n = len(cx)
+        best, bdx, bdy = np.full(n, np.inf), np.zeros(n), np.zeros(n)
+        viewers = np.nonzero(hunt if kind == "prey" else ~hunt)[0]
+        targets = np.nonzero(~hunt if kind == "prey" else hunt)[0]
+        if len(viewers) and len(targets):
+            vx, vy, vh, ix, iy = cx[viewers], cy[viewers], heading[viewers], cx[targets], cy[targets]
+            if kernels.ENABLED:
+                b, dx, dy, _ = kernels.nearest_creatures(vx, vy, vh, ix, iy, self.cfg, self.width, self.height)
+            else:
+                b, dx, dy, _ = self._nearest_points(vx, vy, ix, iy, np.zeros(len(targets)), vh)
+            best[viewers], bdx[viewers], bdy[viewers] = b, dx, dy
+        return best, bdx, bdy
+
+    def creature_points(self, kind):
+        """Living prey («prey») or predators («predator») as points (Food objects) for World.nearest: their positions
+        at the start of the tick while _update_reference runs, else now."""
+        if self._points is not None:
+            return self._points[kind]
+        want = kind == "predator"
+        return [Food(c.x, c.y, 0.0) for c in self.creatures if c.alive and bool(c._spec.get("predator")) == want]
+
+    def nearest_creature(self, creature, kind):
+        """Sensors «prey» and «predator» for one creature (World.nearest rules): (distance², dx, dy) or None."""
+        if bool(creature._spec.get("predator")) == (kind == "predator"):
+            return None   # Never sees its own kind
+        return self.nearest(creature, self.creature_points(kind))[0]
 
     def _value_of(self, diets, food_index):
         """Sensor «valeur» (core/sensors.py): share of the energy of the nearest food in view that each creature
@@ -407,7 +525,8 @@ class World:
     def _update_reference(self):
         """Plain loop version of update(), one creature at a time. Slow: kept as the reference the tests compare to."""
 
-        # Phase 1: Update all creatures
+        # Phase 1: Update all creatures. Creatures seen as prey or predators: where they were at the start of the tick
+        self._points = {k: self.creature_points(k) for k in ("prey", "predator")}
         for creature in self.creatures:
             if creature.alive:
                 inputs = self.sense(creature)
@@ -426,8 +545,8 @@ class World:
 
             for creature in self.creatures:
                 if not creature.alive or creature.energy + food.energy * self.gain(creature, food) > \
-                        creature.energy_max:
-                    continue  # Dead, or the meal would not fit: leaves the food to the others
+                        creature.energy_max or creature._spec.get("predator"):
+                    continue  # Dead, a predator, or the meal would not fit: leaves the food to the others
                 dx = torus_delta(creature.x, food.x, self.width)
                 dy = torus_delta(creature.y, food.y, self.height)
                 distance = math.hypot(dx, dy)
@@ -460,6 +579,26 @@ class World:
                 victim.hit_by_poison(poison.energy)
                 poison.cooldown = max(1, self.cfg.FOOD_RESPAWN_DELAY)
 
+        # Phase 4: predators kill the prey they touch
+        hunters = [c for c in self.creatures if c.alive and c._spec.get("predator")]
+        for h in hunters:
+            h.digest = max(h.digest - 1, 0)
+        for prey in self.creatures if hunters else []:
+            if not prey.alive or prey._spec.get("predator"):
+                continue
+            gain = self.cfg.PREDATION_EFFICIENCY * max(prey.energy, 0.0)
+            best, best_gap = None, math.inf
+            for h in hunters:
+                if h.digest > 0 or h.energy + gain > h.energy_max:
+                    continue
+                distance = math.hypot(torus_delta(h.x, prey.x, self.width), torus_delta(h.y, prey.y, self.height))
+                if distance < h.radius + prey.radius and distance - h.radius < best_gap:
+                    best_gap, best = distance - h.radius, h
+            if best is not None:
+                best.eat_prey(prey, gain)
+                self.predated += 1
+
+        self._points = None
         self.tick += 1
 
     def resize_items(self, food_per_screen=None):

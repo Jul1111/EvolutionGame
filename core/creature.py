@@ -14,7 +14,7 @@ class CreatureStore:
 
     FLOATS = ("x", "y", "angle", "speed", "energy", "speed_sum", "blind_speed_sum", "blind_turn_sum", "last_turn",
               "size", "body", "radius", "energy_max", "base_cost", "move_cost", "diet")
-    INTS = ("age", "unseen_ticks", "blind_ticks", "uid", "near_i", "near_tick", "species")
+    INTS = ("age", "unseen_ticks", "blind_ticks", "uid", "near_i", "near_tick", "species", "digest")
     BOOLS = ("alive", "touching", "food_nearby")
 
     def __init__(self, capacity=16):
@@ -85,6 +85,7 @@ class Creature:
     age = _Field()
     unseen_ticks = _Field()     # Ticks since it last saw an available food (sensor «faim»)
     blind_ticks = _Field()
+    digest = _Field()           # Predators: ticks left before it can attack again (World._predation)
     uid = _Field()
     alive = _Field()
     touching = _Field()         # Pressed against an obstacle at the last tick (a sensor of some profiles)
@@ -107,7 +108,7 @@ class Creature:
         self.alive = True
         self.set_size(size)
         self.diet = diet
-        self.death_cause = None   # "faim" or "vieillesse" (poison kills through hunger)
+        self.death_cause = None   # "faim", "vieillesse" or "mangé" (poison kills through hunger)
         # Lineage (continuous evolution): identity, parent, birth, depth of the lineage (0 = random founder)
         self.uid = uid
         self.parent_id = parent_id
@@ -116,6 +117,7 @@ class Creature:
         self.last_birth_age = None   # Age at its last birth (cooldown)
         self.children = 0
         self.food_eaten = 0
+        self.kills = 0            # Prey eaten (predators)
         self.poison_hits = 0
         self.obstacle_ticks = 0   # Ticks spent pressed against an obstacle
         self.touching = False
@@ -128,6 +130,7 @@ class Creature:
         self.blind_turn_sum = 0.0
         self.last_turn = 0.0
         self.unseen_ticks = 0
+        self.digest = 0
         self.speed_sum = 0.0
         self._s.near_tick[self._i] = -1   # Not seen by World.sense_all yet
         self._s.species[self._i] = PROFILE_INDEX[profile]
@@ -140,6 +143,8 @@ class Creature:
         self.radius = self.cfg.CREATURE_RADIUS * self.body
         self.energy_max = self.cfg.ENERGY_MAX * self.body
         self.base_cost = self.cfg.ENERGY_BASE_COST * self.body ** self.cfg.SIZE_BASE_EXPONENT
+        if self._spec.get("predator"):
+            self.base_cost *= self.cfg.PREDATOR_COST_FACTOR
         self.move_cost = self.cfg.ENERGY_MOVE_COST * self.body
 
     def update(self, inputs, world_width, world_height):
@@ -202,6 +207,14 @@ class Creature:
             return
         self.energy -= amount
         self.poison_hits += 1
+
+    def eat_prey(self, prey, amount):
+        """Kills `prey` and gets `amount` of energy (World._predation checked that it fits), then digests."""
+        prey.alive = False
+        prey.death_cause = "mangé"
+        self.energy = min(self.energy + amount, self.energy_max)
+        self.kills += 1
+        self.digest = self.cfg.PREDATOR_DIGEST
 
     def eat_food(self,amount):
         if not self.alive:

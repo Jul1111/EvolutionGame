@@ -20,6 +20,12 @@
 
 **Deux sortes de nourriture et le gène de régime** (`FOOD_TYPES = 2`, désactivé par défaut). Une nourriture sur deux est de la sorte 1 (dessinée en jaune). Chaque créature porte un régime entre 0 et 1 : une nourriture de sorte k lui donne `FOOD_ENERGY × (1 − |régime − k|)^DIET_EXPONENT`. Avec l'exposant 2 (défaut), un spécialiste (0 ou 1) tire tout de sa nourriture et rien de l'autre, un généraliste (0,5) un quart des deux : les spécialistes sont avantagés. Les fondateurs sont spécialistes, un sur deux de chaque nourriture (`DIET_FOUNDERS`, ou au hasard), un petit reçoit celui de son parent + N(0 ; 0,05) (`DIET_MUTATION_STD` ; à 0,15 une espèce garde deux groupes de spécialistes, `docs/experiences.md`). Le capteur «valeur nourriture» (espèces `regime`, `regime_faim`) donne ce que rapporterait la nourriture la plus proche en vue : la créature ne connaît pas son propre régime, c'est ainsi qu'elle distingue sa nourriture. Colonnes `diet_mean`, `diet_low` (part sous 0,25), `diet_high` (au-dessus de 0,75), `diet__<espèce>`.
 
+**Les prédateurs** (`PREDATION = True`, désactivé par défaut). Au tick `PREDATOR_START` (20 000, une fois le goulot de départ passé), `PREDATOR_FOUNDERS` prédateurs par écran (20) arrivent, avec des réseaux tirés au hasard, de l'espèce `PREDATOR_PROFILE` (`predateur`). Un prédateur ne mange jamais de nourriture, seulement les créatures des autres espèces (ses proies) ; les prédateurs ne se mangent pas entre eux.
+- Chaque proie, dans l'ordre de la liste, est tuée par le prédateur le plus proche qui la touche (centres plus proches que la somme des rayons, distance mesurée au bord du prédateur), qui ne digère pas et dont la réserve peut recevoir le repas. Le prédateur gagne `PREDATION_EFFICIENCY` × l'énergie de la proie (0,5 : la moitié est perdue, toute l'énergie vient des plantes), puis digère `PREDATOR_DIGEST` ticks (300) sans pouvoir attaquer. La proie meurt (cause « mangé »).
+- Mêmes règles de vie que les autres (coût, naissance, vieillesse) ; coût de base multiplié par `PREDATOR_COST_FACTOR` (1). La nourriture suit seulement le nombre de proies.
+- Capteurs : `prey` (distance et angle de la proie la plus proche en vue, pour les prédateurs), `predator` (du prédateur le plus proche en vue, pour les proies). Même cône et même portée que pour la nourriture ; une créature ne voit jamais les siens par ces capteurs.
+- Mesures (colonnes ajoutées seulement avec des prédateurs) : `deaths_eaten`, `prey`, `predators`, `kill_rate` (proies par 1000 ticks de vie de prédateur), pour les proies `prey_threat_frac` (part du temps avec un prédateur en vue), `prey_speed_threat` / `prey_speed_calm` (vitesse avec et sans), `prey_toward` (virage vers lui : négatif = s'en détourne), et pour les prédateurs `pred_chase_frac`, `pred_speed_chase`, `pred_speed_idle`, `pred_toward`.
+
 **Le réseau** (espèce `complet`). 9 entrées → 6 neurones cachés → 2 sorties (virage, vitesse demandée), 74 poids. Entrées : distance et angle de la nourriture visible la plus proche, énergie, vitesse, «peut manger», distance et angle du poison, distance au bord et angle de l'obstacle. La vision est un cône de 120° et de portée 200. Pas de mémoire.
 
 **La vie et la mort** (`evolution/continuous.py`).
@@ -42,6 +48,8 @@ Un profil dit quels capteurs alimentent le réseau, la taille de la couche cach�
 | `complet_12`, `complet_16` | `complet` avec 12 ou 16 neurones cachés | virage, vitesse | 146, 194 |
 | `regime` | `complet` + valeur de la nourriture la plus proche pour son régime (`FOOD_TYPES = 2`) | virage, vitesse | 80 |
 | `regime_faim` | `regime` + faim | virage, vitesse | 86 |
+| `proie` | `complet` + prédateur le plus proche (`PREDATION`) | virage, vitesse | 86 |
+| `predateur` | proie la plus proche, énergie, vitesse, obstacle ; 6 cachés ; mange les autres espèces, jamais la nourriture | virage, vitesse | 56 |
 | `chasseur` | nourriture | virage, vitesse | 6 |
 | `chasseur_rassasie` | nourriture + peut manger | virage, vitesse | 8 |
 | `prudent` | nourriture + poison, 3 cachés | virage, vitesse | 23 |

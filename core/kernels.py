@@ -3,6 +3,7 @@
 - nearest_points: nearest available food, poison or obstacle (distance to its outline) in view of each creature,
   the creatures shared out over the cores (one thread per core, parallel loop).
 - contact_winners: which creature gets each food or poison (closest one in contact, items in list order).
+- prey_winners: which predator kills each prey (same rule, with a contact radius per prey; config.PREDATION).
 
 Same formulas, same order of operations as the numpy code of core/world.py, which stays as the fallback (numba
 missing, or EVOLUTION_NUMBA=0) and as the reference the tests compare to. Compiled once, then cached on disk
@@ -153,6 +154,39 @@ if ENABLED:
                 E[gi] = min(E[gi] + amount, emax[gi]) if fits else E[gi] - amount
         return win
 
+    @njit(cache=True)
+    def _prey_winners(px, py, pr, gain, X, Y, E, radius, emax, ready, width, height, nx, ny, order, starts, counts,
+                      offx, offy):  # pragma: no cover (compiled)
+        m = len(px)
+        win = np.full(m, -1, np.int64)
+        cw, ch = width / nx, height / ny
+        for j in range(m):   # In list order: a kill changes E and ready, which matters for the next prey
+            acx = int(math.floor(px[j] / cw)) % nx
+            acy = int(math.floor(py[j] / ch)) % ny
+            g, gi = np.inf, -1
+            for ox in offx:
+                for oy in offy:
+                    cell = ((acx + ox) % nx) * ny + (acy + oy) % ny
+                    for k in range(starts[cell], starts[cell] + counts[cell]):
+                        i = order[k]
+                        if not ready[i]:
+                            continue
+                        dx = (px[j] - X[i] + width / 2) % width - width / 2
+                        dy = (py[j] - Y[i] + height / 2) % height - height / 2
+                        d2 = dx * dx + dy * dy
+                        if not d2 < (radius[i] + pr[j]) ** 2:
+                            continue
+                        if not E[i] + gain[j] <= emax[i]:
+                            continue
+                        gap = math.sqrt(d2) - radius[i]
+                        if gap < g or (gap == g and i < gi):   # A tie goes to the first predator
+                            g, gi = gap, i
+            if gi >= 0:
+                win[j] = gi
+                E[gi] = E[gi] + gain[j]
+                ready[gi] = False
+        return win
+
 
 def nearest_points(items, cx, cy, heading, ix, iy, cool, cfg, width, height):
     """(distance², dx, dy, item index) of the nearest available item in view of each creature (inf and -1 when
@@ -163,6 +197,22 @@ def nearest_points(items, cx, cy, heading, ix, iy, cool, cfg, width, height):
     return _nearest_points(cx, cy, heading, ix, iy, cool <= 0, float(cfg.VISION_RANGE), cfg.VISION_FOV_DEGREES < 360,
                            math.radians(cfg.VISION_FOV_DEGREES) / 2.0, float(width), float(height), shaped, radius,
                            sides, corners, *grid)
+
+
+def nearest_creatures(cx, cy, heading, ix, iy, cfg, width, height):
+    """nearest_points for creatures seen as points (sensors «prey» and «predator»): every one is available."""
+    return _nearest_points(cx, cy, heading, ix, iy, np.ones(len(ix), np.bool_), float(cfg.VISION_RANGE),
+                           cfg.VISION_FOV_DEGREES < 360, math.radians(cfg.VISION_FOV_DEGREES) / 2.0, float(width),
+                           float(height), False, np.zeros(len(ix)), np.zeros(len(ix), np.int64),
+                           np.zeros((len(ix), 4, 2)), *_cells(ix, iy, width, height, cfg.VISION_RANGE))
+
+
+def prey_winners(px, py, pr, gain, X, Y, E, radius, emax, ready, width, height):
+    """Index of the predator that kills each prey (-1: none): the closest ready predator in contact (distance between
+    the centres under the sum of the radii, measured to the predator's edge) for which the meal fits. Prey in list
+    order; updates E (meal) and ready (digesting) as the kills will."""
+    grid = _cells(X, Y, width, height, float(radius.max() + pr.max()))
+    return _prey_winners(px, py, pr, gain, X, Y, E, radius, emax, ready, float(width), float(height), *grid)
 
 
 def contact_winners(ix, iy, energy, available, X, Y, E, radius, emax, food_radius, fits, width, height, gains=None,

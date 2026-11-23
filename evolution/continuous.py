@@ -17,7 +17,7 @@ import time
 import numpy as np
 
 import config
-from brain.profiles import new_brain
+from brain.profiles import IS_PREDATOR, PROFILES, new_brain
 from core.world import World
 from evolution.mutation import mutate
 
@@ -31,6 +31,12 @@ SAMPLE_HEADER = ["tick", "population", "births", "deaths_hunger", "deaths_age", 
 # With two kinds of food (FOOD_TYPES = 2): mean diet, share of specialists of kind 0 (diet < 0.25) and of kind 1
 # (> 0.75), then the mean diet of each species: diet__<profile>
 DIET_HEADER = ["diet_mean", "diet_low", "diet_high"]
+# With predators (PREDATION, or a predator species among the founders): prey eaten, living prey and predators, kills
+# per 1000 ticks of predator life; for the prey, share of their life with a predator in view, their speed with and
+# without one in view, how much they turn toward it (< 0: away); the same for the predators with a prey in view
+PREDATION_HEADER = ["deaths_eaten", "prey", "predators", "kill_rate", "prey_threat_frac", "prey_speed_threat",
+                    "prey_speed_calm", "prey_toward", "pred_chase_frac", "pred_speed_chase", "pred_speed_idle",
+                    "pred_toward"]
 
 
 class ContinuousSimulation:
@@ -54,11 +60,15 @@ class ContinuousSimulation:
         self.death_log = [] if log_deaths else None
         self._reset_counters()
         profiles = list(founders) if founders else list(self.cfg.ACTIVE_PROFILES)
-        self.species = profiles
-        self.header = SAMPLE_HEADER + [f"pop__{p}" for p in profiles]
+        self.species = profiles + ([self.cfg.PREDATOR_PROFILE] if self.cfg.PREDATION and
+                                   self.cfg.PREDATOR_PROFILE not in profiles else [])
+        self.predation = any(PROFILES[p].get("predator") for p in self.species)   # Predation measures
+        self.header = SAMPLE_HEADER + [f"pop__{p}" for p in self.species]
         self.diets = self.cfg.FOOD_TYPES > 1   # Diet gene in play (two kinds of food)
         if self.diets:
-            self.header += DIET_HEADER + [f"diet__{p}" for p in profiles]
+            self.header += DIET_HEADER + [f"diet__{p}" for p in self.species]
+        if self.predation:
+            self.header += PREDATION_HEADER
         for index, name in enumerate(profiles):
             if founders:
                 for genome, size, *diet in founders[name]:
@@ -87,10 +97,14 @@ class ContinuousSimulation:
         world = self.world
         if world.tick % FOOD_UPDATE_TICKS == 0:
             self.update_food(FOOD_UPDATE_TICKS)
+        if self.cfg.PREDATION and world.tick == self.cfg.PREDATOR_START:
+            self.introduce_predators()
         world.update()
         s, cs = world.store, world.creatures
         alive = s.col("alive")
         self.life_ticks += int(alive.sum())
+        if self.predation:
+            self.hunter_ticks += int((alive & IS_PREDATOR[s.col("species")]).sum())
         if self.cfg.AGE_MAX:
             for i in np.nonzero(alive & (s.col("age") >= self.cfg.AGE_MAX))[0].tolist():
                 cs[i].alive = False
@@ -131,7 +145,7 @@ class ContinuousSimulation:
         hi, lo = self.cfg.FOOD_COUNT, self.cfg.FOOD_COUNT_MIN
         # Only creatures born in this world count: the founders (random, or loaded) mostly die in the first bottleneck,
         # the food must not get scarce because of them
-        born = sum(1 for c in self.world.creatures if c.lineage_gen > 0)
+        born = sum(1 for c in self.world.creatures if c.lineage_gen > 0 and not c._spec.get("predator"))
         pressure = min(1.0, born / max(1, self.cfg.FOOD_PRESSURE_POP))
         return hi + (lo - hi) * pressure
 
@@ -219,6 +233,15 @@ class ContinuousSimulation:
             return {}
         return {"diet": min(1.0, max(0.0, diet + self.rng.gauss(0.0, self.cfg.DIET_MUTATION_STD)))}
 
+    def introduce_predators(self):
+        """PREDATOR_FOUNDERS (per screen) random predators of PREDATOR_PROFILE at random free places (config.PREDATION;
+        called at tick PREDATOR_START)."""
+        name = self.cfg.PREDATOR_PROFILE
+        for _ in range(self.world._count(self.cfg.PREDATOR_FOUNDERS)):
+            brain = new_brain(name)
+            brain.randomize(self.rng, self.cfg.NN_INIT_STD)
+            self._add(brain, name, **({"diet": self._founder_diet()} if self.diets else {}))
+
     def _add(self, brain, profile, **kwargs):
         c = self.world.add_creature(brain, profile, uid=self.next_uid, birth_tick=self.world.tick, **kwargs)
         self.next_uid += 1
@@ -228,20 +251,24 @@ class ContinuousSimulation:
 
     def _reset_counters(self):
         self.births = 0
-        self.deaths = {"faim": 0, "vieillesse": 0}
+        self.deaths = {"faim": 0, "vieillesse": 0, "mangé": 0}
         self.death_ages = []
         self.cap_blocked = 0
         self.life_ticks = 0
+        self.hunter_ticks = 0   # Ticks of predator life (they eat no food: left out of the food and exploration rates)
         w = getattr(self, "world", None)
         self._blind0 = (w.blind_ticks, w.blind_speed, w.blind_turn) if w is not None else (0, 0.0, 0.0)
         self._eaten0 = getattr(self.world, "eaten", 0)
         self._poisoned0 = getattr(self.world, "poisoned", 0)
+        self._predated0 = getattr(self.world, "predated", 0)
+        self._hunt0 = {k: dict(v) for k, v in w.hunt.items()} if w is not None else None
 
     def sample(self):
         """Measures since the last sample (counts) and now (population state)."""
         cs = self.world.creatures
         n = len(cs)
-        per_k = 1000 / self.life_ticks if self.life_ticks else 0.0
+        eaters = self.life_ticks - self.hunter_ticks   # Ticks of life of the creatures that eat food
+        per_k = 1000 / eaters if eaters else 0.0
         blind = self.world.blind_ticks - self._blind0[0]   # Exploration counters kept by the world (core/batch.py)
         return {
             "tick": self.world.tick,
@@ -268,12 +295,32 @@ class ContinuousSimulation:
             "max_size": max((c.size for c in cs), default=None),
             # Exploration: share of the life ticks with no available food in view, and the speed and |turn| then.
             # Exploring = moving fast and fairly straight when nothing is in view
-            "blind_frac": blind / self.life_ticks if self.life_ticks else None,
+            "blind_frac": blind / eaters if eaters else None,
             "blind_speed": (self.world.blind_speed - self._blind0[1]) / blind if blind else None,
             "blind_turn": (self.world.blind_turn - self._blind0[2]) / blind if blind else None,
             **{f"pop__{p}": sum(1 for c in cs if c.profile == p) for p in self.species},
             **(self._diet_sample(cs) if self.diets else {}),
+            **(self._predation_sample(cs) if self.predation else {}),
         }
+
+    def _predation_sample(self, cs):
+        w = self.world
+        h = {k: {m: v - self._hunt0[k][m] for m, v in w.hunt[k].items()} for k in w.hunt}
+        hunters = sum(1 for c in cs if c._spec.get("predator"))
+
+        def ratio(a, b):
+            return a / b if b else None
+        prey, pred = h["predator"], h["prey"]   # What the prey do about predators, the predators about prey
+        return {"deaths_eaten": self.deaths["mangé"], "prey": len(cs) - hunters, "predators": hunters,
+                "kill_rate": ratio(1000 * (w.predated - self._predated0), self.hunter_ticks),
+                "prey_threat_frac": ratio(prey["seen"], prey["ticks"]),
+                "prey_speed_threat": ratio(prey["speed_seen"], prey["seen"]),
+                "prey_speed_calm": ratio(prey["speed_unseen"], prey["ticks"] - prey["seen"]),
+                "prey_toward": ratio(prey["toward"], prey["seen"]),
+                "pred_chase_frac": ratio(pred["seen"], pred["ticks"]),
+                "pred_speed_chase": ratio(pred["speed_seen"], pred["seen"]),
+                "pred_speed_idle": ratio(pred["speed_unseen"], pred["ticks"] - pred["seen"]),
+                "pred_toward": ratio(pred["toward"], pred["seen"])}
 
     def _diet_sample(self, cs):
         diets = [c.diet for c in cs]

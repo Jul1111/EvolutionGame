@@ -114,6 +114,20 @@ DIET_FOUNDERS = "specialistes"   # Random founders: "specialistes" = every other
                                  # yellow (1); "hasard" = a diet drawn at random (the runs before 23/11 evening)
 DIET_MUTATION_STD = 0.05   # 0.15: one species keeps two specialist groups (12/12 seeds, docs/experiences.md)
 
+# Configuration for predators (docs/fonctionnement.md). A predator is a creature of a profile marked "predator"
+# (brain/profiles.py): it never eats food, only creatures of the other profiles (its prey). When it touches a prey
+# while ready (not digesting) and the meal fits in its reserve, the prey dies and the predator gets
+# PREDATION_EFFICIENCY × the prey's energy. PREDATION = True: PREDATOR_FOUNDERS (per screen) random predators of
+# PREDATOR_PROFILE arrive at tick PREDATOR_START, once the prey got through the first bottleneck.
+# PREDATION = False: no predator arrives (the runs before 24/11). Starting values, to tune
+PREDATION = False
+PREDATOR_PROFILE = "predateur"
+PREDATOR_START = 20000      # Tick at which the predators arrive (the prey bottleneck is over by ~15 000)
+PREDATOR_FOUNDERS = 20      # Random predators per screen
+PREDATION_EFFICIENCY = 0.5  # Share of the prey's energy the predator gets (the rest is lost)
+PREDATOR_DIGEST = 300       # Ticks after a kill during which the predator cannot attack (caps what it can eat)
+PREDATOR_COST_FACTOR = 1.0  # Base cost of a predator = this × the base cost of a creature of its size
+
 # Configuration for mutation
 MUTATION_STD = 0.1          # Std of the gaussian noise added to each weight of a child (0.2 was chosen on one seed
                             # only)

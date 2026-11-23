@@ -109,10 +109,13 @@ def _move(world, cs, rows, g, out, spec, food_d2):
     s.age[rows] += 1
     s.speed_sum[rows] += speed
     blind = ~np.isfinite(food_d2)   # No available food in view (same as Creature.food_nearby)
-    # Exploration measures of the whole population (read by evolution/continuous.py)
-    world.blind_ticks += int(blind.sum())
-    world.blind_speed += float(speed[blind].sum())
-    world.blind_turn += float(np.abs(turn[blind]).sum())
+    # Exploration measures of the whole population (read by evolution/continuous.py); predators eat no food: left out
+    if not spec.get("predator"):
+        world.blind_ticks += int(blind.sum())
+        world.blind_speed += float(speed[blind].sum())
+        world.blind_turn += float(np.abs(turn[blind]).sum())
+    if world.hunting:
+        _hunt_measures(world, g, spec, speed, turn)
     b = rows[blind]
     s.blind_ticks[b] += 1
     s.blind_speed_sum[b] += speed[blind]
@@ -122,3 +125,18 @@ def _move(world, cs, rows, g, out, spec, food_d2):
     if out.shape[1] > first_memory:
         for c, m in zip(cs, out[:, first_memory:].tolist()):
             c.memory = m
+
+
+def _hunt_measures(world, g, spec, speed, turn):
+    """Hunting measures (World.hunt): for predators, what they do with a prey in view; for prey, with a predator in
+    view. Toward = turn × side of the target (> 0: turns toward it, < 0: turns away)."""
+    key = "prey" if spec.get("predator") else "predator"
+    d2, dx, dy = g["near"][key]
+    seen = np.isfinite(d2)
+    rel = (np.arctan2(dy[seen], dx[seen]) - g["angle"][seen] + math.pi) % (2 * math.pi) - math.pi
+    h = world.hunt[key]
+    h["ticks"] += len(seen)
+    h["seen"] += int(seen.sum())
+    h["speed_seen"] += float(speed[seen].sum())
+    h["speed_unseen"] += float(speed[~seen].sum())
+    h["toward"] += float((turn[seen] * np.sign(rel)).sum())

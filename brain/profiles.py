@@ -5,8 +5,11 @@ carries the name of its profile, and each profile keeps its own population save 
 Adding a profile = one entry in PROFILES. Sensors come from core/sensors.py.
 Keys: title, sensors, hidden (0 = inputs wired straight to the outputs), speed_output (False: constant speed,
 fixed_speed is an output value in [-1, 1], 0.0 = half the maximum speed), memory (extra outputs fed back as
-inputs), color, brain ("network" by default, "scripted" = hand-written controller, see brain/scripted.py).
+inputs), color, brain ("network" by default, "scripted" = hand-written controller, see brain/scripted.py),
+predator (True: eats the creatures of the other profiles, never food; config.PREDATION).
 """
+import numpy as np
+
 from brain.network import NeuralNetwork
 from brain.scripted import ScriptedBrain
 from core.sensors import SENSORS
@@ -51,9 +54,16 @@ PROFILES = {
     # Reference point, not evolved: see brain/scripted.py
     "scripte": {"title": "Scripté (référence)", "sensors": ["food", "can_eat", "poison", "obstacle"], "hidden": 0,
                 "speed_output": True, "memory": 0, "color": (200, 200, 200), "brain": "scripted"},
+    # Predators (24/11, config.PREDATION). «predateur» eats the creatures of the other profiles, never food; «proie»
+    # is «complet» plus the nearest predator in view (without predators that input never sees anything)
+    "predateur": {"title": "Prédateur", "sensors": ["prey", "energy", "speed", "obstacle"], "hidden": 6,
+                  "speed_output": True, "memory": 0, "color": (235, 60, 60), "predator": True},
+    "proie": {"title": "Proie", "sensors": ["food", "energy", "speed", "can_eat", "poison", "obstacle", "predator"],
+              "hidden": 6, "speed_output": True, "memory": 0, "color": (110, 210, 190)},
 }
 PROFILE_NAMES = list(PROFILES)                              # Species number (CreatureStore.species) → name
 PROFILE_INDEX = {name: i for i, name in enumerate(PROFILE_NAMES)}
+IS_PREDATOR = np.array([bool(PROFILES[n].get("predator")) for n in PROFILE_NAMES])   # Species number → predator?
 
 
 def spec(name):
