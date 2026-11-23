@@ -54,6 +54,7 @@ Réglages de `config.py` : `FOOD_COUNT = 60` (nourriture des petites populations
 - Le goulot de départ est passé dans 24 graines sur 24 (8 en 1×1, 16 en 2×2), contre 8 sur 16 avec `FOOD_COUNT = 40`.
 - Le plafond ne bloque plus de naissances ; c'est la nourriture qui règle la population.
 - Duels de populations évoluées (1×1) : une fois les fondateurs choisis, l'issue ne dépend presque pas du hasard du monde (même vainqueur dans 37 rejeux sur 40). En duels croisés (chaque lignée contre 4 adversaires), la qualité de la lignée adverse prédit 81 à 91 % des issues. Faim et bruit : aucun effet d'espèce. Mémoire : vrai handicap (13 lignées mémoire sur 16 perdent en majorité contre des `complet` variés, p = 0,02), bien que les réseaux s'en servent (la couper coûte 3 % de population et fait perdre les duels plus vite). Ce qui gagne : la population qu'une lignée tient seule (79 % des duels) ; les lignées rapides perdent presque tout. **Confirmé en 2×2 à 60°** : `complet` gagne 44 duels tranchés sur 45 contre la mémoire, les 16 lignées mémoire perdent en majorité.
+- **Prédateurs** (23/11, `PREDATION`) : en 1×1 ils s'éteignent presque toujours (1 graine sur 16 en garde), en 2×2 ils tiennent dans 4 graines sur 16 à 120 000 ticks. Quand ils durent : cycles de Lotka-Volterra (les prédateurs suivent les proies de 2 000 à 4 000 ticks), proies qui se détournent d'eux (5 populations sur 5) et deviennent deux fois plus rapides, prédateurs qui accélèrent à la vue d'une proie. Les proies utilisent plus d'entrées, mais leurs réseaux ne sont pas nettement plus non linéaires.
 - **Deux espèces avec fondateurs spécialistes** : coexistence dans 45 % des graines (21 sur 47, contre 17 % avec des régimes au hasard, p = 0,009 ; mutation du régime 0,05), chaque espèce sur sa nourriture ; avec une mutation à 0,15, une seule espèce occupe plus souvent les deux nourritures en se scindant.
 - **Une espèce se scinde en deux** : avec deux nourritures et une mutation du régime à 0,15, une seule espèce garde deux groupes de spécialistes dans 12 graines sur 12, et en refait un par mutation quand il disparaît ; à 0,05, une seule nourriture finit mangée.
 - **Cerveaux plus gros** (12 ou 16 neurones cachés au lieu de 6) : pas plus non linéaires, même population, pas d'avantage en duel (9 et 11 victoires sur 16). La taille du réseau ne bride pas la complexité.
@@ -424,6 +425,53 @@ Résultats : `experiments/results/20261123_1*_carte_*`, tables dans `experiments
 | Compliqué | 25 obstacles, mutation 0,3 | 0/8 | ~100 | 7 entrées sur 9, non-linéarité 0,22 (30 000 ticks) |
 
 Ils sont dans `presets/` (versionnés) et apparaissent en tête des préréglages du panneau Paramètres (◀ ▶, puis Appliquer). Ils ne changent ni la taille du monde ni les espèces ; les nombres de nourritures, poisons et obstacles sont par écran, valables en 2×2. Limites : base en 1×1, vision 60° (choix arbitraire) ; Dur et Compliqué validés sur 30 000 ticks seulement.
+
+### Prédateurs : survie, cycles, fuite et complexité (23/11/2026)
+
+Nouveau mécanisme (`PREDATION`, `docs/fonctionnement.md`) : des prédateurs (`predateur`, réseaux au hasard) arrivent au tick 20 000 et ne mangent que les proies qu'ils touchent. Les proies sont l'espèce `proie` (`complet` + le prédateur le plus proche en vue). Lots `experiments/lots/predateurs_calibrage*.txt` et `predateurs.txt` ; résultats `experiments/results/20261123_18*_calib_pred_*`, `*_calib2_pred_*`, `*_calib3_*`, `*_pred_1x1`, `*_pred_2x2`, `*_temoin_*` ; scripts et sorties dans `experiments/results/predateurs/` (`analyse.py`, `cycles.py`, `capteurs.py`, `complexite_graines.py`).
+
+**Calibrage** (60 graines, 80 000 ticks) : les prédateurs s'éteignent presque toujours.
+
+| Monde, réglage | Prédateurs encore là à 80 000 ticks | Ce qui se passe |
+|---|---|---|
+| 1×1, 20 fondateurs, rendement 0,5 à 1, digestion 100 ou 300 | 0/24 | ~15 prédateurs au plus : rendement 0,5, ils se remplacent à peine ; 1,0, ils mangent les proies jusqu'à l'extinction (7 graines sur 16 à 0,75-1) |
+| 2×2, 20 fondateurs par écran (80) | 2/32 | les 80 prédateurs effondrent les proies naïves (20 à 50 restantes), puis meurent de faim |
+| 2×2, 5 fondateurs par écran, rendement 0,75 | 3/8 (digestion 100), 4/8 (200) | une arrivée plus douce : retenue comme défaut (5, 0,75, 200) |
+| 2×2, coût de base des prédateurs ×0,5 | 2/8 (20 fondateurs), 4/8 (5) | |
+
+**(a) Le système tient-il ?** Espèce `proie`, 16 graines × 120 000 ticks, défauts.
+
+| Monde | Prédateurs à la fin | Proies éteintes | Prédateurs éteints (ticks) | Pendant leur présence |
+|---|---|---|---|---|
+| 1×1 (5 prédateurs à l'arrivée) | 1/16 | 3/16 (emportées par les prédateurs) | 15/16 (25 000 à 94 000) | ~78 proies, ~15 prédateurs |
+| 2×2 (20) | 4/16 (dont une à 1 prédateur) | 1/16 (goulot de départ, avant leur arrivée) | 11/16 (29 000 à 112 000) | ~200 proies, ~30 prédateurs |
+
+- **Le système proies-prédateurs ne tient pas durablement** : dans la plupart des graines, les prédateurs disparaissent en 10 000 à 40 000 ticks. Le monde ne nourrit que peu de prédateurs (15 en 1×1, 30 à 50 en 2×2), assez peu pour que le hasard d'un creux les emporte. Plus le monde est grand, plus ils durent : 4 graines sur 16 en 2×2 contre 1 en 1×1.
+- **Quand ils durent, les populations font des cycles** : dans les 9 graines où les prédateurs ont tenu plus de 40 000 ticks, les prédateurs suivent les proies (corrélation +0,24 à +0,67 avec 1 800 à 4 200 ticks de retard) et les font baisser (corrélation -0,59 à -0,80 dans l'autre sens) : la signature de Lotka-Volterra, période ~7 000 à 10 000 ticks (2 à 3 min de jeu). De 2 à 15 oscillations selon les graines ; ni amortissement ni emballement n'a été mesuré.
+- Les proies tiennent toujours une fois les prédateurs partis : la nourriture qui suit la population les ramène à leur niveau d'avant.
+
+**(b) Fuite et poursuite.** Mesure sur les populations finales encore en présence de prédateurs (5 : 4 en 2×2, 1 en 1×1), rejouées 1 500 ticks : la sortie du réseau quand il voit l'autre, moins celle du même réseau qui croit ne rien voir (`capteurs.py`, sorties `capteurs_*.txt`). Témoin : les proies du monde sans prédateur, à qui l'on montre les mêmes positions de prédateur (leurs poids sur cette entrée ont dérivé sans servir).
+
+| | Vitesse demandée quand l'autre est en vue | Virage vers lui (> 0 : vers, < 0 : s'en écarte) |
+|---|---|---|
+| Proies | -0,02 (2 sur 5 plus vite) | **-0,07 à -0,58, négatif dans 5 sur 5** |
+| Proies témoins | ~0 | de -0,13 à +0,17 (moyenne +0,00) |
+| Prédateurs | **+0,77 (5 sur 5)** | +0,11 en 2×2 (3 sur 4), -0,18 dans la graine 1×1 |
+
+- **Les proies évoluent une fuite** : elles se détournent du prédateur qu'elles voient, dans les 5 populations, chaque fois plus que le témoin de la même graine (5 sur 5, p = 0,06 en bilatéral). Pendant les runs, le virage moyen vers le prédateur passe de -0,04 à l'arrivée (proies naïves) à -0,09 à la fin en 2×2 et -0,35 dans la graine 1×1.
+- **Elles n'accélèrent pas en le voyant, elles vont vite tout le temps** : vitesse moyenne de la population à la fin, une fois les prédateurs partis, 2,64 dans les graines où ils ont duré plus de 40 000 ticks contre 1,08 sans prédateur (2×2, p = 0,0001 ; 2,83 contre 1,56 en 1×1, p = 0,01). Le passage des prédateurs laisse des proies rapides, même après leur disparition.
+- **Les prédateurs évoluent une poursuite par la vitesse** : ils accélèrent fortement quand une proie est en vue (+0,77, tous), alors que les prédateurs au hasard de l'arrivée vont à peu près aussi vite avec ou sans proie (1,08 contre 0,94). Se tourner vers elle reste faible et inconstant. Certaines lignées attendent presque immobiles (vitesse 0,2 à 0,3 sans proie en vue) : un affût.
+
+**(c) Complexité des réseaux des proies** (`experiments.carte --espece proie`, graine par graine dans `complexite_graines.txt`) :
+
+| Monde | Entrées utilisées (sur 11), sans → avec prédateurs | Non-linéarité, sans → avec |
+|---|---|---|
+| 1×1 | 6,4 → 6,5 (p = 0,78) | 0,18 → 0,21 (p = 0,13) |
+| 2×2 | 6,8 → **7,3 (p = 0,02)** ; 8,1 où ils ont duré (p = 0,002) | 0,16 → 0,18 (p = 0,16) ; 0,20 où ils ont duré (p = 0,13) |
+
+- **Les proies utilisent plus d'entrées quand les prédateurs restent** (+1,3 en 2×2) : surtout les deux du prédateur, qui ne varient jamais sans lui.
+- **La non-linéarité monte un peu, sans que ce soit établi** (+0,02 à +0,04, dans le bruit sur 16 graines). La prédation ajoute une chose à percevoir et à fuir ; elle ne rend pas, à 120 000 ticks, les réseaux nettement plus complexes. La plupart des graines ont perdu leurs prédateurs tôt : un monde où ils durent (plus grand, ou des prédateurs plus stables) serait le vrai test.
+- Suites possibles : un monde 3×3, des refuges pour les proies, des runs plus longs dans les graines qui gardent leurs prédateurs ; espèce omnivore et gène de carnivorie (option C de la conception) gardés pour plus tard.
 
 ### Deux espèces, fondateurs spécialistes : coexistence ou une espèce partout (23/11/2026)
 

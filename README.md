@@ -13,6 +13,7 @@ L'objectif : activer un mécanisme évolutif à la fois, et mesurer ce qu'il pro
 
 - **Évolution continue** : pas de générations. Une créature assez nourrie fait un petit qui hérite de son réseau, muté.
 - **Réseaux configurables** : plusieurs espèces (profils de capteurs et de couches) peuvent partager le monde.
+- **Prédateurs** (facultatif) : une espèce qui ne mange que les autres créatures, avec ses capteurs et ses courbes.
 - **Gène de taille** : coût métabolique selon la loi de Kleiber, modes `actif`, `neutre` ou `fixe`.
 - **Interface pygame** : zoom, suivi de lignée, courbes, graphe du réseau, sauvegarde et reprise.
 - **Expériences sans affichage** : runs multi-graines en parallèle, résultats reproductibles (commit et constantes enregistrés).
@@ -87,6 +88,7 @@ Résultats sur 8 à 16 graines par condition, détails et limites dans [docs/exp
 
 - **Coexistence par niches** : avec deux sortes de nourriture et un gène de régime (`FOOD_TYPES = 2`), deux espèces peuvent coexister durablement, chacune spécialisée sur une nourriture (45 % des graines avec des fondateurs spécialistes, sur 48 ; aucune avec une seule nourriture).
 - **Une espèce peut se scinder** : avec une mutation du régime assez forte (0,15), une seule espèce se partage en deux groupes de spécialistes, et en refait un quand il disparaît.
+- **Les prédateurs tiennent mal, mais façonnent les proies** : des créatures qui mangent les autres (`PREDATION`) s'éteignent presque toujours en 1×1 et dans 3 graines sur 4 en 2×2. Là où elles durent : cycles proies-prédateurs, proies qui fuient et vont deux fois plus vite, prédateurs qui accélèrent sur une proie en vue.
 - **La complexité vient du temps, pas de la taille du cerveau** : sur un million de ticks, la non-linéarité des réseaux triple puis plafonne ; des réseaux 2 à 3 fois plus gros ne sont pas plus complexes.
 - **Les réglages ne s'additionnent pas** : chacun pris seul reste vivable, mais combiner peu de nourriture, repousse lente et poison éteint tout. Quatre préréglages validés (Facile, Équitable, Dur, Compliqué, dossier `presets/`) sont proposés en tête du panneau Paramètres.
 
@@ -114,7 +116,7 @@ tests/         Tests pytest
 - [ ] Étude du gène de taille (actif contre neutre)
 - [ ] Reproduction à deux parents
 - [ ] Environnement changeant
-- [ ] Prédation et interactions
+- [x] Prédation : espèce prédatrice, capteurs proie et prédateur, cycles, fuite et poursuite (coexistence durable encore rare)
 - [ ] Signaux, apprentissage et transmission
 
 ## Contribuer

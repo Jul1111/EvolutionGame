@@ -1,0 +1,19 @@
+graine  1 : proies ( 0) vitesse +nan virage vers +nan | prédateurs ( 0) vitesse +nan virage vers +nan | témoin ( 0) vitesse +nan virage vers +nan
+graine  2 : proies ( 0) vitesse +nan virage vers +nan | prédateurs ( 0) vitesse +nan virage vers +nan | témoin ( 0) vitesse +nan virage vers +nan
+graine  3 : proies ( 0) vitesse +nan virage vers +nan | prédateurs ( 0) vitesse +nan virage vers +nan | témoin ( 0) vitesse +nan virage vers +nan
+graine  4 : proies (30) vitesse -0.19 virage vers -0.222 | prédateurs (30) vitesse +0.87 virage vers +0.189 | témoin (30) vitesse -0.21 virage vers -0.100
+graine  5 : proies ( 0) vitesse +nan virage vers +nan | prédateurs ( 0) vitesse +nan virage vers +nan | témoin ( 0) vitesse +nan virage vers +nan
+graine  6 : proies ( 0) vitesse +nan virage vers +nan | prédateurs ( 0) vitesse +nan virage vers +nan | témoin ( 0) vitesse +nan virage vers +nan
+graine  7 : proies ( 6) vitesse +0.16 virage vers -0.379 | prédateurs ( 1) vitesse +0.34 virage vers +0.279 | témoin (30) vitesse -0.01 virage vers +0.168
+graine  8 : proies (30) vitesse +0.05 virage vers -0.117 | prédateurs (30) vitesse +0.94 virage vers -0.100 | témoin (30) vitesse +0.01 virage vers -0.080
+graine  9 : proies ( 0) vitesse +nan virage vers +nan | prédateurs ( 0) vitesse +nan virage vers +nan | témoin ( 0) vitesse +nan virage vers +nan
+graine 10 : proies (30) vitesse -0.09 virage vers -0.065 | prédateurs (30) vitesse +0.92 virage vers +0.055 | témoin (30) vitesse +0.07 virage vers +0.140
+graine 11 : proies ( 0) vitesse +nan virage vers +nan | prédateurs ( 0) vitesse +nan virage vers +nan | témoin ( 0) vitesse +nan virage vers +nan
+graine 12 : proies ( 0) vitesse +nan virage vers +nan | prédateurs ( 0) vitesse +nan virage vers +nan | témoin ( 0) vitesse +nan virage vers +nan
+graine 13 : proies ( 0) vitesse +nan virage vers +nan | prédateurs ( 0) vitesse +nan virage vers +nan | témoin ( 0) vitesse +nan virage vers +nan
+graine 15 : proies ( 0) vitesse +nan virage vers +nan | prédateurs ( 0) vitesse +nan virage vers +nan | témoin ( 0) vitesse +nan virage vers +nan
+graine 16 : proies ( 0) vitesse +nan virage vers +nan | prédateurs ( 0) vitesse +nan virage vers +nan | témoin ( 0) vitesse +nan virage vers +nan
+
+Proies    : vitesse -0.017 (médiane -0.018, > 0 dans 2/4) | virage -0.196 (médiane -0.170, > 0 dans 0/4)
+Prédateurs: vitesse +0.765 (médiane +0.892, > 0 dans 4/4) | virage +0.106 (médiane +0.122, > 0 dans 3/4)
+Témoin    : vitesse -0.036 (médiane -0.000, > 0 dans 2/4) | virage +0.032 (médiane +0.030, > 0 dans 2/4)

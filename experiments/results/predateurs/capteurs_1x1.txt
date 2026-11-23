@@ -1,0 +1,17 @@
+graine  2 : proies ( 0) vitesse +nan virage vers +nan | prédateurs ( 0) vitesse +nan virage vers +nan | témoin ( 0) vitesse +nan virage vers +nan
+graine  3 : proies ( 0) vitesse +nan virage vers +nan | prédateurs ( 0) vitesse +nan virage vers +nan | témoin ( 0) vitesse +nan virage vers +nan
+graine  4 : proies ( 0) vitesse +nan virage vers +nan | prédateurs ( 0) vitesse +nan virage vers +nan | témoin ( 0) vitesse +nan virage vers +nan
+graine  6 : proies ( 0) vitesse +nan virage vers +nan | prédateurs ( 0) vitesse +nan virage vers +nan | témoin ( 0) vitesse +nan virage vers +nan
+graine  8 : proies ( 0) vitesse +nan virage vers +nan | prédateurs ( 0) vitesse +nan virage vers +nan | témoin ( 0) vitesse +nan virage vers +nan
+graine  9 : proies (30) vitesse +0.02 virage vers -0.576 | prédateurs (16) vitesse +0.67 virage vers -0.176 | témoin (30) vitesse +0.08 virage vers -0.131
+graine 10 : proies ( 0) vitesse +nan virage vers +nan | prédateurs ( 0) vitesse +nan virage vers +nan | témoin ( 0) vitesse +nan virage vers +nan
+graine 11 : proies ( 0) vitesse +nan virage vers +nan | prédateurs ( 0) vitesse +nan virage vers +nan | témoin ( 0) vitesse +nan virage vers +nan
+graine 12 : proies ( 0) vitesse +nan virage vers +nan | prédateurs ( 0) vitesse +nan virage vers +nan | témoin ( 0) vitesse +nan virage vers +nan
+graine 13 : proies ( 0) vitesse +nan virage vers +nan | prédateurs ( 0) vitesse +nan virage vers +nan | témoin ( 0) vitesse +nan virage vers +nan
+graine 14 : proies ( 0) vitesse +nan virage vers +nan | prédateurs ( 0) vitesse +nan virage vers +nan | témoin ( 0) vitesse +nan virage vers +nan
+graine 15 : proies ( 0) vitesse +nan virage vers +nan | prédateurs ( 0) vitesse +nan virage vers +nan | témoin ( 0) vitesse +nan virage vers +nan
+graine 16 : proies ( 0) vitesse +nan virage vers +nan | prédateurs ( 0) vitesse +nan virage vers +nan | témoin ( 0) vitesse +nan virage vers +nan
+
+Proies    : vitesse +0.017 (médiane +0.017, > 0 dans 1/1) | virage -0.576 (médiane -0.576, > 0 dans 0/1)
+Prédateurs: vitesse +0.674 (médiane +0.674, > 0 dans 1/1) | virage -0.176 (médiane -0.176, > 0 dans 0/1)
+Témoin    : vitesse +0.076 (médiane +0.076, > 0 dans 1/1) | virage -0.131 (médiane -0.131, > 0 dans 0/1)
