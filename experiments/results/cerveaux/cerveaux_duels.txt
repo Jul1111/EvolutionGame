@@ -1,0 +1,2 @@
+duel_6_12 {'complet': 7, 'complet_12': 9, 'deux': 0, 'aucune': 0} élimination médiane 11700.0 p (binomial bilatéral) = 0.80
+duel_6_16 {'complet': 5, 'complet_16': 11, 'deux': 0, 'aucune': 0} élimination médiane 12000.0 p (binomial bilatéral) = 0.21

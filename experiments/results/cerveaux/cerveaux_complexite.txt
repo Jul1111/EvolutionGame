@@ -1,0 +1,21 @@
+== cerveau_6
+    tick  graines  entrées (± graines)  non-linéarité (±)  population  vitesse  générations
+ 1000000        8   6.12 ± 0.61        0.256 ± 0.091         213     1.18         99
+
+Par graine (entrées / non-linéarité) :
+  seed_1: 1000k 5.8/0.22
+  seed_2: 1000k 5.0/0.43
+== cerveau_12
+    tick  graines  entrées (± graines)  non-linéarité (±)  population  vitesse  générations
+ 1000000        8   6.51 ± 0.34        0.234 ± 0.030         219     0.87         97
+
+Par graine (entrées / non-linéarité) :
+  seed_1: 1000k 7.1/0.20
+  seed_2: 1000k 6.1/0.26
+== cerveau_16
+    tick  graines  entrées (± graines)  non-linéarité (±)  population  vitesse  générations
+ 1000000        8   6.78 ± 0.26        0.209 ± 0.028         217     0.90         95
+
+Par graine (entrées / non-linéarité) :
+  seed_1: 1000k 7.0/0.20
+  seed_2: 1000k 6.7/0.22

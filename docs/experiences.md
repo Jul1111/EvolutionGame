@@ -54,6 +54,7 @@ Réglages de `config.py` : `FOOD_COUNT = 60` (nourriture des petites populations
 - Le goulot de départ est passé dans 24 graines sur 24 (8 en 1×1, 16 en 2×2), contre 8 sur 16 avec `FOOD_COUNT = 40`.
 - Le plafond ne bloque plus de naissances ; c'est la nourriture qui règle la population.
 - Duels de populations évoluées (1×1) : une fois les fondateurs choisis, l'issue ne dépend presque pas du hasard du monde (même vainqueur dans 37 rejeux sur 40). En duels croisés (chaque lignée contre 4 adversaires), la qualité de la lignée adverse prédit 81 à 91 % des issues. Faim et bruit : aucun effet d'espèce. Mémoire : vrai handicap (13 lignées mémoire sur 16 perdent en majorité contre des `complet` variés, p = 0,02), bien que les réseaux s'en servent (la couper coûte 3 % de population et fait perdre les duels plus vite). Ce qui gagne : la population qu'une lignée tient seule (79 % des duels) ; les lignées rapides perdent presque tout. **Confirmé en 2×2 à 60°** : `complet` gagne 44 duels tranchés sur 45 contre la mémoire, les 16 lignées mémoire perdent en majorité.
+- **Cerveaux plus gros** (12 ou 16 neurones cachés au lieu de 6) : pas plus non linéaires, même population, pas d'avantage en duel (9 et 11 victoires sur 16). La taille du réseau ne bride pas la complexité.
 - **Coexistence par niches** : avec deux sortes de nourriture et un gène de régime où les spécialistes sont avantagés, deux espèces coexistent de façon stable dans 3 graines sur 13 (0 sur 16 avec une seule nourriture), chaque fois sur des nourritures différentes. Sans avantage aux spécialistes, aucune niche ne se forme.
 - **Un million de ticks** : la non-linéarité des réseaux continue de monter (0,13 à 50 000 ticks → 0,36, plateau vers 700 000), pas le nombre d'entrées utilisées (~6 sur 9) ; la vitesse baisse encore (1,44 → 0,56). Les runs de 120 000 ticks voient des populations encore en train de changer.
 - **Carte des réglages** (section « Carte des réglages et préréglages ») : la nourriture décide de la survie, la vision et la mutation de la complexité des réseaux ; aucun réglage ne fait coexister deux espèces durablement, l'abondance retarde seulement l'élimination. Combinés, les réglages durs s'additionnent jusqu'à l'extinction : quatre préréglages validés (Facile, Équitable, Dur, Compliqué) sont dans `presets/`.
@@ -421,6 +422,21 @@ Résultats : `experiments/results/20261123_1*_carte_*`, tables dans `experiments
 | Compliqué | 25 obstacles, mutation 0,3 | 0/8 | ~100 | 7 entrées sur 9, non-linéarité 0,22 (30 000 ticks) |
 
 Ils sont dans `presets/` (versionnés) et apparaissent en tête des préréglages du panneau Paramètres (◀ ▶, puis Appliquer). Ils ne changent ni la taille du monde ni les espèces ; les nombres de nourritures, poisons et obstacles sont par écran, valables en 2×2. Limites : base en 1×1, vision 60° (choix arbitraire) ; Dur et Compliqué validés sur 30 000 ticks seulement.
+
+### Cerveaux plus gros : 6, 12 ou 16 neurones cachés (23/11/2026)
+
+La complexité est-elle bridée par la taille du réseau ? `complet` (6 neurones cachés, 74 poids) contre `complet_12` (146 poids) et `complet_16` (194 poids), mêmes capteurs, défauts de `config.py`. Seules : 8 graines × 200 000 ticks, complexité des populations finales. Duels à fondateurs aléatoires : 16 graines × 120 000 ticks. Lot `experiments/lots/cerveaux.txt` ; résultats `experiments/results/20261123_16*_cerveau_*` et `*_duel_6_*`, tables dans `experiments/results/cerveaux/`. (Les photos intermédiaires demandées n'ont pas été prises : `--photos` se perdait dans les lots, corrigé depuis.)
+
+| Neurones cachés | Population | Vitesse | Entrées utilisées (sur 9) | Non-linéarité | Duel contre 6 neurones |
+|---|---|---|---|---|---|
+| 6 | 213 | 1,18 | 6,1 ± 0,6 | 0,26 ± 0,09 | — |
+| 12 | 219 | 0,87 | 6,5 ± 0,3 | 0,23 ± 0,03 | gagne 9 sur 16 (p = 0,80) |
+| 16 | 217 | 0,90 | 6,8 ± 0,3 | 0,21 ± 0,03 | gagne 11 sur 16 (p = 0,21) |
+
+- **La taille du réseau ne bride pas la complexité** : avec 2 à 3 fois plus de poids, les réseaux ne sont pas plus non linéaires (plutôt un peu moins, écart dans le bruit), et la population tenue est la même. Ils utilisent un peu plus d'entrées (6,8 contre 6,1 sur 9) et varient moins d'une graine à l'autre.
+- **Pas d'avantage en duel** : 9 et 11 victoires sur 16, compatibles avec le hasard. Plus de poids à faire évoluer ne coûte rien non plus (la mutation touche chaque poids : un grand réseau mute plus en tout).
+- Le contrôle : `cerveau_6` reproduit exactement les chiffres du run d'un million de ticks à 200 000 ticks (6,12 entrées, 0,256), mêmes graines, mêmes réglages.
+- Ce qui limite la complexité est donc plutôt le monde (ce qu'il y a à percevoir et à décider) que la capacité du réseau : la non-linéarité monte avec le temps (section suivante), pas avec la taille.
 
 ### Coexistence par niches : deux sortes de nourriture (23/11/2026)
 
