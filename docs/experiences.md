@@ -54,6 +54,7 @@ Réglages de `config.py` : `FOOD_COUNT = 60` (nourriture des petites populations
 - Le goulot de départ est passé dans 24 graines sur 24 (8 en 1×1, 16 en 2×2), contre 8 sur 16 avec `FOOD_COUNT = 40`.
 - Le plafond ne bloque plus de naissances ; c'est la nourriture qui règle la population.
 - Duels de populations évoluées (1×1) : une fois les fondateurs choisis, l'issue ne dépend presque pas du hasard du monde (même vainqueur dans 37 rejeux sur 40). En duels croisés (chaque lignée contre 4 adversaires), la qualité de la lignée adverse prédit 81 à 91 % des issues. Faim et bruit : aucun effet d'espèce. Mémoire : vrai handicap (13 lignées mémoire sur 16 perdent en majorité contre des `complet` variés, p = 0,02), bien que les réseaux s'en servent (la couper coûte 3 % de population et fait perdre les duels plus vite). Ce qui gagne : la population qu'une lignée tient seule (79 % des duels) ; les lignées rapides perdent presque tout. **Confirmé en 2×2 à 60°** : `complet` gagne 44 duels tranchés sur 45 contre la mémoire, les 16 lignées mémoire perdent en majorité.
+- **Coexistence par niches** : avec deux sortes de nourriture et un gène de régime où les spécialistes sont avantagés, deux espèces coexistent de façon stable dans 3 graines sur 13 (0 sur 16 avec une seule nourriture), chaque fois sur des nourritures différentes. Sans avantage aux spécialistes, aucune niche ne se forme.
 - **Un million de ticks** : la non-linéarité des réseaux continue de monter (0,13 à 50 000 ticks → 0,36, plateau vers 700 000), pas le nombre d'entrées utilisées (~6 sur 9) ; la vitesse baisse encore (1,44 → 0,56). Les runs de 120 000 ticks voient des populations encore en train de changer.
 - **Carte des réglages** (section « Carte des réglages et préréglages ») : la nourriture décide de la survie, la vision et la mutation de la complexité des réseaux ; aucun réglage ne fait coexister deux espèces durablement, l'abondance retarde seulement l'élimination. Combinés, les réglages durs s'additionnent jusqu'à l'extinction : quatre préréglages validés (Facile, Équitable, Dur, Compliqué) sont dans `presets/`.
 - Duel en 2×2 (16 graines) : `complet` l'emporte 10 fois, `complet_faim` 6 fois. Écart compatible avec le hasard (p = 0,45) : le capteur de faim ne donne ni avantage ni handicap mesurable. Il n'est pas cassé, mais il vaut presque toujours ~0 : son échelle (600 ticks) est 50 fois plus longue que les moments typiques sans nourriture en vue. Avec une échelle de 60 ticks, l'entrée varie et le réseau s'en sert un peu (couper le capteur coûte ~2,5 % de population), mais le duel reste à 9 contre 6 (et une graine où les deux coexistent) : l'avantage est trop petit face au hasard du départ. Une espèce élimine toujours l'autre, entre 6 000 et 70 000 ticks.
@@ -420,6 +421,23 @@ Résultats : `experiments/results/20261123_1*_carte_*`, tables dans `experiments
 | Compliqué | 25 obstacles, mutation 0,3 | 0/8 | ~100 | 7 entrées sur 9, non-linéarité 0,22 (30 000 ticks) |
 
 Ils sont dans `presets/` (versionnés) et apparaissent en tête des préréglages du panneau Paramètres (◀ ▶, puis Appliquer). Ils ne changent ni la taille du monde ni les espèces ; les nombres de nourritures, poisons et obstacles sont par écran, valables en 2×2. Limites : base en 1×1, vision 60° (choix arbitraire) ; Dur et Compliqué validés sur 30 000 ticks seulement.
+
+### Coexistence par niches : deux sortes de nourriture (23/11/2026)
+
+La carte des réglages n'a trouvé aucun réglage qui fasse coexister deux espèces : une élimine toujours l'autre. Nouveau mécanisme : deux sortes de nourriture et un gène de régime hérité (`FOOD_TYPES = 2`, voir `docs/fonctionnement.md`). Deux espèces presque identiques, `regime` et `regime_faim` (la seconde a en plus le capteur de faim), défauts de `config.py`, 16 graines × 120 000 ticks. Lot `experiments/lots/niches.txt` ; résultats `experiments/results/20261123_15*_niches_*`, table par graine et script dans `experiments/results/niches/`.
+
+| Condition | Extinctions | Coexistence à la fin | Régimes |
+|---|---|---|---|
+| Témoin : une sorte de nourriture (énergie 30) | 0/16 | 0/16 | — |
+| Deux sortes, énergie 60, exposant 2 (spécialistes avantagés) | 3/16 | **3/13** | spécialistes (> 98 % sous 0,25 ou au-dessus de 0,75) |
+| Deux sortes, énergie 60, exposant 1 (pas d'avantage) | 1/16 | 1/15 | généralistes (~0,5) |
+
+- **Avec des niches, des espèces coexistent, et chaque fois sur des nourritures différentes** : dans les 3 graines, une espèce a un régime moyen de 0,95 à 0,97, l'autre de 0,04 à 0,06. Les espèces se sont partagé les deux nourritures.
+- **Cette coexistence est stable**, pas une élimination lente : l'espèce rare remonte (graine 6 : 10 créatures à 15 000 ticks, 122 à la fin ; graines 3 et 12 : de ~50 à plus de 100). Une espèce rare laisse sa nourriture intacte, donc abondante : elle repart. C'est le retour à l'équilibre qui manquait avec une seule nourriture.
+- **Sans avantage aux spécialistes (exposant 1)**, tout le monde reste généraliste (régime ~0,5) et une espèce élimine l'autre comme avec une seule nourriture (1 coexistence sur 15). Ce sont bien les niches qui font coexister, pas le fait d'avoir deux sortes de nourriture.
+- **Le plus souvent, une seule espèce reste et une seule nourriture est mangée** : dans 9 des 10 graines à une espèce, la quasi-totalité de la population est spécialiste de la même nourriture, l'autre est laissée. Passer d'un régime à l'autre oblige à traverser les généralistes, qui ne tirent qu'un quart de chaque nourriture : une vallée que la mutation (0,05 par naissance) ne franchit pas. La coexistence se joue tôt : il faut que les deux spécialisations s'installent avant qu'une espèce élimine l'autre. Une graine (1) garde les deux spécialistes dans une même espèce (53 % / 46 %) : deux lignées dans la même espèce.
+- **Coût** : la nourriture de l'autre sorte ne rapporte rien à un spécialiste, d'où l'énergie doublée (60) ; malgré elle, 3 graines sur 16 s'éteignent au départ (régimes tirés au hasard : en moyenne un tiers de l'énergie).
+- Suites possibles : une mutation de régime plus forte, ou un exposant entre 1 et 2, pour que la vallée se franchisse et que la seconde nourriture soit conquise ; plus de graines pour mesurer la fréquence de la coexistence.
 
 ### Un million de ticks : la complexité continue-t-elle de monter ? (23/11/2026)
 

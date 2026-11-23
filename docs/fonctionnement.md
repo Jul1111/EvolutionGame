@@ -18,6 +18,8 @@
 - `fixe` : tout le monde à 1.
 - Couleur «taille» (touche C) : de petit (rouge) à grand (vert). Les créatures sont dessinées à leur taille.
 
+**Deux sortes de nourriture et le gène de régime** (`FOOD_TYPES = 2`, désactivé par défaut). Une nourriture sur deux est de la sorte 1 (dessinée en jaune). Chaque créature porte un régime entre 0 et 1 : une nourriture de sorte k lui donne `FOOD_ENERGY × (1 − |régime − k|)^DIET_EXPONENT`. Avec l'exposant 2 (défaut), un spécialiste (0 ou 1) tire tout de sa nourriture et rien de l'autre, un généraliste (0,5) un quart des deux : les spécialistes sont avantagés. Les fondateurs tirent leur régime au hasard, un petit reçoit celui de son parent + N(0 ; 0,05). Le capteur «valeur nourriture» (espèces `regime`, `regime_faim`) donne ce que rapporterait la nourriture la plus proche en vue : la créature ne connaît pas son propre régime, c'est ainsi qu'elle distingue sa nourriture. Colonnes `diet_mean`, `diet_low` (part sous 0,25), `diet_high` (au-dessus de 0,75), `diet__<espèce>`.
+
 **Le réseau** (espèce `complet`). 9 entrées → 6 neurones cachés → 2 sorties (virage, vitesse demandée), 74 poids. Entrées : distance et angle de la nourriture visible la plus proche, énergie, vitesse, «peut manger», distance et angle du poison, distance au bord et angle de l'obstacle. La vision est un cône de 120° et de portée 200. Pas de mémoire.
 
 **La vie et la mort** (`evolution/continuous.py`).
@@ -37,6 +39,9 @@ Un profil dit quels capteurs alimentent le réseau, la taille de la couche cach�
 | `complet_faim` | `complet` + faim (temps depuis la dernière nourriture vue, 0 → 1 en 1 s) | virage, vitesse | 80 |
 | `complet_bruit` | `complet` + bruit (valeur au hasard à chaque tick, entre -1 et 1) | virage, vitesse | 80 |
 | `complet_memoire` | `complet` + 2 cellules de mémoire (sorties renvoyées en entrée au tick suivant) | virage, vitesse, 2 mémoires | 100 |
+| `complet_12`, `complet_16` | `complet` avec 12 ou 16 neurones cachés | virage, vitesse | 146, 194 |
+| `regime` | `complet` + valeur de la nourriture la plus proche pour son régime (`FOOD_TYPES = 2`) | virage, vitesse | 80 |
+| `regime_faim` | `regime` + faim | virage, vitesse | 86 |
 | `chasseur` | nourriture | virage, vitesse | 6 |
 | `chasseur_rassasie` | nourriture + peut manger | virage, vitesse | 8 |
 | `prudent` | nourriture + poison, 3 cachés | virage, vitesse | 23 |

@@ -1,0 +1,54 @@
+20261123_153059_niches_temoin : 0 éteintes, coexistence 0/16 (dont espèces sur des nourritures différentes : 0), victoires regime 11 / regime_faim 5, élimination médiane 11400
+  seed_1   pop regime    0  regime_faim  215
+  seed_2   pop regime  217  regime_faim    0
+  seed_3   pop regime    0  regime_faim  141
+  seed_4   pop regime  210  regime_faim    0
+  seed_5   pop regime    0  regime_faim  221
+  seed_6   pop regime  218  regime_faim    0
+  seed_7   pop regime  215  regime_faim    0
+  seed_8   pop regime  221  regime_faim    0
+  seed_9   pop regime  203  regime_faim    0
+  seed_10  pop regime    0  regime_faim  218
+  seed_11  pop regime  212  regime_faim    0
+  seed_12  pop regime  224  regime_faim    0
+  seed_13  pop regime  183  regime_faim    0
+  seed_14  pop regime  199  regime_faim    0
+  seed_15  pop regime  186  regime_faim    0
+  seed_16  pop regime    0  regime_faim  196
+
+20261123_154042_niches_exp2 : 3 éteintes, coexistence 3/13 (dont espèces sur des nourritures différentes : 3), victoires regime 6 / regime_faim 4, élimination médiane 11400
+  seed_1   pop regime    0  regime_faim  241  régime moyen regime   -   regime_faim 0.46  spécialistes 0/1 : 0.53 / 0.46
+  seed_2   pop regime    0  regime_faim    0
+  seed_3   pop regime  125  regime_faim  116  régime moyen regime 0.95  regime_faim 0.04  spécialistes 0/1 : 0.48 / 0.52
+  seed_4   pop regime  176  regime_faim    0  régime moyen regime 0.95  regime_faim   -   spécialistes 0/1 : 0.00 / 0.98
+  seed_5   pop regime  175  regime_faim    0  régime moyen regime 0.04  regime_faim   -   spécialistes 0/1 : 1.00 / 0.00
+  seed_6   pop regime  113  regime_faim  122  régime moyen regime 0.97  regime_faim 0.06  spécialistes 0/1 : 0.52 / 0.48
+  seed_7   pop regime  156  regime_faim    0  régime moyen regime 0.96  regime_faim   -   spécialistes 0/1 : 0.00 / 0.99
+  seed_8   pop regime  201  regime_faim    0  régime moyen regime 0.03  regime_faim   -   spécialistes 0/1 : 1.00 / 0.00
+  seed_9   pop regime    0  regime_faim  183  régime moyen regime   -   regime_faim 0.07  spécialistes 0/1 : 0.98 / 0.00
+  seed_10  pop regime  189  regime_faim    0  régime moyen regime 0.10  regime_faim   -   spécialistes 0/1 : 0.94 / 0.00
+  seed_11  pop regime  198  regime_faim    0  régime moyen regime 0.03  regime_faim   -   spécialistes 0/1 : 1.00 / 0.00
+  seed_12  pop regime  150  regime_faim  105  régime moyen regime 0.04  regime_faim 0.95  spécialistes 0/1 : 0.59 / 0.41
+  seed_13  pop regime    0  regime_faim  164  régime moyen regime   -   regime_faim 0.95  spécialistes 0/1 : 0.00 / 1.00
+  seed_14  pop regime    0  regime_faim    0
+  seed_15  pop regime    0  regime_faim    0
+  seed_16  pop regime    0  regime_faim  145  régime moyen regime   -   regime_faim 0.93  spécialistes 0/1 : 0.00 / 0.98
+
+20261123_154911_niches_exp1 : 1 éteintes, coexistence 1/15 (dont espèces sur des nourritures différentes : 1), victoires regime 7 / regime_faim 7, élimination médiane 17100
+  seed_1   pop regime  199  regime_faim    0  régime moyen regime 0.52  regime_faim   -   spécialistes 0/1 : 0.04 / 0.09
+  seed_2   pop regime  202  regime_faim    0  régime moyen regime 0.47  regime_faim   -   spécialistes 0/1 : 0.06 / 0.00
+  seed_3   pop regime  193  regime_faim    0  régime moyen regime 0.63  regime_faim   -   spécialistes 0/1 : 0.05 / 0.31
+  seed_4   pop regime    0  regime_faim  209  régime moyen regime   -   regime_faim 0.52  spécialistes 0/1 : 0.00 / 0.03
+  seed_5   pop regime    0  regime_faim  197  régime moyen regime   -   regime_faim 0.50  spécialistes 0/1 : 0.04 / 0.07
+  seed_6   pop regime    0  regime_faim  149  régime moyen regime   -   regime_faim 0.52  spécialistes 0/1 : 0.00 / 0.03
+  seed_7   pop regime  198  regime_faim    0  régime moyen regime 0.50  regime_faim   -   spécialistes 0/1 : 0.01 / 0.03
+  seed_8   pop regime  209  regime_faim    0  régime moyen regime 0.48  regime_faim   -   spécialistes 0/1 : 0.14 / 0.03
+  seed_9   pop regime  117  regime_faim  101  régime moyen regime 0.84  regime_faim 0.12  spécialistes 0/1 : 0.36 / 0.39
+  seed_10  pop regime    0  regime_faim  198  régime moyen regime   -   regime_faim 0.39  spécialistes 0/1 : 0.32 / 0.08
+  seed_11  pop regime  178  regime_faim    0  régime moyen regime 0.42  regime_faim   -   spécialistes 0/1 : 0.17 / 0.02
+  seed_12  pop regime    0  regime_faim  212  régime moyen regime   -   regime_faim 0.50  spécialistes 0/1 : 0.12 / 0.09
+  seed_13  pop regime  180  regime_faim    0  régime moyen regime 0.57  regime_faim   -   spécialistes 0/1 : 0.00 / 0.15
+  seed_14  pop regime    0  regime_faim    0
+  seed_15  pop regime    0  regime_faim  162  régime moyen regime   -   regime_faim 0.36  spécialistes 0/1 : 0.40 / 0.15
+  seed_16  pop regime    0  regime_faim  149  régime moyen regime   -   regime_faim 0.49  spécialistes 0/1 : 0.07 / 0.00
+
