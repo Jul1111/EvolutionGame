@@ -1,0 +1,22 @@
+run                      complet/faim gagne   élimination médiane (ticks)
+carte_base               5/3 (deux 0, aucun 0)      14400
+carte_vision_120         3/5 (deux 0, aucun 0)       9000
+carte_vision_360         2/4 (deux 0, aucun 2)       8700
+carte_nourriture_30      3/4 (deux 0, aucun 1)      10800
+carte_nourriture_40      2/6 (deux 0, aucun 0)      12000
+carte_energie_nourr_15   0/3 (deux 0, aucun 5)       9600
+carte_energie_nourr_60   4/4 (deux 0, aucun 0)      18000
+carte_repousse_0         5/3 (deux 0, aucun 0)      30000
+carte_repousse_300       2/6 (deux 0, aucun 0)      15300
+carte_mutation_0.05      3/5 (deux 0, aucun 0)      13800
+carte_mutation_0.3       5/3 (deux 0, aucun 0)      24600
+carte_repro_80           3/5 (deux 0, aucun 0)       9300
+carte_repro_180          4/4 (deux 0, aucun 0)      13800
+carte_age_3000           4/4 (deux 0, aucun 0)      11100
+carte_age_0              4/4 (deux 0, aucun 0)      15600
+carte_poison_0           5/3 (deux 0, aucun 0)      14700
+carte_poison_20          4/4 (deux 0, aucun 0)       9300
+carte_obstacles_0        1/6 (deux 1, aucun 0)      12000
+carte_obstacles_25       4/3 (deux 0, aucun 1)      13200
+carte_taille_fixe        5/3 (deux 0, aucun 0)      12900
+carte_taille_neutre      3/5 (deux 0, aucun 0)      15600
