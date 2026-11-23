@@ -16,7 +16,7 @@ addopts = "-q -p no:cacheprovider"
 
 [tool.ruff]
 line-length = 120
-extend-exclude = ["graphify-out"]
+extend-exclude = ["graphify-out", "experiments/results"]   # Archived analysis scripts, kept as they ran
 
 [tool.ruff.lint]
 select = ["E", "F", "W"]
