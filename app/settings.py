@@ -22,6 +22,7 @@ PARAMS = {
     "founders": ("INITIAL_POPULATION", [50, 100, 200, 300, 400], str),
     "size_mode": ("SIZE_MODE", ["fixe", "neutre", "actif"], str),
     "food_types": ("FOOD_TYPES", [1, 2], lambda v: "une" if v == 1 else "deux (régimes)"),
+    "diet_mutation": ("DIET_MUTATION_STD", [0.02, 0.05, 0.1, 0.15, 0.3], lambda v: f"{v:g}"),
     "world_scale": ("WORLD_SCALE", [1, 2, 3], lambda v: f"{v}×{v} écrans"),
 }
 # Settings that only take effect on a new world (obstacles are drawn when the world is created).

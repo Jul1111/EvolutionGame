@@ -110,7 +110,7 @@ SIZE_BASE_EXPONENT = 0.75
 # [0, 1]. FOOD_TYPES = 1: one kind, diets play no part (the runs before 23/11)
 FOOD_TYPES = 1
 DIET_EXPONENT = 2.0
-DIET_MUTATION_STD = 0.05
+DIET_MUTATION_STD = 0.05   # 0.15: one species keeps two specialist groups (12/12 seeds, docs/experiences.md)
 
 # Configuration for mutation
 MUTATION_STD = 0.1          # Std of the gaussian noise added to each weight of a child (0.2 was chosen on one seed

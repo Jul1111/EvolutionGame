@@ -31,6 +31,7 @@ PARAM_INFO = {
     "food_pressure": ("Population de rareté", "Créatures nées dans ce monde (pas les fondateurs) à partir desquelles la nourriture est au minimum. Entre 0 et ce nombre : baisse en ligne droite."),
     "food_adapt": ("Réaction en", "Temps simulé pour que la nourriture suive un changement de population : progressif, pour éviter le yo-yo. «aussitôt» = immédiat."),
     "food_energy": ("Énergie d'une nourriture", "Énergie gagnée à chaque repas."),
+    "diet_mutation": ("Mutation du régime", "Avec deux sortes de nourriture : de combien le régime d'un petit s'écarte de celui de son parent. À 0,05 une seule nourriture finit mangée ; à 0,15 l'espèce garde presque toujours deux groupes de spécialistes, et en refait un quand il disparaît."),
     "food_types": ("Sortes de nourriture", "Deux : une nourriture sur deux est jaune, et chaque créature hérite d'un régime (0 = mange le vert, 1 = le jaune). Un spécialiste tire tout de sa nourriture et rien de l'autre : deux espèces peuvent se partager le monde. Doubler l'énergie d'une nourriture (60). Couleur «régime» : touche C. Au prochain départ de zéro."),
     "respawn": ("Délai de réapparition", "Temps avant qu'une nourriture mangée soit de nouveau disponible."),
     "poison_count": ("Nombre de poisons", "Sources de poison dans le monde. 0 = aucun."),
@@ -85,7 +86,8 @@ HELP_KEYS = [
 # Columns and sections of the settings panel (keys = main.PARAMS). Unknown keys go to «Autres».
 PARAM_COLUMNS = (
     (("Évolution", ("mutation", "repro", "age_max", "size_mode")), ("Perception", ("fov",)),
-     ("Nourriture", ("food", "food_min", "food_pressure", "food_adapt", "food_energy", "respawn", "food_types"))),
+     ("Nourriture", ("food", "food_min", "food_pressure", "food_adapt", "food_energy", "respawn", "food_types",
+                     "diet_mutation"))),
     (("Dangers", ("poison_count", "poison_energy", "obstacle_count")), ("Monde", ("founders", "world_scale"))),
 )
 

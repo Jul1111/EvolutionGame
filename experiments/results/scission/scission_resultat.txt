@@ -1,0 +1,57 @@
+20261123_170005_scission_m005 : 4 éteintes, scindées à la fin 2/12, fin de la scission (médiane, les autres) 5400 ticks
+  seed_1   éteinte
+  seed_2   pop  180  spécialistes vert 1.00  jaune 0.00  généralistes 0.00  un seul groupe depuis ~2400 ticks
+  seed_3   pop  207  spécialistes vert 0.00  jaune 1.00  généralistes 0.00  un seul groupe depuis ~5400 ticks
+  seed_4   pop  186  spécialistes vert 0.00  jaune 0.98  généralistes 0.02  un seul groupe depuis ~4800 ticks
+  seed_5   pop  234  spécialistes vert 0.53  jaune 0.47  généralistes 0.00  SCINDÉE (100% du temps sur la 2e moitié)
+  seed_6   éteinte
+  seed_7   pop  178  spécialistes vert 0.00  jaune 0.99  généralistes 0.01  un seul groupe depuis ~4800 ticks
+  seed_8   pop  167  spécialistes vert 0.00  jaune 0.99  généralistes 0.01  un seul groupe depuis ~7800 ticks
+  seed_9   éteinte
+  seed_10  pop  236  spécialistes vert 0.64  jaune 0.36  généralistes 0.00  SCINDÉE (100% du temps sur la 2e moitié)
+  seed_11  pop  169  spécialistes vert 1.00  jaune 0.00  généralistes 0.00  un seul groupe depuis ~5400 ticks
+  seed_12  pop   91  spécialistes vert 0.00  jaune 0.99  généralistes 0.01  un seul groupe depuis ~7200 ticks
+  seed_13  pop  170  spécialistes vert 1.00  jaune 0.00  généralistes 0.00  un seul groupe depuis ~4200 ticks
+  seed_14  pop  191  spécialistes vert 0.99  jaune 0.00  généralistes 0.01  un seul groupe depuis ~5400 ticks
+  seed_15  éteinte
+  seed_16  pop  178  spécialistes vert 0.00  jaune 1.00  généralistes 0.00  un seul groupe depuis ~9000 ticks
+
+20261123_170747_scission_m015 : 4 éteintes, scindées à la fin 12/12, fin de la scission (médiane, les autres) nan ticks
+  seed_1   pop  241  spécialistes vert 0.38  jaune 0.51  généralistes 0.11  SCINDÉE (100% du temps sur la 2e moitié)
+  seed_2   pop  205  spécialistes vert 0.38  jaune 0.50  généralistes 0.12  SCINDÉE (100% du temps sur la 2e moitié)
+  seed_3   éteinte
+  seed_4   éteinte
+  seed_5   pop  224  spécialistes vert 0.40  jaune 0.53  généralistes 0.07  SCINDÉE (100% du temps sur la 2e moitié)
+  seed_6   pop  226  spécialistes vert 0.39  jaune 0.48  généralistes 0.12  SCINDÉE (100% du temps sur la 2e moitié)
+  seed_7   pop  197  spécialistes vert 0.21  jaune 0.67  généralistes 0.12  SCINDÉE (100% du temps sur la 2e moitié)
+  seed_8   éteinte
+  seed_9   éteinte
+  seed_10  pop  202  spécialistes vert 0.57  jaune 0.34  généralistes 0.09  SCINDÉE (100% du temps sur la 2e moitié)
+  seed_11  pop  212  spécialistes vert 0.58  jaune 0.37  généralistes 0.05  SCINDÉE (50% du temps sur la 2e moitié)
+  seed_12  pop  170  spécialistes vert 0.34  jaune 0.61  généralistes 0.05  SCINDÉE (80% du temps sur la 2e moitié)
+  seed_13  pop  232  spécialistes vert 0.56  jaune 0.37  généralistes 0.08  SCINDÉE (100% du temps sur la 2e moitié)
+  seed_14  pop  205  spécialistes vert 0.33  jaune 0.60  généralistes 0.07  SCINDÉE (100% du temps sur la 2e moitié)
+  seed_15  pop  211  spécialistes vert 0.34  jaune 0.56  généralistes 0.10  SCINDÉE (100% du temps sur la 2e moitié)
+  seed_16  pop  213  spécialistes vert 0.40  jaune 0.52  généralistes 0.08  SCINDÉE (100% du temps sur la 2e moitié)
+
+20261123_171533_scission_exp15 : 1 éteintes, scindées à la fin 9/15, fin de la scission (médiane, les autres) 3300 ticks
+  seed_1   pop  194  spécialistes vert 0.99  jaune 0.00  généralistes 0.01  un seul groupe depuis ~2400 ticks
+  seed_2   pop  125  spécialistes vert 0.14  jaune 0.45  généralistes 0.42  SCINDÉE (63% du temps sur la 2e moitié)
+  seed_3   pop  228  spécialistes vert 0.49  jaune 0.49  généralistes 0.03  SCINDÉE (88% du temps sur la 2e moitié)
+  seed_4   pop  210  spécialistes vert 0.47  jaune 0.50  généralistes 0.03  SCINDÉE (69% du temps sur la 2e moitié)
+  seed_5   pop  197  spécialistes vert 0.98  jaune 0.00  généralistes 0.02  un seul groupe depuis ~1800 ticks
+  seed_6   pop  218  spécialistes vert 0.61  jaune 0.39  généralistes 0.00  SCINDÉE (100% du temps sur la 2e moitié)
+  seed_7   pop  218  spécialistes vert 0.78  jaune 0.12  généralistes 0.10  SCINDÉE (99% du temps sur la 2e moitié)
+  seed_8   pop  168  spécialistes vert 0.10  jaune 0.26  généralistes 0.65  un seul groupe depuis ~3000 ticks
+  seed_9   pop  208  spécialistes vert 0.24  jaune 0.71  généralistes 0.06  SCINDÉE (100% du temps sur la 2e moitié)
+  seed_10  éteinte
+  seed_11  pop  179  spécialistes vert 1.00  jaune 0.00  généralistes 0.00  un seul groupe depuis ~6000 ticks
+  seed_12  pop  185  spécialistes vert 0.31  jaune 0.60  généralistes 0.08  SCINDÉE (54% du temps sur la 2e moitié)
+  seed_13  pop  155  spécialistes vert 0.50  jaune 0.22  généralistes 0.28  SCINDÉE (30% du temps sur la 2e moitié)
+  seed_14  pop  226  spécialistes vert 0.40  jaune 0.56  généralistes 0.04  SCINDÉE (53% du temps sur la 2e moitié)
+  seed_15  pop  197  spécialistes vert 0.01  jaune 0.59  généralistes 0.39  un seul groupe depuis ~3600 ticks
+  seed_16  pop  178  spécialistes vert 0.01  jaune 0.56  généralistes 0.43  un seul groupe depuis ~6000 ticks
+
+m005 : groupes perdus (< 2 %) puis refaits (>= 10 %) : 1 [('12', 'diet_high', 16800.0, 32400.0)]
+m015 : groupes perdus (< 2 %) puis refaits (>= 10 %) : 12 [('1', 'diet_high', 6600.0, 39600.0), ('10', 'diet_high', 11400.0, 22200.0), ('11', 'diet_high', 6600.0, 90000.0), ('12', 'diet_low', 12600.0, 15000.0), ('12', 'diet_high', 30000.0, 72000.0), ('13', 'diet_high', 6600.0, 48000.0)]
+exp15 : groupes perdus (< 2 %) puis refaits (>= 10 %) : 9 [('10', 'diet_low', 6600.0, 7800.0), ('12', 'diet_low', 9000.0, 74400.0), ('13', 'diet_high', 7200.0, 102600.0), ('14', 'diet_high', 6600.0, 88200.0), ('2', 'diet_low', 55200.0, 70800.0), ('2', 'diet_high', 6600.0, 51600.0)]
