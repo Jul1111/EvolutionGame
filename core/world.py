@@ -326,24 +326,27 @@ class World:
         return self._best_per_creature(len(cx), pi[keep], pj[keep], d2[keep], dx[keep], dy[keep])
 
     def _nearest_shapes(self, items, cx, cy, ix, iy, cool, heading):
-        """Nearest available obstacle in view of each creature (distance to its real outline). Few obstacles: the
-        full creatures × obstacles matrix."""
-        n, m = len(cx), len(items)
-        dx = (ix[None, :] - cx[:, None]) % self.width
+        """Nearest available obstacle in view of each creature: distance to its real outline, for the pairs of
+        neighbouring grid cells (cells as wide as the range plus the biggest obstacle radius)."""
+        range_ = self.cfg.VISION_RANGE
+        orad = np.fromiter((o.radius for o in items), float, len(items))
+        pi, pj = near_pairs(cx, cy, ix, iy, range_ + float(orad.max()), self.width, self.height)
+        dx = (ix[pj] - cx[pi]) % self.width
         dx = np.where(dx > self.width / 2, dx - self.width, dx)
-        dy = (iy[None, :] - cy[:, None]) % self.height
+        dy = (iy[pj] - cy[pi]) % self.height
         dy = np.where(dy > self.height / 2, dy - self.height, dy)
         d2 = dx * dx + dy * dy
-        range_ = self.cfg.VISION_RANGE
-        for j, o in enumerate(items):   # Distance to the outline, only for the creatures in reach
-            idx = np.nonzero(d2[:, j] <= (range_ + o.radius) ** 2)[0]
+        # Distance to the outline, only for the creatures in reach of the obstacle's bounding circle
+        reach = np.nonzero(d2 <= (range_ + orad[pj]) ** 2)[0]
+        reach = reach[np.argsort(pj[reach], kind="stable")]
+        bounds = np.searchsorted(pj[reach], np.arange(len(items) + 1)).tolist()
+        for j, o in enumerate(items):
+            idx = reach[bounds[j]:bounds[j + 1]]
             if idx.size:
-                edge = o.edge_distance_np(-dx[idx, j], -dy[idx, j])
-                d2[idx, j] = edge * edge
-        pi, pj = np.repeat(np.arange(n), m), np.tile(np.arange(m), n)
-        dx, dy, d2 = dx.ravel(), dy.ravel(), d2.ravel()
+                edge = o.edge_distance_np(-dx[idx], -dy[idx])
+                d2[idx] = edge * edge
         keep = self._vision_filter(dx, dy, d2, heading[pi]) & (cool[pj] <= 0)
-        return self._best_per_creature(n, pi[keep], pj[keep], d2[keep], dx[keep], dy[keep])
+        return self._best_per_creature(len(cx), pi[keep], pj[keep], d2[keep], dx[keep], dy[keep])
 
     def _update_reference(self):
         """Plain loop version of update(), one creature at a time. Slow: kept as the reference the tests compare to."""

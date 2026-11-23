@@ -23,6 +23,8 @@ def near_pairs(ax, ay, bx, by, reach, width, height):
     pair closer than `reach` is in it, each pair once; their order is unspecified. Coordinates in [0, width) and
     [0, height)."""
     nx, ny = cell_counts(width, height, reach)
+    if nx <= 3 and ny <= 3:   # The neighbourhood is the whole world: every pair, without the grid's work
+        return np.repeat(np.arange(len(ax)), len(bx)), np.tile(np.arange(len(bx)), len(ax))
     cw, ch = width / nx, height / ny
     acx = np.floor_divide(ax, cw).astype(np.int64) % nx
     acy = np.floor_divide(ay, ch).astype(np.int64) % ny
