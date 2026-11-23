@@ -151,7 +151,7 @@ def test_progress_reads_what_the_seeds_wrote(tmp_path):
     (tmp_path / "seed_3" / "population_finale.npz").touch()                    # Finished; seed 4 not started
     fraction, done, total, _ = run_progress(str(tmp_path))
     assert (fraction, done, total) == (0.625, 2, 4)
-    assert "62 %" in bar(fraction, done, total, 60) and "restantes" in bar(fraction, done, total, 60)
+    assert "62 %" in bar(fraction, done, total, 60) and "reste" in bar(fraction, done, total, 60)
     (tmp_path / "summary.csv").touch()
     assert run_progress(str(tmp_path))[0] == 1.0
 
@@ -173,7 +173,7 @@ def test_a_lot_is_planned_before_it_runs(tmp_path):
     with pytest.raises(SystemExit):
         lot.plan(lot.read_lot(str(path)))                 # Two runs with the same name
     text, fraction = render({"label": "lot", "started": 0, "finished": None, "runs": runs})
-    assert fraction == 0 and text.splitlines()[1].startswith("    a ") and "en attente" in text
+    assert fraction == 0 and text.splitlines()[1].startswith("  a ") and "en attente" in text
 
 
 def test_one_command_with_several_values_gives_several_runs():

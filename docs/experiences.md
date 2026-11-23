@@ -21,15 +21,15 @@ python -m experiments.lot "--name a ..." "--name b ... {run:a}/seed_{seed}/popul
 **Lots** : des runs entre guillemets, ou un fichier texte d'une ligne par run (les arguments de `experiments.run`, `#` pour un commentaire, `\` en fin de ligne pour continuer). `{run:NOM}` est remplacé par le dossier de résultats du run `NOM` du même lot, pour partir des populations d'un run précédent. Tout le lot est vérifié avant le premier run (une faute de frappe ne tombe pas après des heures). Le plan va dans `experiments/results/lots/<date>_<fichier>.json`, la sortie des runs dans le `.log` à côté. Un run en échec arrête le lot. Affichage :
 
 ```
-Lot exemple.txt  [###########-------------------]  38 %  1/3 runs  9 min 12 écoulées, ~15 min 01 restantes
-    seul_complet       [##############################] 100 %  4/4 graines  6 min 40 écoulées
-    seul_complet_faim  [##########--------------------]  33 %  0/4 graines  2 min 32 écoulées, ~5 min 04 restantes
-    duel_evolues       [------------------------------]   0 %  en attente
+Lot exemple  [########------------]  38 %   1/3 runs  9 min 12, reste ~15 min 01
+  seul_complet       [####################] 100 %   4/4 graines  6 min 40
+  seul_complet_faim  [#######-------------]  33 %   0/4 graines  2 min 32, reste ~5 min 04
+  duel_evolues       [--------------------]   0 %  en attente
 ```
 
 La barre globale pèse chaque run par son coût estimé (graines × ticks × surface du monde) : un run en 2×2 compte 4 fois un run en 1×1.
 
-**Avancement** : `experiments.run` affiche une barre pendant qu'il tourne (`[#########---] 75 %  12/16 graines  6 min 10 écoulées, ~2 min 03 restantes`), redessinée sur place dans un terminal, une ligne tous les 10 % dans un fichier de log. Pour un run lancé ailleurs (en fond, autre terminal) : `python -m experiments.progress` montre les lots en cours (barre globale, puis une barre par run) et les runs lancés seuls, `--suivre` la rafraîchit toutes les 5 s. Elle est lue sur le disque (dernière ligne de `timeline.csv` de chaque graine) : précise à `SAMPLE_TICKS` près, et le temps restant compte aussi les pauses.
+**Avancement** : `experiments.run` affiche une barre pendant qu'il tourne (`[###############-----]  75 %  12/16 graines  6 min 10, reste ~2 min 03`), redessinée sur place dans un terminal, une ligne tous les 10 % dans un fichier de log. Pour un run lancé ailleurs (en fond, autre terminal) : `python -m experiments.progress` montre les lots en cours (barre globale, puis une barre par run) et les runs lancés seuls, `--suivre` la redessine toutes les 5 s en haut de l'écran (lignes coupées à la largeur du terminal). Elle est lue sur le disque (dernière ligne de `timeline.csv` de chaque graine) : précise à `SAMPLE_TICKS` près, et le temps restant compte aussi les pauses.
 
 **Pause** : `python -m experiments.pause` arrête net toutes les expériences en cours et leurs processus de graines (plus aucun calcul), `python -m experiments.pause reprise` les relance exactement où elles étaient (mêmes résultats que sans pause), `etat` les liste. Une pause ne survit pas à l'extinction ou au redémarrage de l'ordinateur : le run en cours est alors perdu (les graines déjà finies restent sur le disque).
 

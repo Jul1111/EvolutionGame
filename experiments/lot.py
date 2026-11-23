@@ -88,7 +88,7 @@ def save(state, path):
 
 def run_lot(runs, label):
     """Run a planned lot (see plan) one run after the other, showing its progress. Returns 0, or 1 on a failure."""
-    from experiments.progress import render
+    from experiments.progress import fit, render
     os.makedirs(LOTS, exist_ok=True)
     base = os.path.join(LOTS, f"{time.strftime('%Y%m%d_%H%M%S')}_{label}")
     state = {"label": label, "started": time.time(), "finished": None, "runs": runs}
@@ -111,7 +111,7 @@ def run_lot(runs, label):
                 time.sleep(2)
                 text, fraction = render(state)
                 if tty:
-                    sys.stdout.write("\033[H\033[J" + text + "\n")
+                    sys.stdout.write("\033[H\033[J" + fit(text) + "\n")
                     sys.stdout.flush()
                 elif int(fraction * 20) > last_step:   # A log: every 5 %
                     last_step = int(fraction * 20)

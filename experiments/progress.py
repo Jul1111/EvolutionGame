@@ -58,14 +58,21 @@ def duration(seconds):
     return f"{seconds // 60} min {seconds % 60:02d}"
 
 
-def bar(fraction, done, total, elapsed, width=30):
-    """[##########--------------------]  33 %  5/16 graines  12 min 04 écoulées, ~24 min 10 restantes"""
+def bar(fraction, done, total, elapsed, width=20):
+    """[#######-------------]  33 %   5/16 graines  12 min 04, reste ~24 min 10"""
     filled = int(round(width * fraction))
-    text = f"[{'#' * filled}{'-' * (width - filled)}] {100 * fraction:3.0f} %  {done}/{total} graines  " \
-           f"{duration(elapsed)} écoulées"
+    text = f"[{'#' * filled}{'-' * (width - filled)}] {100 * fraction:3.0f} %  {done:2d}/{total} graines  " \
+           f"{duration(elapsed)}"
     if 0.01 <= fraction < 1:
-        text += f", ~{duration(elapsed * (1 - fraction) / fraction)} restantes"
+        text += f", reste ~{duration(elapsed * (1 - fraction) / fraction)}"
     return text
+
+
+def fit(text):
+    """Lines cut to the width of the terminal: a line that wraps would break a redraw."""
+    import shutil
+    width = shutil.get_terminal_size().columns - 1
+    return "\n".join(line if len(line) <= width else line[:width - 1] + "…" for line in text.splitlines())
 
 
 def render(lot):
@@ -76,14 +83,14 @@ def render(lot):
     lines, done_w = [], 0.0
     for r in lot["runs"]:
         if r["status"] == "en attente" or not r["dir"] or not os.path.exists(os.path.join(r["dir"], "run.json")):
-            fraction, line = 0.0, f"[{'-' * 30}]   0 %  {r['status']}"
+            fraction, line = 0.0, f"[{'-' * 20}]   0 %  {r['status']}"
         else:
             fraction, finished, total, elapsed = run_progress(r["dir"])
             line = bar(fraction, finished, total, elapsed)
             if r["status"].startswith("échec"):
                 line += f"  {r['status']}"
         done_w += r["weight"] * fraction
-        lines.append(f"    {r['name']:<{width}}  {line}")
+        lines.append(f"  {r['name']:<{width}}  {line}")
     fraction = 1.0 if lot.get("finished") else done_w / total_w
     elapsed = (lot.get("finished") or time.time()) - lot["started"]
     runs_done = sum(r["status"] == "fini" for r in lot["runs"])
@@ -126,7 +133,10 @@ def main(argv=None):
             fraction, done, total, elapsed = run_progress(d)
             blocks.append(f"{os.path.basename(d)}\n    {bar(fraction, done, total, elapsed)}")
         text = "\n".join(blocks)
-        print(text)
+        if args.suivre and sys.stdout.isatty():
+            sys.stdout.write("\033[H\033[J")   # Redraw from the top of the screen, like watch
+            text = fit(text)
+        print(text, flush=True)
         if not args.suivre or (all(run_progress(d)[0] >= 1 for d in runs) and all(render(lot)[1] >= 1 for lot in lots)):
             return
         try:
@@ -134,8 +144,6 @@ def main(argv=None):
         except KeyboardInterrupt:
             print()   # End the line of ^C
             return
-        if sys.stdout.isatty():
-            sys.stdout.write(f"\033[{text.count(chr(10)) + 1}F\033[J")   # Redraw in place
 
 
 if __name__ == "__main__":
