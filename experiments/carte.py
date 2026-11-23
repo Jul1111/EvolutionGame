@@ -120,10 +120,12 @@ def _complexity_job(path):
 
 def run_complexity(run, jobs=None):
     from concurrent.futures import ProcessPoolExecutor
+
+    from core.kernels import worker_init
     paths = sorted(glob.glob(os.path.join(run, "seed_*", "population_finale.npz")))
     if not paths:
         return float("nan"), float("nan")
-    with ProcessPoolExecutor(jobs or os.cpu_count()) as pool:
+    with ProcessPoolExecutor(jobs or os.cpu_count(), initializer=worker_init, initargs=(jobs,)) as pool:
         res = [r for r in pool.map(_complexity_job, paths) if r]
     return float(np.mean([r[0] for r in res])), float(np.mean([r[1] for r in res]))
 

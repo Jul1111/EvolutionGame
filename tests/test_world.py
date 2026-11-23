@@ -124,3 +124,26 @@ def test_derived_config_follows_its_sources():
     config.ENERGY_MAX = 123.0
     assert config.ENERGY_INPUT_MAX == 123.0
     assert "WORLD_WIDTH" not in dir(config)   # Not a module attribute: it cannot be set by mistake or saved
+
+
+def test_compiled_kernels_match_numpy(monkeypatch):
+    """core/kernels.py (numba) and the numpy code of World give exactly the same run: vision of food, poison and
+    every obstacle shape, field of view or all around, contacts."""
+    import pytest
+
+    from core import kernels
+    from evolution.continuous import ContinuousSimulation
+    if not kernels.ENABLED:
+        pytest.skip("numba absent")
+    for fov in (60, 360):
+        cfg = config.Settings(VISION_FOV_DEGREES=fov, OBSTACLE_COUNT=15, POISON_COUNT=12, WORLD_SCALE=2,
+                              ACTIVE_PROFILES=["complet", "scripte"])
+        runs = []
+        for enabled in (True, False):
+            monkeypatch.setattr(kernels, "ENABLED", enabled)
+            sim = ContinuousSimulation(random.Random(5), cfg=cfg)
+            sim.run(400)
+            runs.append([(c.uid, c.x, c.y, c.energy, c.food_eaten, c.poison_hits, c.unseen_ticks)
+                         for c in sim.world.creatures] + [(f.x, f.y, f.cooldown) for f in sim.world.foods])
+        assert runs[0] == runs[1]
+        assert sum(r[4] for r in runs[0] if len(r) == 7) > 0   # Meals happened

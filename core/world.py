@@ -10,6 +10,7 @@ from core.creature import Creature, CreatureStore
 from brain.profiles import PROFILES, PROFILE_NAMES, needed_items, new_brain
 from core.sensors import SENSORS
 from core.batch import decide_and_move
+from core import kernels
 from core.grid import near_pairs
 
 class World:
@@ -192,6 +193,17 @@ class World:
         reach2 = (radius + self.cfg.FOOD_RADIUS) ** 2   # One value per creature
         ix = np.fromiter((i.x for i in items), float, m)
         iy = np.fromiter((i.y for i in items), float, m)
+        if kernels.ENABLED:   # Compiled (core/kernels.py): the winner of each item, then the effects in list order
+            energy = np.fromiter((i.energy for i in items), float, m)
+            available = np.fromiter((i.cooldown <= 0 for i in items), bool, m)
+            win = kernels.contact_winners(ix, iy, energy, available, X, Y, E, radius, emax, self.cfg.FOOD_RADIUS,
+                                          fits, self.width, self.height).tolist()
+            for j, item in enumerate(items):
+                if item.cooldown > 0:
+                    self._item_returns(item)
+                elif win[j] >= 0:
+                    effect(item, alive[win[j]])
+            return
         # Only the pairs of neighbouring grid cells (core/grid.py), with the same distance formula as a full matrix
         pj, pi = near_pairs(ix, iy, X, Y, float(np.sqrt(reach2.max())), self.width, self.height)
         dx = (ix[pj] - X[pi] + self.width / 2) % self.width - self.width / 2
@@ -279,7 +291,10 @@ class World:
             ix = np.fromiter((i.x for i in items), float, m)
             iy = np.fromiter((i.y for i in items), float, m)
             cool = np.fromiter((i.cooldown for i in items), float, m)
-            if getattr(items[0], "radius", 0):
+            if kernels.ENABLED:   # Compiled, on every core (core/kernels.py)
+                best, bdx, bdy = kernels.nearest_points(items, cx, cy, heading, ix, iy, cool, self.cfg, self.width,
+                                                        self.height)
+            elif getattr(items[0], "radius", 0):
                 best, bdx, bdy = self._nearest_shapes(items, cx, cy, ix, iy, cool, heading)
             else:
                 best, bdx, bdy = self._nearest_points(cx, cy, ix, iy, cool, heading)

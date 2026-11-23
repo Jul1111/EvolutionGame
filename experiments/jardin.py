@@ -80,7 +80,8 @@ def main(argv=None):
         if src != "aleatoire":
             print(f"{os.path.relpath(src, ROOT)} : réglages de {population_settings(src)[1]}")
     jobs = [(src, d, s) for src in args.sources for d in args.densities for s in args.seeds]
-    with ProcessPoolExecutor(max_workers=args.jobs) as pool:
+    from core.kernels import worker_init   # One numba thread per worker when they fill the cores
+    with ProcessPoolExecutor(max_workers=args.jobs, initializer=worker_init, initargs=(args.jobs,)) as pool:
         shared = [[v] * len(jobs) for v in (args.ticks, args.warmup, args.profile, overrides)]
         results = list(pool.map(garden, *zip(*jobs), *shared))
     table = {}

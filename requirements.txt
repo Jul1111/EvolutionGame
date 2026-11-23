@@ -1,2 +1,3 @@
 numpy>=2.2
 pygame-ce>=2.5.8
+numba>=0.60          # Optional: compiles the heaviest steps of a tick (core/kernels.py), ~2x faster

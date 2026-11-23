@@ -66,7 +66,8 @@ def main(argv=None):
     from experiments.run import population_settings
     for src in args.sources:
         print(f"{os.path.relpath(src, ROOT)} : réglages de {population_settings(src)[1]}")
-    with ProcessPoolExecutor(max_workers=args.jobs) as pool:
+    from core.kernels import worker_init   # One numba thread per worker when they fill the cores
+    with ProcessPoolExecutor(max_workers=args.jobs, initializer=worker_init, initargs=(args.jobs,)) as pool:
         results = list(pool.map(follow, args.sources, [args.seed] * len(args.sources),
                                 [args.ticks] * len(args.sources), [args.skip] * len(args.sources)))
     print(f"\n{'population':<55} {'morts':>6} {'rho':>7}   petits par quart de vitesse (lent → rapide)")

@@ -268,7 +268,9 @@ def main(argv=None):
           f"→ {os.path.relpath(out_dir, ROOT)}")
 
     pairs = paired_seeds(args.seeds, args.shift)
-    with ProcessPoolExecutor(max_workers=max(1, args.jobs)) as pool:
+    from core.kernels import worker_init   # One numba thread per worker when they fill the cores
+    with ProcessPoolExecutor(max_workers=max(1, args.jobs), initializer=worker_init,
+                             initargs=(args.jobs,)) as pool:
         futures = [pool.submit(run_seed, s, out_dir, overrides, args.ticks, profiles, args.from_population,
                                args.replica, pairs[s]) for s in args.seeds]
         show_progress(out_dir, futures)
