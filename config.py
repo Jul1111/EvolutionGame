@@ -110,6 +110,8 @@ SIZE_BASE_EXPONENT = 0.75
 # [0, 1]. FOOD_TYPES = 1: one kind, diets play no part (the runs before 23/11)
 FOOD_TYPES = 1
 DIET_EXPONENT = 2.0
+DIET_FOUNDERS = "specialistes"   # Random founders: "specialistes" = every other one eats only green (0) or only
+                                 # yellow (1); "hasard" = a diet drawn at random (the runs before 23/11 evening)
 DIET_MUTATION_STD = 0.05   # 0.15: one species keeps two specialist groups (12/12 seeds, docs/experiences.md)
 
 # Configuration for mutation

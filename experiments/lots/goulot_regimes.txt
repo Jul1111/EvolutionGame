@@ -1,0 +1,5 @@
+# Goulot de départ avec deux nourritures (23/11) : régimes des fondateurs tirés au hasard ou spécialistes.
+--name goulot_regime --profiles regime --seeds 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 --ticks 30000 --jobs 8 \
+    --set FOOD_TYPES=2 FOOD_ENERGY=60.0 DIET_MUTATION_STD=0.15 --varie DIET_FOUNDERS=hasard,specialistes
+--name goulot_duel --profiles regime regime_faim --seeds 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 --ticks 30000 \
+    --jobs 8 --set FOOD_TYPES=2 FOOD_ENERGY=60.0 DIET_MUTATION_STD=0.15 --varie DIET_FOUNDERS=hasard,specialistes

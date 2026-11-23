@@ -64,13 +64,13 @@ class ContinuousSimulation:
                 for genome, size, *diet in founders[name]:
                     brain = new_brain(name)
                     brain.set_genome(genome)
-                    extra = {"diet": diet[0] if diet else rng.random()} if self.diets else {}
+                    extra = {"diet": diet[0] if diet else self._founder_diet()} if self.diets else {}
                     self._add(brain, name, size=size if self.cfg.SIZE_MODE != "fixe" else 1.0, **extra)
             else:
                 for _ in range(_share(self.cfg.INITIAL_POPULATION, index, len(profiles))):
                     brain = new_brain(name)
                     brain.randomize(rng, self.cfg.NN_INIT_STD)
-                    self._add(brain, name, **({"diet": rng.random()} if self.diets else {}))
+                    self._add(brain, name, **({"diet": self._founder_diet()} if self.diets else {}))
         if timeline_path and append and os.path.exists(timeline_path):
             self.header = _upgrade_header(timeline_path, self.header)
         elif timeline_path:
@@ -205,6 +205,13 @@ class ContinuousSimulation:
             return 1.0
         size *= math.exp(self.rng.gauss(0.0, self.cfg.SIZE_MUTATION_STD))
         return min(self.cfg.SIZE_MAX, max(self.cfg.SIZE_MIN, size))
+
+    def _founder_diet(self):
+        """Diet of a founder without one (DIET_FOUNDERS): specialists of each food in turn, or drawn at random."""
+        if self.cfg.DIET_FOUNDERS == "hasard":
+            return self.rng.random()
+        self._founders_made = getattr(self, "_founders_made", 0) + 1
+        return float(self._founders_made % 2)
 
     def _child_diet(self, diet):
         """Diet gene of a newborn (two kinds of food): the parent's + N(0, DIET_MUTATION_STD), kept in [0, 1]."""
