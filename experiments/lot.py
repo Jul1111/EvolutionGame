@@ -1,8 +1,12 @@
 """A batch (lot) of experiment runs, one after the other, with an overall progress bar and one bar per run.
 
+    python -m experiments.lot "--name a --seeds 1 2 3 4" "--name b --seeds 1 2 3 4 --set FOOD_COUNT=30"
     python -m experiments.lot experiments/lots/<fichier>.txt
 
-The file: one run per line, the arguments of experiments.run (# starts a comment, a line ending with \\ goes on).
+Each quoted argument is one run (the arguments of experiments.run); or a file with one run per line.
+Runs of one setup with several values need no lot: experiments.run --varie / --replica / --shift does it.
+
+The file: one run per line (# starts a comment, a line ending with \\ goes on).
 {run:NAME} is replaced by the results folder of the run of this lot named NAME (a later run can start from the
 populations of an earlier one):
 
@@ -43,17 +47,20 @@ def plan(runs):
     """What the lot will do, before any run: name, seeds, ticks and weight (cost estimate: seed-ticks times the
     world surface) of each run. Typos in the arguments stop here, not after hours."""
     import config
-    from experiments.run import build_parser, parse_overrides
+    from experiments.run import build_parser, expand, parse_overrides
     parser = build_parser()
     out = []
-    for args in runs:
+    for line in runs:
         try:
-            parsed = parser.parse_args(args)
+            expanded = expand(parser.parse_args(line))   # A line with --varie, --replica 1 2... gives several runs
         except SystemExit:
-            raise SystemExit(f"Ligne invalide dans le lot : {' '.join(args)}")
-        scale = parse_overrides(parsed.set).get("WORLD_SCALE", config.WORLD_SCALE)
-        out.append({"name": parsed.name, "args": args, "seeds": parsed.seeds, "ticks": parsed.ticks,
-                    "weight": len(parsed.seeds) * parsed.ticks * scale ** 2, "dir": None, "status": "en attente"})
+            raise SystemExit(f"Ligne invalide dans le lot : {' '.join(line)}")
+        for _, args in expanded:
+            parsed = parser.parse_args(args)
+            scale = parse_overrides(parsed.set).get("WORLD_SCALE", config.WORLD_SCALE)
+            out.append({"name": parsed.name, "args": args, "seeds": parsed.seeds, "ticks": parsed.ticks,
+                        "weight": len(parsed.seeds) * parsed.ticks * scale ** 2, "dir": None,
+                        "status": "en attente"})
     names = [r["name"] for r in out]
     if len(set(names)) != len(names):
         raise SystemExit("Deux runs du lot ont le même --name")
@@ -79,17 +86,12 @@ def save(state, path):
     os.replace(tmp, path)
 
 
-def main(argv=None):
-    argv = sys.argv[1:] if argv is None else argv
-    if len(argv) != 1:
-        raise SystemExit(__doc__)
+def run_lot(runs, label):
+    """Run a planned lot (see plan) one run after the other, showing its progress. Returns 0, or 1 on a failure."""
     from experiments.progress import render
-    runs = plan(read_lot(argv[0]))
     os.makedirs(LOTS, exist_ok=True)
-    stamp = time.strftime("%Y%m%d_%H%M%S")
-    base = os.path.join(LOTS, f"{stamp}_{os.path.splitext(os.path.basename(argv[0]))[0]}")
-    state = {"file": os.path.relpath(os.path.abspath(argv[0]), ROOT), "started": time.time(), "finished": None,
-             "runs": runs}
+    base = os.path.join(LOTS, f"{time.strftime('%Y%m%d_%H%M%S')}_{label}")
+    state = {"label": label, "started": time.time(), "finished": None, "runs": runs}
     save(state, base + ".json")
     tty = sys.stdout.isatty()
     print(f"Lot de {len(runs)} runs → {os.path.relpath(base, ROOT)}.json (sortie des runs : .log)")
@@ -124,6 +126,15 @@ def main(argv=None):
     save(state, base + ".json")
     print(render(state)[0])
     return 0
+
+
+def main(argv=None):
+    argv = sys.argv[1:] if argv is None else argv
+    if not argv:
+        raise SystemExit(__doc__)
+    if len(argv) == 1 and os.path.isfile(argv[0]):
+        return run_lot(plan(read_lot(argv[0])), os.path.splitext(os.path.basename(argv[0]))[0])
+    return run_lot(plan([shlex.split(a) for a in argv]), "lot")
 
 
 if __name__ == "__main__":

@@ -172,5 +172,19 @@ def test_a_lot_is_planned_before_it_runs(tmp_path):
     path.write_text("--name a\n--name a\n", encoding="utf-8")
     with pytest.raises(SystemExit):
         lot.plan(lot.read_lot(str(path)))                 # Two runs with the same name
-    text, fraction = render({"file": "lot.txt", "started": 0, "finished": None, "runs": runs})
+    text, fraction = render({"label": "lot", "started": 0, "finished": None, "runs": runs})
     assert fraction == 0 and text.splitlines()[1].startswith("    a ") and "en attente" in text
+
+
+def test_one_command_with_several_values_gives_several_runs():
+    from experiments.lot import plan
+    parser = run_module.build_parser()
+    runs = run_module.expand(parser.parse_args(
+        ["--name", "c", "--seeds", "1", "--varie", "FOOD_COUNT=30,60", "--replica", "1", "2", "--set", "AGE_MAX=9"]))
+    assert [n for n, _ in runs] == ["c_30_r1", "c_30_r2", "c_60_r1", "c_60_r2"]
+    last = parser.parse_args(runs[-1][1])
+    assert last.set == ["AGE_MAX=9", "FOOD_COUNT=60"] and last.replica == [2] and last.shift == [0]
+    assert [n for n, _ in run_module.expand(parser.parse_args(["--name", "c"]))] == ["c"]   # One run: same name
+    with pytest.raises(SystemExit):
+        run_module.expand(parser.parse_args(["--name", "c", "--varie", "NOT_A_SETTING=1,2"]))
+    assert len(plan([["--name", "l", "--shift", "0", "1", "2"]])) == 3   # A lot line expands the same way

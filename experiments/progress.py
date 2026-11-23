@@ -88,7 +88,7 @@ def render(lot):
     elapsed = (lot.get("finished") or time.time()) - lot["started"]
     runs_done = sum(r["status"] == "fini" for r in lot["runs"])
     head = bar(fraction, runs_done, len(lot["runs"]), elapsed).replace("graines", "runs")
-    return f"Lot {os.path.basename(lot['file'])}  {head}\n" + "\n".join(lines), fraction
+    return f"Lot {lot.get('label') or os.path.basename(lot['file'])}  {head}\n" + "\n".join(lines), fraction
 
 
 def running_lots():

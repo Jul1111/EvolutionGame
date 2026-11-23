@@ -12,10 +12,13 @@ python -m experiments.run ... --replica 1         # mêmes fondateurs, autre has
 python -m experiments.run ... --shift 1 --from-population <A>/seed_{seed}/... <B>/seed_{pair}/...   # duels croisés
 python -m experiments.pause [reprise|etat]        # mettre en pause / reprendre les expériences en cours
 python -m experiments.progress [--suivre]         # barre d'avancement des lots et runs en cours
-python -m experiments.lot experiments/lots/<fichier>.txt   # plusieurs runs à la suite (exemple : exemple.txt)
+python -m experiments.run --name cout --varie ENERGY_MOVE_COST=0.015,0.03,0.06   # 3 runs à la suite
+python -m experiments.lot "--name a ..." "--name b ... {run:a}/seed_{seed}/population_finale.npz"   # runs différents
 ```
 
-**Lots** : un fichier texte, une ligne par run (les arguments de `experiments.run`, `#` pour un commentaire, `\` en fin de ligne pour continuer). `{run:NOM}` est remplacé par le dossier de résultats du run `NOM` du même lot, pour partir des populations d'un run précédent. Tout le lot est vérifié avant le premier run (une faute de frappe ne tombe pas après des heures). Le plan va dans `experiments/results/lots/<date>_<fichier>.json`, la sortie des runs dans le `.log` à côté. Un run en échec arrête le lot. Affichage :
+**Plusieurs runs d'une seule commande**, sans fichier : `--varie NOM=V1,V2,...` fait un run par valeur (`cout_0.015`, `cout_0.03`...), `--replica 1 2` et `--shift 0 1 2` un run par valeur (`_r1`, `_s0`...) ; plusieurs à la fois : toutes les combinaisons. Pour des runs qui diffèrent autrement (autres espèces, un run qui part des populations d'un autre) : `experiments.lot` avec un run entre guillemets par argument, ou un fichier texte d'une ligne par run (`experiments/lots/exemple.txt`). Dans les deux cas : barre globale puis une barre par run.
+
+**Lots** : des runs entre guillemets, ou un fichier texte d'une ligne par run (les arguments de `experiments.run`, `#` pour un commentaire, `\` en fin de ligne pour continuer). `{run:NOM}` est remplacé par le dossier de résultats du run `NOM` du même lot, pour partir des populations d'un run précédent. Tout le lot est vérifié avant le premier run (une faute de frappe ne tombe pas après des heures). Le plan va dans `experiments/results/lots/<date>_<fichier>.json`, la sortie des runs dans le `.log` à côté. Un run en échec arrête le lot. Affichage :
 
 ```
 Lot exemple.txt  [###########-------------------]  38 %  1/3 runs  9 min 12 écoulées, ~15 min 01 restantes

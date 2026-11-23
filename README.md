@@ -40,7 +40,8 @@ Lancer une expérience sans affichage :
 ```bash
 python -m experiments.run --name essai --seeds 1 2 3 4 --ticks 120000
 python -m experiments.summary experiments/results/<run>
-python -m experiments.lot experiments/lots/exemple.txt   # plusieurs runs à la suite, barre globale
+python -m experiments.run --name cout --varie ENERGY_MOVE_COST=0.015,0.06   # un run par valeur, barre globale
+python -m experiments.lot "--name a ..." "--name b ..."   # runs différents à la suite, barre globale
 python -m experiments.progress --suivre   # barre d'avancement des lots et runs en cours
 python -m experiments.pause            # pause des expériences en cours (reprise : python -m experiments.pause reprise)
 ```

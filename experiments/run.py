@@ -13,6 +13,12 @@
     ... --shift 1 --from-population <run A>/seed_{seed}/... <run B>/seed_{pair}/...
         ({pair}: the seed `shift` places further in --seeds, cyclically: each population meets other opponents)
 
+Several runs in one command (one after the other, an overall progress bar and one bar per run):
+    python -m experiments.run --name cout --varie ENERGY_MOVE_COST=0.015,0.03,0.06     (3 runs: cout_0.015, ...)
+    python -m experiments.run --name rejeu ... --replica 1 2                           (rejeu_r1, rejeu_r2)
+    python -m experiments.run --name croise ... --shift 0 1 2                          (croise_s0, croise_s1, ...)
+Several --varie, --replica and --shift values: every combination.
+
 Each run writes experiments/results/<date>_<name>/:
     run.json                    command, git commit, every constant of config.py (after --set)
     seed_<n>/timeline.csv       one line every SAMPLE_TICKS ticks
@@ -177,12 +183,16 @@ def build_parser():
                         help="Population sauvegardée de départ (.npz). {seed} est remplacé par le numéro de graine. "
                              "Plusieurs fichiers : INITIAL_POPULATION fondateurs, à parts égales de chacun (duel "
                              "de populations évoluées)")
-    parser.add_argument("--replica", type=int, default=0,
-                        help="Autre hasard du monde, mêmes fondateurs (0 : la graine telle quelle)")
-    parser.add_argument("--shift", type=int, default=0,
-                        help="{pair} dans --from-population : la graine placée SHIFT rangs plus loin dans --seeds")
+    parser.add_argument("--replica", type=int, nargs="+", default=[0],
+                        help="Autre hasard du monde, mêmes fondateurs (0 : la graine telle quelle). Plusieurs "
+                             "valeurs : un run par valeur")
+    parser.add_argument("--shift", type=int, nargs="+", default=[0],
+                        help="{pair} dans --from-population : la graine placée SHIFT rangs plus loin dans --seeds. "
+                             "Plusieurs valeurs : un run par valeur")
     parser.add_argument("--set", nargs="*", default=[], metavar="NOM=VALEUR",
                         help="Remplace une constante de config.py")
+    parser.add_argument("--varie", nargs="*", default=[], metavar="NOM=V1,V2,...",
+                        help="Un run par valeur de la constante (plusieurs --varie : toutes les combinaisons)")
     parser.add_argument("--jobs", type=int, default=os.cpu_count(), help="Graines lancées en parallèle")
     parser.add_argument("--out-dir", default=None, help=argparse.SUPPRESS)   # Chosen by experiments.lot
     return parser
@@ -197,8 +207,44 @@ def parse_overrides(items):
     return overrides
 
 
+def expand(args):
+    """The runs of one command: [(name, argv)], one per combination of the --varie, --replica and --shift values.
+    A single run keeps its name; otherwise each name gets the values that change (cout_0.015, rejeu_r1, croise_s2)."""
+    import itertools
+    dims = []   # One list per varied option: [(what goes in argv, label in the name)]
+    for item in args.varie:
+        name, _, values = item.partition("=")
+        dims.append([(("--set", f"{name.strip().upper()}={v.strip()}"), v.strip()) for v in values.split(",")
+                     if v.strip()])
+    dims.append([(("--replica", str(r)), f"r{r}") for r in args.replica])
+    dims.append([(("--shift", str(k)), f"s{k}") for k in args.shift])
+    out = []
+    for combo in itertools.product(*dims):
+        name = "_".join([args.name, *(label for dim, (_, label) in zip(dims, combo) if len(dim) > 1)])
+        chosen = [pair for pair, _ in combo]
+        sets = [*args.set, *(value for option, value in chosen if option == "--set")]
+        argv = ["--name", name, "--seeds", *map(str, args.seeds), "--ticks", str(args.ticks), "--jobs", str(args.jobs)]
+        for option, value in chosen:
+            if option != "--set":
+                argv += [option, value]
+        if args.profiles:
+            argv += ["--profiles", *args.profiles]
+        if args.from_population:
+            argv += ["--from-population", *args.from_population]
+        if sets:
+            argv += ["--set", *sets]
+        build_settings(parse_overrides(sets))   # Typos stop here, before the first run
+        out.append((name, argv))
+    return out
+
+
 def main(argv=None):
     args = build_parser().parse_args(argv)
+    runs = expand(args)
+    if len(runs) > 1:
+        from experiments.lot import plan, run_lot
+        return run_lot(plan([a for _, a in runs]), args.name)
+    args.replica, args.shift = args.replica[0], args.shift[0]
 
     import config
     overrides = parse_overrides(args.set)
@@ -234,4 +280,4 @@ def main(argv=None):
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
