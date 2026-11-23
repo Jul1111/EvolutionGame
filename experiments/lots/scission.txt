@@ -1,0 +1,7 @@
+# Une espèce se scinde-t-elle en deux spécialistes ? (23/11) Une seule espèce (regime), deux sortes de nourriture.
+--name scission_m005 --profiles regime --seeds 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 --ticks 120000 --jobs 8 \
+    --set FOOD_TYPES=2 FOOD_ENERGY=60.0
+--name scission_m015 --profiles regime --seeds 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 --ticks 120000 --jobs 8 \
+    --set FOOD_TYPES=2 FOOD_ENERGY=60.0 DIET_MUTATION_STD=0.15
+--name scission_exp15 --profiles regime --seeds 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 --ticks 120000 --jobs 8 \
+    --set FOOD_TYPES=2 FOOD_ENERGY=60.0 DIET_EXPONENT=1.5
