@@ -4,6 +4,7 @@ are not recorded in the run.json of an experiment."""
 # World
 DEAD_COLOR = (90, 90, 90)
 FOOD_COLOR = (90, 200, 110)
+FOOD_B_COLOR = (240, 210, 80)     # Second kind of food (FOOD_TYPES = 2): yellow, far from the green
 POISON_COLOR = (176, 96, 214)
 OBSTACLE_COLOR = (92, 102, 112)
 

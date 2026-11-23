@@ -27,8 +27,8 @@ class World:
         self.obstacles = self._make_obstacles()
         # Far enough from an obstacle for a creature to touch it
         reach = self.cfg.CREATURE_RADIUS + self.cfg.FOOD_RADIUS
-        self.foods = [Food(*self._free_position(reach), self.cfg.FOOD_ENERGY)
-                      for _ in range(self._count(self.cfg.FOOD_COUNT))]
+        self.foods = [Food(*self._free_position(reach), self.cfg.FOOD_ENERGY, k % self.cfg.FOOD_TYPES)
+                      for k in range(self._count(self.cfg.FOOD_COUNT))]
         # Poison: same kind of object as food, but its `energy` is the damage. Seen through its own two inputs
         self.poisons = [Food(*self._free_position(reach), self.cfg.POISON_ENERGY)
                         for _ in range(self._count(self.cfg.POISON_COUNT))]
@@ -170,8 +170,10 @@ class World:
             E = s.col("energy")[rows].copy()
             body = (s.col("radius")[rows].copy(),        # Contact radius (body size)
                     s.col("energy_max")[rows].copy())    # Energy reserve (body size)
-            # Phase 2: food goes to the closest creature in contact that still has room for the whole meal
-            self._contacts(self.foods, alive, X, Y, E, body, self._eat, fits=True)
+            # Phase 2: food goes to the closest creature in contact that still has room for the whole meal (its share
+            # of it, with two kinds of food)
+            gains = self.gains(s.col("diet")[rows])
+            self._contacts(self.foods, alive, X, Y, E, body, self._eat, fits=True, gains=gains)
             # Phase 3: poison hurts the closest creature in contact, then moves to a new random place
             self._contacts(self.poisons, alive, X, Y, E, body, self._poisoned, fits=False)
         else:
@@ -180,10 +182,11 @@ class World:
                     self._item_returns(item)
         self.tick += 1
 
-    def _contacts(self, items, alive, X, Y, E, body, effect, fits):
+    def _contacts(self, items, alive, X, Y, E, body, effect, fits, gains=None):
         """For each available item, in list order: the closest living creature in contact gets `effect`.
         body = (contact radius, energy reserve) of each creature.
         fits=True: only creatures for which the item energy fits under their reserve are eligible.
+        gains: (creatures, 2) share of the energy of an item of each kind (World.gains), None = the whole of it.
         A cheap numpy pass finds the items that touch someone; only those are resolved one by one (an item
         changes E, which matters for the next one)."""
         m = len(items)
@@ -196,13 +199,15 @@ class World:
         if kernels.ENABLED:   # Compiled (core/kernels.py): the winner of each item, then the effects in list order
             energy = np.fromiter((i.energy for i in items), float, m)
             available = np.fromiter((i.cooldown <= 0 for i in items), bool, m)
+            kinds = np.fromiter((i.kind for i in items), np.int64, m) if gains is not None else np.zeros(m, np.int64)
             win = kernels.contact_winners(ix, iy, energy, available, X, Y, E, radius, emax, self.cfg.FOOD_RADIUS,
-                                          fits, self.width, self.height).tolist()
+                                          fits, self.width, self.height, gains, kinds).tolist()
             for j, item in enumerate(items):
                 if item.cooldown > 0:
                     self._item_returns(item)
                 elif win[j] >= 0:
-                    effect(item, alive[win[j]])
+                    i = win[j]
+                    effect(item, alive[i], item.energy if gains is None else item.energy * gains[i, item.kind])
             return
         # Only the pairs of neighbouring grid cells (core/grid.py), with the same distance formula as a full matrix
         pj, pi = near_pairs(ix, iy, X, Y, float(np.sqrt(reach2.max())), self.width, self.height)
@@ -224,20 +229,34 @@ class World:
             # Closest creature in contact; the distance is measured to its edge, as the bodies differ in size
             who = pi[lo:hi]
             gap = np.sqrt(d2[lo:hi]) - radius[who]
+            amount = item.energy if gains is None else item.energy * gains[who, item.kind]
             if fits:
-                gap = np.where(E[who] + item.energy <= emax[who], gap, np.inf)
+                gap = np.where(E[who] + amount <= emax[who], gap, np.inf)
             k = int(np.argmin(gap))
             if gap[k] < np.inf:
                 i = int(who[k])
-                effect(item, alive[i])
+                effect(item, alive[i], amount if gains is None else float(amount[k]))
                 E[i] = alive[i].energy
 
-    def _eat(self, food, creature):
-        creature.eat_food(food.energy)
+    def gains(self, diets):
+        """Share of a food's energy that each creature gets, by kind of food: array (creatures, 2) for an array of
+        diets; None when there is one kind of food (FOOD_TYPES = 1: the whole energy, the runs before 23/11)."""
+        if self.cfg.FOOD_TYPES < 2:
+            return None
+        return np.stack([(1.0 - np.abs(diets - k)) ** self.cfg.DIET_EXPONENT for k in (0, 1)], axis=1)
+
+    def gain(self, creature, food):
+        """Share of `food`'s energy that `creature` gets (1 with one kind of food)."""
+        if self.cfg.FOOD_TYPES < 2:
+            return 1.0
+        return float(self.gains(np.array([creature.diet]))[0, food.kind])
+
+    def _eat(self, food, creature, amount):
+        creature.eat_food(amount)
         self.eaten += 1
         food.cooldown = max(1, self.cfg.FOOD_RESPAWN_DELAY)   # Placed elsewhere when it comes back (_item_returns)
 
-    def _poisoned(self, poison, creature):
+    def _poisoned(self, poison, creature, amount):
         creature.hit_by_poison(poison.energy)
         self.poisoned += 1
         poison.cooldown = max(1, self.cfg.FOOD_RESPAWN_DELAY)   # Placed elsewhere when it comes back (_item_returns)
@@ -287,18 +306,22 @@ class World:
             m = len(items)
             if m == 0:
                 self._near[key] = (np.full(n, np.inf), np.zeros(n), np.zeros(n))
+                if key == "food":
+                    self._food_value = np.zeros(n)
                 continue
             ix = np.fromiter((i.x for i in items), float, m)
             iy = np.fromiter((i.y for i in items), float, m)
             cool = np.fromiter((i.cooldown for i in items), float, m)
             if kernels.ENABLED:   # Compiled, on every core (core/kernels.py)
-                best, bdx, bdy = kernels.nearest_points(items, cx, cy, heading, ix, iy, cool, self.cfg, self.width,
+                best, bdx, bdy, bj = kernels.nearest_points(items, cx, cy, heading, ix, iy, cool, self.cfg, self.width,
                                                         self.height)
             elif getattr(items[0], "radius", 0):
-                best, bdx, bdy = self._nearest_shapes(items, cx, cy, ix, iy, cool, heading)
+                best, bdx, bdy, bj = self._nearest_shapes(items, cx, cy, ix, iy, cool, heading)
             else:
-                best, bdx, bdy = self._nearest_points(cx, cy, ix, iy, cool, heading)
+                best, bdx, bdy, bj = self._nearest_points(cx, cy, ix, iy, cool, heading)
             self._near[key] = (best, bdx, bdy)
+            if key == "food":
+                self._food_value = self._value_of(s.col("diet")[alive_rows], bj)
             in_view = np.isfinite(best)   # An available item in view
             if key == "food":
                 food_seen = in_view
@@ -306,6 +329,19 @@ class World:
         s.col("near_i")[alive_rows] = rows
         s.col("near_tick")[alive_rows] = self.tick
         return alive
+
+    def _value_of(self, diets, food_index):
+        """Sensor «valeur» (core/sensors.py): share of the energy of the nearest food in view that each creature
+        would get (0 when it sees none, 1 with one kind of food)."""
+        seen = food_index >= 0
+        gains = self.gains(diets)
+        if gains is None:
+            return seen.astype(float)
+        kinds = np.fromiter((f.kind for f in self.foods), np.int64, len(self.foods))
+        rows = np.nonzero(seen)[0]
+        value = np.zeros(len(food_index))
+        value[rows] = gains[rows, kinds[food_index[rows]]]
+        return value
 
     def _vision_filter(self, dx, dy, d2, heading):
         """In view: within range, and inside the field of view (the angle, arctan2 the costly part, only for the
@@ -319,14 +355,14 @@ class World:
 
     def _best_per_creature(self, n, pi, pj, d2, dx, dy):
         """Per creature, the pair of smallest distance² (an exact tie goes to the last item, like nearest()):
-        (distance², dx, dy) arrays, distance² = inf when it has no pair."""
-        best, bdx, bdy = np.full(n, np.inf), np.zeros(n), np.zeros(n)
+        (distance², dx, dy, item index) arrays, distance² = inf and index -1 when it has no pair."""
+        best, bdx, bdy, bj = np.full(n, np.inf), np.zeros(n), np.zeros(n), np.full(n, -1, np.int64)
         if len(pi):
             order = np.lexsort((-pj, d2, pi))
             first = order[np.r_[True, pi[order][1:] != pi[order][:-1]]]
             rows = pi[first]
-            best[rows], bdx[rows], bdy[rows] = d2[first], dx[first], dy[first]
-        return best, bdx, bdy
+            best[rows], bdx[rows], bdy[rows], bj[rows] = d2[first], dx[first], dy[first], pj[first]
+        return best, bdx, bdy, bj
 
     def _nearest_points(self, cx, cy, ix, iy, cool, heading):
         """Nearest available point item (food, poison) in view of each creature, from the pairs of neighbouring grid
@@ -384,7 +420,8 @@ class World:
             best_gap = math.inf
 
             for creature in self.creatures:
-                if not creature.alive or creature.energy + food.energy > creature.energy_max:
+                if not creature.alive or creature.energy + food.energy * self.gain(creature, food) > \
+                        creature.energy_max:
                     continue  # Dead, or the meal would not fit: leaves the food to the others
                 dx = torus_delta(creature.x, food.x, self.width)
                 dy = torus_delta(creature.y, food.y, self.height)
@@ -394,7 +431,7 @@ class World:
                     best = creature
 
             if best is not None:
-                best.eat_food(food.energy)
+                best.eat_food(food.energy * self.gain(best, food))
                 # The food comes back after a delay, at a new random place away from the creatures
                 food.cooldown = max(1, self.cfg.FOOD_RESPAWN_DELAY)
 
@@ -431,7 +468,8 @@ class World:
             target = self._count(count)
             del items[target:]
             while len(items) < target:
-                item = Food(*self._free_position(reach), energy)
+                item = Food(*self._free_position(reach), energy, len(items) % self.cfg.FOOD_TYPES if items is self.foods
+                            else 0)
                 if not self._place_item(item):
                     item.cooldown = 1   # No room away from the creatures now: it will try again next tick
                 items.append(item)
@@ -468,11 +506,12 @@ class World:
             brain.randomize(self.rng, self.cfg.NN_INIT_STD)
             self.add_creature(brain, profile)
 
-    def nearest(self, creature, items):
+    def nearest(self, creature, items, with_item=False):
         """Nearest available item in the creature's field of view: ((distance², dx, dy) or None, in_view).
         In view = within the vision range AND within VISION_FOV_DEGREES centred on the heading.
-        in_view says whether an available item is in view. Also used by the debug overlay."""
-        best = None
+        in_view says whether an available item is in view. Also used by the debug overlay.
+        with_item=True: (found, in_view, the item or None)."""
+        best = best_item = None
         range2 = self.cfg.VISION_RANGE ** 2
         best_distance2 = range2
         in_view = False
@@ -498,8 +537,8 @@ class World:
             in_view = True
             if distance2 <= best_distance2:
                 best_distance2 = distance2
-                best = (distance2, dx, dy)
-        return best, in_view
+                best, best_item = (distance2, dx, dy), item
+        return (best, in_view, best_item) if with_item else (best, in_view)
 
     def direction(self, creature, found):
         """Network inputs for one kind of target: [distance, relative angle]. Nothing in view: maximum distance,
@@ -521,6 +560,7 @@ class World:
             i = int(creature._s.near_i[creature._i])
             ctx = {k: (float(d2[i]), float(dx[i]), float(dy[i])) if np.isfinite(d2[i]) else None
                    for k, (d2, dx, dy) in self._near.items()}
+            ctx["food_value"] = float(self._food_value[i])
         else:
             food, in_view = self.nearest(creature, self.foods)
             creature.food_nearby = in_view  # An available food in view

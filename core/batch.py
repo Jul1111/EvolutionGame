@@ -13,12 +13,13 @@ from brain.profiles import PROFILE_NAMES, PROFILES
 from core.sensors import SENSORS
 
 
-def _group(store, rows, near_rows, near):
+def _group(world, store, rows, near_rows, near):
     """Attributes of the creatures at `rows` of the store (near_rows = their index in the arrays of `near`) for the
     vectorized sensors."""
     return {"angle": store.angle[rows], "speed": store.speed[rows], "energy": store.energy[rows],
             "energy_max": store.energy_max[rows], "unseen": store.unseen_ticks[rows].astype(float),
             "uid": store.uid[rows].astype(float), "touching": store.touching[rows],
+            "food_value": world._food_value[near_rows],
             "near": {k: (d2[near_rows], dx[near_rows], dy[near_rows]) for k, (d2, dx, dy) in near.items()}}
 
 
@@ -81,7 +82,7 @@ def decide_and_move(world, alive, alive_rows, near):
         spec = PROFILES[name]
         near_rows = np.nonzero((species == code) & ~starving)[0]   # Index in `alive` and in the arrays of `near`
         cs = [alive[k] for k in near_rows.tolist()]
-        g = _group(store, rows[near_rows], near_rows, near)
+        g = _group(world, store, rows[near_rows], near_rows, near)
         parts = [SENSORS[key].vec(world, g) for key in spec["sensors"]]
         if spec["memory"]:
             parts.append(np.array([c.memory for c in cs], dtype=float))

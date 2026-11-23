@@ -26,6 +26,13 @@ PROFILES = {
     "complet_memoire": {"title": "Complet + mémoire", "sensors": ["food", "energy", "speed", "can_eat", "poison",
                                                                   "obstacle"],
                         "hidden": 6, "speed_output": True, "memory": 2, "color": (255, 214, 102)},
+    # Diets (FOOD_TYPES = 2): «complet» plus the value of the nearest food for its own diet; two species to duel
+    "regime": {"title": "Régime", "sensors": ["food", "energy", "speed", "can_eat", "poison", "obstacle",
+                                              "food_value"],
+               "hidden": 6, "speed_output": True, "memory": 0, "color": (140, 230, 140)},
+    "regime_faim": {"title": "Régime + faim", "sensors": ["food", "energy", "speed", "can_eat", "poison", "obstacle",
+                                                          "food_value", "hunger"],
+                    "hidden": 6, "speed_output": True, "memory": 0, "color": (230, 120, 200)},
     "chasseur": {"title": "Chasseur", "sensors": ["food"], "hidden": 0, "speed_output": True, "memory": 0,
                  "color": (255, 196, 77)},
     "chasseur_rassasie": {"title": "Chasseur rassasié", "sensors": ["food", "can_eat"], "hidden": 0,

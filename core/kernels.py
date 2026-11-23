@@ -84,6 +84,7 @@ if ENABLED:
         best = np.full(n, np.inf)
         bdx = np.zeros(n)
         bdy = np.zeros(n)
+        bjs = np.full(n, -1, np.int64)
         cw, ch = width / nx, height / ny
         for i in prange(n):
             acx = int(math.floor(cx[i] / cw)) % nx
@@ -115,12 +116,12 @@ if ENABLED:
                         if d2 < b or (d2 == b and j > bj):   # An exact tie goes to the last item
                             b, bj, bx_, by_ = d2, j, dx, dy
             if bj >= 0:
-                best[i], bdx[i], bdy[i] = b, bx_, by_
-        return best, bdx, bdy
+                best[i], bdx[i], bdy[i], bjs[i] = b, bx_, by_, bj
+        return best, bdx, bdy, bjs
 
     @njit(cache=True)
     def _contact_winners(ix, iy, energy, available, X, Y, E, radius, emax, reach2, food_radius, fits, width,
-                         height, nx, ny, order, starts, counts, offx, offy):  # pragma: no cover (compiled)
+                         height, typed, gains, kinds, nx, ny, order, starts, counts, offx, offy):  # pragma: no cover
         m = len(ix)
         win = np.full(m, -1, np.int64)
         cw, ch = width / nx, height / ny
@@ -140,20 +141,22 @@ if ENABLED:
                         d2 = dx * dx + dy * dy
                         if not d2 < reach2[i]:
                             continue
-                        if fits and not E[i] + energy[j] <= emax[i]:
+                        amount = energy[j] * gains[i, kinds[j]] if typed else energy[j]
+                        if fits and not E[i] + amount <= emax[i]:
                             continue
                         gap = math.sqrt(d2) - radius[i]
                         if gap < g or (gap == g and i < gi):   # A tie goes to the first creature
                             g, gi = gap, i
             if gi >= 0:
                 win[j] = gi
-                E[gi] = min(E[gi] + energy[j], emax[gi]) if fits else E[gi] - energy[j]
+                amount = energy[j] * gains[gi, kinds[j]] if typed else energy[j]
+                E[gi] = min(E[gi] + amount, emax[gi]) if fits else E[gi] - amount
         return win
 
 
 def nearest_points(items, cx, cy, heading, ix, iy, cool, cfg, width, height):
-    """(distance², dx, dy) of the nearest available item in view of each creature (inf when none); for an obstacle
-    the distance to its outline."""
+    """(distance², dx, dy, item index) of the nearest available item in view of each creature (inf and -1 when
+    none); for an obstacle the distance to its outline."""
     radius, sides, corners = _shapes(items)
     shaped = bool(radius.any())
     grid = _cells(ix, iy, width, height, cfg.VISION_RANGE + (float(radius.max()) if shaped else 0.0))
@@ -162,13 +165,17 @@ def nearest_points(items, cx, cy, heading, ix, iy, cool, cfg, width, height):
                            sides, corners, *grid)
 
 
-def contact_winners(ix, iy, energy, available, X, Y, E, radius, emax, food_radius, fits, width, height):
+def contact_winners(ix, iy, energy, available, X, Y, E, radius, emax, food_radius, fits, width, height, gains=None,
+                    kinds=None):
     """Index of the creature that gets each item (-1: nobody). Updates E as the effects will (meal capped at the
-    reserve, or poison damage)."""
+    reserve, or poison damage). gains / kinds: share of the energy by kind of food (World.gains), None = all of it."""
     reach2 = (radius + food_radius) ** 2
     grid = _cells(X, Y, width, height, float(np.sqrt(reach2.max())))
+    typed = gains is not None
+    if not typed:
+        gains, kinds = np.ones((1, 2)), np.zeros(len(ix), np.int64)
     return _contact_winners(ix, iy, energy, available, X, Y, E, radius, emax, reach2, float(food_radius), fits,
-                            float(width), float(height), *grid)
+                            float(width), float(height), typed, gains, kinds, *grid)
 
 
 def worker_init(jobs):

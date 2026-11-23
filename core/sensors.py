@@ -8,7 +8,8 @@ Each sensor has two forms that must give the same values:
   `ctx`: {item kind: (distance², dx, dy) or None}, what World.sense_all found for this tick.
 - vec(world, group) → array (n, number of labels). All the creatures of a species at once (World.update).
   `group` holds their attributes as arrays (see core/batch.py: x, y, angle, speed, energy, energy_max, unseen,
-  uid, touching) and `near`: {item kind: (distance², dx, dy) arrays, distance² = inf when nothing is seen}.
+  uid, touching, food_value) and `near`: {item kind: (distance², dx, dy) arrays, distance² = inf when nothing is
+  seen}.
 """
 import math
 from collections import namedtuple
@@ -99,6 +100,20 @@ def _noise_v(world, g):
     return (2.0 * (v - np.floor(v)) - 1.0)[:, None]
 
 
+def _food_value(world, c, ctx):
+    # Share of the energy of the nearest food in view that this creature would get: its diet against the kind of
+    # that food (FOOD_TYPES = 2); 1 with one kind of food, 0 when no food is in view. Its own diet is not an input:
+    # this is how it can tell its food from the other
+    if "food_value" not in ctx:
+        found, _, item = world.nearest(c, world.foods, with_item=True)
+        ctx["food_value"] = 0.0 if item is None else world.gain(c, item)
+    return [ctx["food_value"]]
+
+
+def _food_value_v(world, g):
+    return g["food_value"][:, None]
+
+
 def _sensor(labels, pair, needs=()):
     fn, vec = pair
     return Sensor(labels, fn, set(needs), vec)
@@ -115,4 +130,5 @@ SENSORS = {
     "touch": _sensor(["Contact"], (_touch, _touch_v)),
     "hunger": _sensor(["Faim"], (_hunger, _hunger_v)),
     "noise": _sensor(["Bruit"], (_noise, _noise_v)),
+    "food_value": _sensor(["Valeur nourr."], (_food_value, _food_value_v), {"food"}),
 }

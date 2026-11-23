@@ -102,6 +102,16 @@ SIZE_MIN = 0.5
 SIZE_MAX = 2.0
 SIZE_BASE_EXPONENT = 0.75
 
+# Configuration for diets (niches, docs/experiences.md). FOOD_TYPES = 2: every other food is of kind 1 (drawn in another
+# colour), and each creature has a diet gene in [0, 1]. A food of kind k gives FOOD_ENERGY × (1 - |diet - k|) **
+# DIET_EXPONENT: a specialist (diet 0 or 1) gets all of its food and nothing from the other, a generalist (0.5) gets
+# 0.5 ** DIET_EXPONENT of both. Exponent > 1: specialists win, and the food the fewest eat becomes the most available
+# (two niches). Founders draw their diet at random; a newborn gets its parent's + N(0, DIET_MUTATION_STD), kept in
+# [0, 1]. FOOD_TYPES = 1: one kind, diets play no part (the runs before 23/11)
+FOOD_TYPES = 1
+DIET_EXPONENT = 2.0
+DIET_MUTATION_STD = 0.05
+
 # Configuration for mutation
 MUTATION_STD = 0.1          # Std of the gaussian noise added to each weight of a child (0.2 was chosen on one seed
                             # only)

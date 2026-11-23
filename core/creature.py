@@ -13,7 +13,7 @@ class CreatureStore:
     and writing each creature object; a Creature reads and writes its own row through the fields below."""
 
     FLOATS = ("x", "y", "angle", "speed", "energy", "speed_sum", "blind_speed_sum", "blind_turn_sum", "last_turn",
-              "size", "body", "radius", "energy_max", "base_cost", "move_cost")
+              "size", "body", "radius", "energy_max", "base_cost", "move_cost", "diet")
     INTS = ("age", "unseen_ticks", "blind_ticks", "uid", "near_i", "near_tick", "species")
     BOOLS = ("alive", "touching", "food_nearby")
 
@@ -81,6 +81,7 @@ class Creature:
     energy_max = _Field()
     base_cost = _Field()
     move_cost = _Field()
+    diet = _Field()             # Diet gene in [0, 1]: which kind of food feeds it (FOOD_TYPES = 2, config.py)
     age = _Field()
     unseen_ticks = _Field()     # Ticks since it last saw an available food (sensor «faim»)
     blind_ticks = _Field()
@@ -90,7 +91,7 @@ class Creature:
     food_nearby = _Field()      # An available food in view (set by World.sense_all / World.sense each tick)
 
     def __init__(self, x, y, angle, energy, brain, profile, uid=0, parent_id=None, birth_tick=0, lineage_gen=0,
-                 size=1.0, cfg=config, store=None):
+                 size=1.0, diet=0.5, cfg=config, store=None):
         """`store`: the CreatureStore of the world it lives in (World.add_creature); its own one-row store if None."""
         self._s = CreatureStore(1) if store is None else store
         self._i = self._s.add()
@@ -105,6 +106,7 @@ class Creature:
         self._spec = PROFILES[profile]
         self.alive = True
         self.set_size(size)
+        self.diet = diet
         self.death_cause = None   # "faim" or "vieillesse" (poison kills through hunger)
         # Lineage (continuous evolution): identity, parent, birth, depth of the lineage (0 = random founder)
         self.uid = uid

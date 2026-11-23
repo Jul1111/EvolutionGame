@@ -128,6 +128,8 @@ class Scene:
             self.species_sprites = {n: self._build_body(p["color"]) for n, p in PROFILES.items()}
             self.dead_sprite = self._build_dead()
             self.food_sprites = [self._build_food(f) for f in range(FOOD_FRAMES)]
+            # Second kind of food (FOOD_TYPES = 2, diets): same shape, another colour
+            self.food_b_sprites = [self._build_food(f, theme.FOOD_B_COLOR) for f in range(FOOD_FRAMES)]
             self.poison_sprites = [self._build_poison(f) for f in range(FOOD_FRAMES)]
             self._sized = {}   # Body sprites resized for the size gene: (id of sprite, size step) → sprite
             self._lineage_sprites = {}
@@ -290,7 +292,8 @@ class Scene:
         pygame.draw.circle(big, (*theme.DEAD_COLOR, 110), (c, c), r * s, max(1, int(k * s)))
         return _shrink(big, size)
 
-    def _build_food(self, frame):
+    def _build_food(self, frame, color=None):
+        color = theme.FOOD_COLOR if color is None else color
         k = self.sprite_scale
         r = self.cfg.FOOD_RADIUS * k
         halo = r * 4
@@ -301,9 +304,9 @@ class Scene:
         for i in range(steps):  # concentric discs, alpha growing towards the centre
             radius = halo * s * (1.0 - i / steps)
             alpha = int(70 * pulse * ((i + 1) / steps) ** 1.5)
-            pygame.draw.circle(big, (*theme.FOOD_COLOR, alpha), (c, c), radius)
-        core = _lerp(theme.FOOD_COLOR, (255, 255, 255), 0.35)
-        pygame.draw.circle(big, (*theme.FOOD_COLOR, 255), (c, c), r * s)
+            pygame.draw.circle(big, (*color, alpha), (c, c), radius)
+        core = _lerp(color, (255, 255, 255), 0.35)
+        pygame.draw.circle(big, (*color, 255), (c, c), r * s)
         pygame.draw.circle(big, (*core, 255), (c - r * 0.25 * s, c - r * 0.25 * s), r * 0.5 * s)
         return _shrink(big, size)
 
@@ -408,7 +411,8 @@ class Scene:
             if food.cooldown > 0:
                 continue  # Eaten, not back yet
             frame = int(now / 90 + i * 3) % FOOD_FRAMES
-            self._queue(batch, self.food_sprites[frame], self._images(world, food.x, food.y, 14))
+            sprites = self.food_b_sprites if food.kind else self.food_sprites
+            self._queue(batch, sprites[frame], self._images(world, food.x, food.y, 14))
 
         for i, poison in enumerate(world.poisons):
             if poison.cooldown > 0:

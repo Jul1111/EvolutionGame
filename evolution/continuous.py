@@ -28,13 +28,17 @@ SAMPLE_HEADER = ["tick", "population", "births", "deaths_hunger", "deaths_age", 
                  "cap_blocked", "food_available", "mean_size", "size_std", "min_size", "max_size",
                  "blind_frac", "blind_speed", "blind_turn", "food_sources"]
 # Then one column per species of the run: pop__<profile> (living creatures of that species)
+# With two kinds of food (FOOD_TYPES = 2): mean diet, share of specialists of kind 0 (diet < 0.25) and of kind 1
+# (> 0.75), then the mean diet of each species: diet__<profile>
+DIET_HEADER = ["diet_mean", "diet_low", "diet_high"]
 
 
 class ContinuousSimulation:
     def __init__(self, rng, timeline_path=None, founders=None, verbose=False, start_tick=0, append=False,
                  log_deaths=False, cfg=config):
-        """`founders`: {profile: [(genome, size)]} to start from a saved population (load_population); else random
-        founders of cfg.ACTIVE_PROFILES. `start_tick` and `append`: resume a saved run, adding to its timeline.csv."""
+        """`founders`: {profile: [(genome, size) or (genome, size, diet)]} to start from a saved population
+        (load_population); else random founders of cfg.ACTIVE_PROFILES. `start_tick` and `append`: resume a saved
+        run, adding to its timeline.csv."""
         self.cfg = cfg   # Settings in force (see config.Settings); the live module by default
         self.rng = rng
         self.verbose = verbose
@@ -52,17 +56,21 @@ class ContinuousSimulation:
         profiles = list(founders) if founders else list(self.cfg.ACTIVE_PROFILES)
         self.species = profiles
         self.header = SAMPLE_HEADER + [f"pop__{p}" for p in profiles]
+        self.diets = self.cfg.FOOD_TYPES > 1   # Diet gene in play (two kinds of food)
+        if self.diets:
+            self.header += DIET_HEADER + [f"diet__{p}" for p in profiles]
         for index, name in enumerate(profiles):
             if founders:
-                for genome, size in founders[name]:
+                for genome, size, *diet in founders[name]:
                     brain = new_brain(name)
                     brain.set_genome(genome)
-                    self._add(brain, name, size=size if self.cfg.SIZE_MODE != "fixe" else 1.0)
+                    extra = {"diet": diet[0] if diet else rng.random()} if self.diets else {}
+                    self._add(brain, name, size=size if self.cfg.SIZE_MODE != "fixe" else 1.0, **extra)
             else:
                 for _ in range(_share(self.cfg.INITIAL_POPULATION, index, len(profiles))):
                     brain = new_brain(name)
                     brain.randomize(rng, self.cfg.NN_INIT_STD)
-                    self._add(brain, name)
+                    self._add(brain, name, **({"diet": rng.random()} if self.diets else {}))
         if timeline_path and append and os.path.exists(timeline_path):
             self.header = _upgrade_header(timeline_path, self.header)
         elif timeline_path:
@@ -186,7 +194,7 @@ class ContinuousSimulation:
         brain.set_genome(mutate(parent.brain.get_genome(), self.rng, self.cfg.MUTATION_STD))
         child = self._add(brain, parent.profile, energy=self.cfg.REPRO_CHILD_ENERGY * parent.body,
                           near=(parent.x, parent.y), parent_id=parent.uid, lineage_gen=parent.lineage_gen + 1,
-                          size=self._child_size(parent.size))
+                          size=self._child_size(parent.size), **self._child_diet(parent.diet))
         child.energy = min(child.energy, child.energy_max)
         self.births += 1
         self.total_births += 1
@@ -197,6 +205,12 @@ class ContinuousSimulation:
             return 1.0
         size *= math.exp(self.rng.gauss(0.0, self.cfg.SIZE_MUTATION_STD))
         return min(self.cfg.SIZE_MAX, max(self.cfg.SIZE_MIN, size))
+
+    def _child_diet(self, diet):
+        """Diet gene of a newborn (two kinds of food): the parent's + N(0, DIET_MUTATION_STD), kept in [0, 1]."""
+        if not self.diets:
+            return {}
+        return {"diet": min(1.0, max(0.0, diet + self.rng.gauss(0.0, self.cfg.DIET_MUTATION_STD)))}
 
     def _add(self, brain, profile, **kwargs):
         c = self.world.add_creature(brain, profile, uid=self.next_uid, birth_tick=self.world.tick, **kwargs)
@@ -251,7 +265,16 @@ class ContinuousSimulation:
             "blind_speed": (self.world.blind_speed - self._blind0[1]) / blind if blind else None,
             "blind_turn": (self.world.blind_turn - self._blind0[2]) / blind if blind else None,
             **{f"pop__{p}": sum(1 for c in cs if c.profile == p) for p in self.species},
+            **(self._diet_sample(cs) if self.diets else {}),
         }
+
+    def _diet_sample(self, cs):
+        diets = [c.diet for c in cs]
+        by_species = {f"diet__{p}": [c.diet for c in cs if c.profile == p] for p in self.species}
+        return {"diet_mean": statistics.mean(diets) if diets else None,
+                "diet_low": sum(d < 0.25 for d in diets) / len(diets) if diets else None,
+                "diet_high": sum(d > 0.75 for d in diets) / len(diets) if diets else None,
+                **{k: statistics.mean(v) if v else None for k, v in by_species.items()}}
 
     def _sample(self):
         s = self.sample()
@@ -283,13 +306,16 @@ def save_population(sim, path):
         data[f"genomes__{name}"] = np.array([c.brain.get_genome() for c in members])
         data[f"lineage__{name}"] = np.array([c.lineage_gen for c in members])
         data[f"sizes__{name}"] = np.array([c.size for c in members])
+        if getattr(sim, "diets", False):   # Diet gene in play only with two kinds of food
+            data[f"diets__{name}"] = np.array([c.diet for c in members])
     tmp = path[:-4] + "_tmp.npz" if path.endswith(".npz") else path + "_tmp.npz"
     np.savez(tmp, **data)
     os.replace(tmp, path if path.endswith(".npz") else path + ".npz")
 
 
 def load_population(path, with_tick=False):
-    """{profile: [(genome, size)]} from save_population (size 1 for saves made before the size gene).
+    """{profile: [(genome, size)]} from save_population (size 1 for saves made before the size gene); (genome, size,
+    diet) for a population saved with two kinds of food.
     with_tick=True: (founders, tick of the save).
     Profiles that no longer exist, or whose network changed size, are left out (message printed)."""
     from brain.profiles import PROFILES, n_params
@@ -303,7 +329,10 @@ def load_population(path, with_tick=False):
                 print(f"{os.path.basename(path)} : espèce {name} ignorée (inconnue ou réseau modifié)")
                 continue
             sizes = data[f"sizes__{name}"] if f"sizes__{name}" in data.files else np.ones(len(genomes))
-            founders[name] = [(g, float(sz)) for g, sz in zip(genomes, sizes)]
+            if f"diets__{name}" in data.files:   # (genome, size, diet); saves before the diet gene: (genome, size)
+                founders[name] = [(g, float(sz), float(d)) for g, sz, d in zip(genomes, sizes, data[f"diets__{name}"])]
+            else:
+                founders[name] = [(g, float(sz)) for g, sz in zip(genomes, sizes)]
         tick = int(data["tick"]) if "tick" in data.files else 0
     return (founders, tick) if with_tick else founders
 
