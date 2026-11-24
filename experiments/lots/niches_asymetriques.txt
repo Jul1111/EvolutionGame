@@ -1,0 +1,8 @@
+# Niches asymétriques (24/11) : une espèce (regime) qui se scinde (mutation du régime 0,15), deux sortes de nourriture
+# d'énergie totale égale, l'une rare et riche, l'autre abondante et pauvre. Les deux groupes vivent-ils autrement ?
+--name asym_1_1 --profiles regime --seeds 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 --ticks 120000 --jobs 8 \
+    --set FOOD_TYPES=2 FOOD_ENERGY=60.0 DIET_MUTATION_STD=0.15
+--name asym_1_2 --profiles regime --seeds 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 --ticks 120000 --jobs 8 \
+    --set FOOD_TYPES=2 FOOD_ENERGY=60.0 DIET_MUTATION_STD=0.15 FOOD_KIND_SHARES=(1,2) FOOD_KIND_ENERGY=(1.5,0.75)
+--name asym_1_3 --profiles regime --seeds 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 --ticks 120000 --jobs 8 \
+    --set FOOD_TYPES=2 FOOD_ENERGY=60.0 DIET_MUTATION_STD=0.15 FOOD_KIND_SHARES=(1,3) FOOD_KIND_ENERGY=(2.0,0.6667)
