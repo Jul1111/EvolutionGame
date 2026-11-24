@@ -1,0 +1,7 @@
+# Nombre de niches à nourriture égale par niche (24/11) : avec 3 ou 4 sortes à la nourriture de 2 (lot niches_nombre),
+# la plupart des graines s'éteignent au départ (chaque spécialiste ne voit que sa part). Ici FOOD_COUNT et FOOD_COUNT_MIN
+# suivent le nombre de sortes (30 et 7,5 par sorte) : chaque niche a autant de nourriture qu'avec deux sortes.
+--name niches_egal_3 --profiles regime --seeds 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 --ticks 120000 --jobs 8 \
+    --set FOOD_ENERGY=60.0 FOOD_TYPES=3 FOOD_COUNT=90 FOOD_COUNT_MIN=22 --varie DIET_MUTATION_STD=0.05,0.15
+--name niches_egal_4 --profiles regime --seeds 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 --ticks 120000 --jobs 8 \
+    --set FOOD_ENERGY=60.0 FOOD_TYPES=4 FOOD_COUNT=120 FOOD_COUNT_MIN=30 --varie DIET_MUTATION_STD=0.05,0.15
