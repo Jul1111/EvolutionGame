@@ -4,6 +4,7 @@ import pygame
 import config
 from rendering import theme
 from brain.profiles import PROFILES, input_labels, output_labels
+from core.food import diet_group
 from rendering.backend.glass import frost
 from rendering.ui.draw import VALUE, LABEL, MINT, AMBER, CORAL, BLUE, Ctx, create_fonts, _panel, _bar, _signed_bar, \
     _text, _row
@@ -23,6 +24,8 @@ KY_MIN = 0.8      # Smallest vertical stretch of the Population and Créature ca
 KY_GOOD = 0.92    # Stretch the cards keep as long as the graph or the curves panel can still fit
 
 MAX_PANEL_W = 560    # Logical width cap, for very wide windows
+
+MIXED_DIET = (150, 156, 170)   # Dot of the mixed diets (between two kinds of food), Population panel
 
 
 class Hud:
@@ -206,7 +209,11 @@ class Hud:
         _row(p, f, c, 86, "Naissances / morts par min", rates)
         _row(p, f, c, 104, "Générations moy. / max", f"{sum(gens) / n:.1f} / {max(gens)}" if n else "-")
         lineage = getattr(self, "lineage", None)
-        if lineage is not None and n and len(self.profiles) == 1:   # Several species: their counts take this row
+        kinds = self.cfg.FOOD_TYPES
+        groups = kinds > 1 and len(self.profiles) == 1   # One species eating several kinds: its diet groups instead
+        if groups:
+            self._draw_diet_groups(p, f, c, world, kinds)
+        elif lineage is not None and n and len(self.profiles) == 1:   # Several species: their counts take this row
             count, share, _ = lineage.summary(world)
             share_txt = f"{share:.0%}" if share >= 0.1 else f"{share * 100:.1f} %"
             _row(p, f, c, 122, "Lignées · la plus grande", f"{count} · {share_txt}")
@@ -230,6 +237,8 @@ class Hud:
                        for i, v in enumerate(vals) if v is not None]
                 if len(pts) > 1:
                     pygame.draw.aalines(p, PROFILES[nm]["color"], False, pts)
+        elif groups:
+            self._diet_curves(p, c, kinds)
         else:
             # Mini curve of the population over the last relevés
             pops = [r.get("population") for r in self.rows[-80:] if r.get("population") is not None]
@@ -246,6 +255,35 @@ class Hud:
         renderer = getattr(self, 'renderer', 'CPU')
         _text(p, f["small"], f"{fps:.0f} FPS · {renderer}", W - pad, c.y(158), LABEL, right=True)
         return p
+
+    def _draw_diet_groups(self, p, f, c, world, kinds):
+        """Row «Régimes»: living specialists of each kind of food (dot of its colour) and mixed diets (grey)."""
+        counts = [0] * (kinds + 1)
+        for d, a in zip(*world.columns("diet", "alive")):
+            if a:
+                g = diet_group(d, kinds)
+                counts[kinds if g is None else g] += 1
+        _text(p, f["small"], "Régimes", c.x(14), c.y(124), LABEL)
+        x = p.get_width() - c.x(14)
+        for color, count in reversed(list(zip((*theme.FOOD_KIND_COLORS[:kinds], MIXED_DIET), counts))):
+            img = _text(p, f["small"], str(count), x, c.y(124), VALUE, right=True)
+            x -= img.get_width() + c.x(5)
+            pygame.draw.circle(p, color, (x - c.x(3), c.y(124) + img.get_height() // 2), max(3, c.x(4)))
+            x -= c.x(14)
+
+    def _diet_curves(self, p, c, kinds):
+        """Mini curves of the specialists of each kind of food over the last relevés (timeline.csv)."""
+        area = pygame.Rect(c.x(14), c.y(138), p.get_width() - 2 * c.x(14), max(c.x(10), c.y(16)))
+        pygame.draw.rect(p, (255, 255, 255, 12), area, border_radius=max(2, c.x(4)))
+        cols = ["diet_low", "diet_high"] if kinds == 2 else [f"diet_kind{k}" for k in range(kinds)]
+        recent = [r for r in self.rows[-80:] if r.get("population") is not None]
+        series = [[(r.get(col) or 0) * r["population"] for r in recent] for col in cols]
+        top = max([v for vs in series for v in vs] + [1])
+        for color, vals in zip(theme.FOOD_KIND_COLORS, series):
+            pts = [(area.x + area.w * i / max(1, len(vals) - 1), area.bottom - 2 - (area.h - 4) * v / top)
+                   for i, v in enumerate(vals)]
+            if len(pts) > 1:
+                pygame.draw.aalines(p, color, False, pts)
 
     def _draw_creature(self, world, selected):
         f, c = self.fonts, Ctx(self.u, self.ky)
@@ -275,7 +313,15 @@ class Hud:
         _row(p, f, c, 96, "Âge", format_time(cr.age))
         _row(p, f, c, 114, "Nourriture / poison", f"{cr.food_eaten} / {cr.poison_hits}")
         blind_share = cr.blind_ticks / cr.age if cr.age else 0.0
-        _row(p, f, c, 132, "Temps aveugle", f"{blind_share:.0%}")
+        if self.cfg.FOOD_TYPES > 1:   # Diets: its diet gene too, with the colour of the food it is a specialist of
+            value = f"{blind_share:.0%} / {cr.diet:.2f}"
+            _row(p, f, c, 132, "Temps aveugle / régime", value)
+            g = diet_group(cr.diet, self.cfg.FOOD_TYPES)
+            w, h = f["base"].size(value)
+            pygame.draw.circle(p, MIXED_DIET if g is None else theme.FOOD_KIND_COLORS[g],
+                               (W - pad - w - c.x(10), c.y(132) + h // 2), max(3, c.x(4)))
+        else:
+            _row(p, f, c, 132, "Temps aveugle", f"{blind_share:.0%}")
         _row(p, f, c, 150, "Taille / génération / petits", f"{cr.size:.2f} / {cr.lineage_gen} / {cr.children}")
         return p
 

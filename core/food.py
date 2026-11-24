@@ -13,6 +13,13 @@ def kind_position(kind, kinds):
     return kind / (kinds - 1) if kinds > 1 else 0.0
 
 
+def diet_group(diet, kinds):
+    """Kind of food a diet is a specialist of (within a quarter of the gap between kinds from its diet: two kinds,
+    below 0.25 or above 0.75), None for a mixed diet."""
+    k = round(diet * (kinds - 1))
+    return k if abs(diet - kind_position(k, kinds)) < 0.25 / (kinds - 1) else None
+
+
 def kind_pattern(cfg):
     """Kind of the food of each index, repeating: FOOD_KIND_SHARES (whole numbers, one per kind; empty = equal shares)
     spread as evenly as possible along the list. Equal shares: 0, 1, .., FOOD_TYPES - 1 (food k is of kind

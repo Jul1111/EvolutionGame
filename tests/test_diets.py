@@ -84,8 +84,10 @@ def test_fast_update_matches_reference_with_two_kinds():
 @pytest.mark.parametrize("kinds", [2, 4])
 def test_game_shows_diets(make_app, kinds):
     """Kinds of food in the game: colour «régime», the diet curves (and the 0-1 curves, once broken), legend."""
-    app = make_app(FOOD_TYPES=kinds, FOOD_ENERGY=60.0, ACTIVE_PROFILES=["regime", "regime_faim"], SAMPLE_TICKS=5)
+    profiles = ["regime", "regime_faim"] if kinds == 2 else ["regime"]   # One species: the diet groups panel row
+    app = make_app(FOOD_TYPES=kinds, FOOD_ENERGY=60.0, ACTIVE_PROFILES=profiles, SAMPLE_TICKS=5)
     app.run(max_frames=2)   # First frame: the layout
+    app.selection.pick(app.world.creatures[0])
     while app.scene.color_label() != "régime":
         app.do("color")
     app.do("legend")
@@ -147,3 +149,9 @@ def test_four_kinds_founders_columns_and_kernels(monkeypatch):
         sim.run(300)
         runs.append([(c.uid, c.x, c.y, c.energy, c.food_eaten, c.diet) for c in sim.world.creatures])
     assert runs[0] == runs[1] and sum(r[4] for r in runs[0]) > 0
+
+
+def test_diet_groups():
+    from core.food import diet_group
+    assert [diet_group(d, 2) for d in (0.0, 0.2, 0.5, 0.8, 1.0)] == [0, 0, None, 1, 1]
+    assert [diet_group(d, 4) for d in (0.0, 0.1, 0.3, 0.5, 0.7, 1.0)] == [0, None, 1, None, 2, 3]

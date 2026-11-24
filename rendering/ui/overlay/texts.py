@@ -54,13 +54,14 @@ GEN_TIPS = [
     (68, "Temps simulé depuis le départ de cette population."),
     (86, "Naissances et morts depuis le départ. Une créature naît quand son parent atteint le seuil d'énergie."),
     (104, "Génération de lignée : nombre d'ancêtres depuis les fondateurs tirés au hasard (0)."),
+    (122, "Une espèce : nombre de lignées (descendants d'un même fondateur) et part de la plus grande. Avec plusieurs sortes de nourriture : spécialistes de chaque nourriture (point de sa couleur) et régimes mixtes (gris), et leurs courbes en dessous. Plusieurs espèces : créatures de chaque espèce."),
 ]
 CREATURE_TIPS = [
     (36, "Énergie restante. À 0, la créature meurt. Plafond : {energy_max:g} × taille (si la taille agit)."),
     (66, "Vitesse actuelle, de 0 à {speed_max:g}. Elle change progressivement vers la vitesse demandée par le réseau."),
     (96, "Âge : durée de vie de cette créature (temps simulé)."),
     (114, "Nourritures mangées / poisons touchés depuis sa naissance."),
-    (132, "Temps aveugle : part de sa vie passée sans aucune nourriture dans son champ de vision (cône)."),
+    (132, "Temps aveugle : part de sa vie passée sans aucune nourriture dans son champ de vision (cône). Avec plusieurs sortes de nourriture, son régime (0 = mange le vert, 1 = la dernière sorte) et la couleur de la nourriture dont il est spécialiste (gris : mixte)."),
     (150, "Taille (gène du corps, de {size_min:g} à {size_max:g}), génération de lignée et nombre de petits. Les petits sont la seule chose que la sélection naturelle récompense."),
 ]
 NET_TIPS = {
