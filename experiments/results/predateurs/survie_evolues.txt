@@ -1,0 +1,18 @@
+
+20261124_141128_predevol_proies_naives  (rendement 0.75, digestion 200, coût ×1.0, échelle 2)
+  coexistence à la fin 0/15, proies vivantes 7/15, prédateurs éteints 15/15 (ticks [10831, 12048, 12444, 12600, 12603, 12766, 13631, 15000, 15000, 19200, 20919, 25200, 39600, 44802, 69000])
+  pendant la présence des prédateurs : proies 260, prédateurs 69.8, CV prédateurs 0.76, oscillations 3.6
+  début : proies vitesse 1.26 avec / 1.18 sans prédateur en vue, virage vers lui -0.021, en vue 35.6% ; prédateurs vitesse 1.23 / 0.55, virage vers la proie +0.031, proies/1000 t 1.77
+  fin   : proies vitesse nan avec / nan sans prédateur en vue, virage vers lui +nan, en vue nan% ; prédateurs vitesse nan / nan, virage vers la proie +nan, proies/1000 t nan
+
+20261124_143225_predevol_proies_rodees  (rendement 0.75, digestion 200, coût ×1.0, échelle 2)
+  coexistence à la fin 1/15, proies vivantes 9/15, prédateurs éteints 14/15 (ticks [12000, 12196, 12465, 12538, 13129, 13200, 15600, 21600, 26400, 40553, 50400, 50600, 65400, 94200])
+  pendant la présence des prédateurs : proies 242, prédateurs 67.8, CV prédateurs 0.77, oscillations 5.4
+  début : proies vitesse 1.83 avec / 1.73 sans prédateur en vue, virage vers lui -0.040, en vue 30.9% ; prédateurs vitesse 1.16 / 0.51, virage vers la proie +0.026, proies/1000 t 1.68
+  fin   : proies vitesse 3.34 avec / 3.43 sans prédateur en vue, virage vers lui -0.247, en vue 17.7% ; prédateurs vitesse 1.18 / 0.28, virage vers la proie +0.064, proies/1000 t 1.88
+
+20261124_145806_predevol_couples  (rendement 0.75, digestion 200, coût ×1.0, échelle 2)
+  coexistence à la fin 0/16, proies vivantes 11/16, prédateurs éteints 16/16 (ticks [4420, 4727, 6000, 6539, 6600, 6600, 6600, 6600, 6636, 7009, 7800, 8400, 13800, 21000, 40800, 57600])
+  pendant la présence des prédateurs : proies 237, prédateurs 118.6, CV prédateurs 0.83, oscillations 2.4
+  début : proies vitesse 3.12 avec / 3.19 sans prédateur en vue, virage vers lui -0.125, en vue 47.6% ; prédateurs vitesse 1.25 / 0.59, virage vers la proie +0.014, proies/1000 t 1.08
+  fin   : proies vitesse nan avec / nan sans prédateur en vue, virage vers lui +nan, en vue nan% ; prédateurs vitesse nan / nan, virage vers la proie +nan, proies/1000 t nan

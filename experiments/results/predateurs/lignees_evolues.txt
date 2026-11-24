@@ -1,0 +1,63 @@
+
+predevol_proies_naives
+  graine  1  pred_1x1 g9             prédateurs éteints après 20200 ticks     fin : proies 510, prédateurs 0
+  graine  2  pred_2x2 g4             prédateurs éteints après 7603 ticks      fin : proies 0, prédateurs 0
+  graine  3  pred_2x2 g8             prédateurs éteints après 39802 ticks     fin : proies 0, prédateurs 0
+  graine  4  pred_2x2 g10            prédateurs éteints après 15919 ticks     fin : proies 0, prédateurs 0
+  graine  5  pred_3x3 g7             prédateurs éteints après 10000 ticks     fin : proies 475, prédateurs 0
+  graine  6  pred_3x3 g13            prédateurs éteints après 8631 ticks      fin : proies 0, prédateurs 0
+  graine  7  pred_3x3_t60k g8        prédateurs éteints après 5831 ticks      fin : proies 0, prédateurs 0
+  graine  8  pred_1x1 g9             prédateurs éteints après 34600 ticks     fin : proies 500, prédateurs 0
+  graine  9  pred_2x2 g4             prédateurs éteints après 7048 ticks      fin : proies 0, prédateurs 0
+  graine 10  pred_2x2 g8             prédateurs éteints après 10000 ticks     fin : proies 474, prédateurs 0
+  graine 11  pred_2x2 g10            prédateurs éteints après 7444 ticks      fin : proies 0, prédateurs 0
+  graine 12  pred_3x3 g7             prédateurs éteints après 14200 ticks     fin : proies 491, prédateurs 0
+  graine 13  pred_3x3 g13            prédateurs éteints après 7600 ticks      fin : proies 476, prédateurs 0
+  graine 15  pred_1x1 g9             prédateurs éteints après 64000 ticks     fin : proies 533, prédateurs 0
+  graine 16  pred_2x2 g4             prédateurs éteints après 7766 ticks      fin : proies 0, prédateurs 0
+
+predevol_proies_rodees
+  graine  1  pred_1x1 g9             prédateurs éteints après 35553 ticks     fin : proies 0, prédateurs 0
+  graine  2  pred_2x2 g4             prédateurs éteints après 8200 ticks      fin : proies 471, prédateurs 0
+  graine  3  pred_2x2 g8             prédateurs éteints après 10600 ticks     fin : proies 513, prédateurs 0
+  graine  4  pred_2x2 g10            prédateurs éteints après 16600 ticks     fin : proies 457, prédateurs 0
+  graine  5  pred_3x3 g7             prédateurs éteints après 45400 ticks     fin : proies 481, prédateurs 0
+  graine  6  pred_3x3 g13            prédateurs éteints après 8129 ticks      fin : proies 0, prédateurs 0
+  graine  7  pred_3x3_t60k g8        prédateurs éteints après 89200 ticks     fin : proies 408, prédateurs 0
+  graine  8  pred_1x1 g9             prédateurs éteints après 21400 ticks     fin : proies 544, prédateurs 0
+  graine  9  pred_2x2 g4             prédateurs éteints après 7000 ticks      fin : proies 486, prédateurs 0
+  graine 10  pred_2x2 g8             prédateurs gardés                        fin : proies 273, prédateurs 64
+  graine 11  pred_2x2 g10            prédateurs éteints après 7196 ticks      fin : proies 0, prédateurs 0
+  graine 12  pred_3x3 g7             prédateurs éteints après 45600 ticks     fin : proies 0, prédateurs 0
+  graine 13  pred_3x3 g13            prédateurs éteints après 7465 ticks      fin : proies 0, prédateurs 0
+  graine 15  pred_1x1 g9             prédateurs éteints après 60400 ticks     fin : proies 459, prédateurs 0
+  graine 16  pred_2x2 g4             prédateurs éteints après 7538 ticks      fin : proies 0, prédateurs 0
+
+predevol_couples
+  graine  1  pred_1x1 g9             prédateurs éteints après 21000 ticks     fin : proies 499, prédateurs 0
+  graine  2  pred_2x2 g4             prédateurs éteints après 7800 ticks      fin : proies 505, prédateurs 0
+  graine  3  pred_2x2 g8             prédateurs éteints après 6600 ticks      fin : proies 469, prédateurs 0
+  graine  4  pred_2x2 g10            prédateurs éteints après 13800 ticks     fin : proies 427, prédateurs 0
+  graine  5  pred_3x3 g7             prédateurs éteints après 6539 ticks      fin : proies 0, prédateurs 0
+  graine  6  pred_3x3 g13            prédateurs éteints après 6600 ticks      fin : proies 535, prédateurs 0
+  graine  7  pred_3x3_t60k g8        prédateurs éteints après 4727 ticks      fin : proies 0, prédateurs 0
+  graine  8  pred_1x1 g9             prédateurs éteints après 40800 ticks     fin : proies 479, prédateurs 0
+  graine  9  pred_2x2 g4             prédateurs éteints après 8400 ticks      fin : proies 446, prédateurs 0
+  graine 10  pred_2x2 g8             prédateurs éteints après 6000 ticks      fin : proies 279, prédateurs 0
+  graine 11  pred_2x2 g10            prédateurs éteints après 6600 ticks      fin : proies 467, prédateurs 0
+  graine 12  pred_3x3 g7             prédateurs éteints après 6636 ticks      fin : proies 0, prédateurs 0
+  graine 13  pred_3x3 g13            prédateurs éteints après 6600 ticks      fin : proies 472, prédateurs 0
+  graine 14  pred_3x3_t60k g8        prédateurs éteints après 4420 ticks      fin : proies 0, prédateurs 0
+  graine 15  pred_1x1 g9             prédateurs éteints après 57600 ticks     fin : proies 479, prédateurs 0
+  graine 16  pred_2x2 g4             prédateurs éteints après 7009 ticks      fin : proies 0, prédateurs 0
+
+Prédateurs gardés jusqu'à la fin, par lignée :
+  lignée                    predevol_proies_naives    predevol_proies_rodees          predevol_couples
+  pred_1x1 g9                                  0/3                       0/3                       0/3
+  pred_2x2 g10                                 0/2                       0/2                       0/2
+  pred_2x2 g4                                  0/3                       0/3                       0/3
+  pred_2x2 g8                                  0/2                       1/2                       0/2
+  pred_3x3 g13                                 0/2                       0/2                       0/2
+  pred_3x3 g7                                  0/2                       0/2                       0/2
+  pred_3x3_t60k g8                             0/1                       0/1                       0/2
+  total                                       0/15                      1/15                      0/16

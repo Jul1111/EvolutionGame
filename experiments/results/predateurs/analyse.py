@@ -81,7 +81,7 @@ def main(argv):
     for run in [a for a in argv if not a.startswith("--")]:
         info = json.load(open(os.path.join(run, "run.json"), encoding="utf-8"))
         cfg, ticks = info["config"], info["ticks"]
-        start = cfg["PREDATOR_START"]
+        start = cfg["PREDATOR_START"] if cfg["PREDATION"] else 0   # Else: predators among the founders (tick 0)
         seeds = {}
         for f in sorted(glob.glob(os.path.join(run, "seed_*", "timeline.csv"))):
             seeds[int(f.split("seed_")[1].split(os.sep)[0])] = seed_stats(f, start, ticks)
