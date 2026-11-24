@@ -1,6 +1,33 @@
 # Expériences et résultats
 
-## Expériences
+Ce qu'on a appris en faisant tourner la simulation, du plus général au plus précis : d'abord un résumé par thème, puis la façon de lancer une expérience, puis le détail de chaque expérience (protocole, chiffres, limites), rangé par thème et daté.
+
+## En bref
+
+Réglages de `config.py` : `FOOD_COUNT = 60` (nourriture des petites populations), `FOOD_COUNT_MIN = 15`, `FOOD_PRESSURE_POP = 300` créatures nées pour le monde entier, `POP_MAX = 400` par écran (`POP_CAP`). Détails et protocoles dans les sections datées ci-dessous.
+
+| Cadre | Extinctions | Population à l'équilibre | Vitesse moyenne | Coût d'un tick |
+|---|---|---|---|---|
+| 1×1, une espèce (`complet`) | 0/8 | 204 ± 27 | 1,49 ± 1,03 (une graine à ~3,9, les autres ~1) | ~1,4 ms |
+| 2×2, 60°, `complet` + `complet_faim` | 0/16 | 440 ± 27 | 0,77 ± 0,08 | ~7,4 ms |
+
+Coût d'un tick : chiffres d'avant l'optimisation du 23/11 ; depuis, environ 4 fois moins en 2×2.
+
+**Population.** C'est la nourriture qui règle la population, pas le plafond : il ne bloque plus de naissances. Le goulot du départ (200 fondateurs au hasard qui tombent à quelques dizaines) passe dans 24 graines sur 24 avec 60 nourritures par écran au départ, contre 8 sur 16 avec 40 ([Population, goulot et plafond](#population-goulot-et-plafond)).
+
+**Vitesse.** La quantité de nourriture règle la vitesse (×2 de 15 à 60 nourritures par écran), la densité très peu. Presque toutes les populations partent vite puis ralentissent pendant que leur population monte ; à la fin, la vitesse fixe presque la population (corrélation −0,97). Le coût du mouvement règle la vitesse, pas la population ([Vitesse](#vitesse)).
+
+**Duels et lignées.** Une fois les fondateurs choisis, l'issue d'un duel ne dépend presque pas du hasard du monde (même vainqueur dans 37 rejeux sur 40) : c'est la lignée qui compte, pas l'espèce. Ce qui gagne : la population qu'une lignée tient seule (79 % des duels) ; les lignées rapides perdent presque tout. Les capteurs de faim et de bruit ne donnent aucun avantage mesurable ; la mémoire est un vrai handicap (`complet` gagne 44 duels tranchés sur 45 contre elle en 2×2) ([Duels d'espèces et lignées](#duels-despèces-et-lignées)).
+
+**Complexité des réseaux.** Elle monte longtemps : la non-linéarité passe de 0,13 à 50 000 ticks à 0,36 vers 700 000, alors que le nombre d'entrées utilisées reste vers 6 sur 9. Des cerveaux plus gros (12 ou 16 neurones cachés au lieu de 6) ne sont pas plus complexes et ne gagnent pas plus. Parmi les réglages, la nourriture décide de la survie, la vision et la mutation de la complexité ; les préréglages validés sont dans `presets/` ([Complexité des réseaux et réglages](#complexité-des-réseaux-et-réglages)).
+
+**Niches et régimes.** Avec une seule nourriture, une espèce élimine toujours l'autre. Avec deux sortes de nourriture et un gène de régime, deux espèces coexistent dans 45 % des graines quand leurs fondateurs sont spécialistes (21 sur 47, contre 17 % avec des régimes au hasard, p = 0,009), chacune sur sa nourriture. Une seule espèce se scinde en deux groupes de spécialistes quand le régime mute assez (0,15 : 12 graines sur 12). Si une nourriture est rare et riche et l'autre abondante et pauvre, à énergie égale, le groupe de la rare est plus petit, plus lent, mange moins souvent et choisit sa nourriture par sa valeur plutôt que par sa distance. Avec 3 ou 4 sortes et une mutation du régime de 0,15, le nombre de groupes suit le nombre de niches (3 groupes dans 12 graines sur 12 avec 3 sortes) ; avec une mutation faible, c'est l'histoire du départ qui décide ([Niches et régimes](#niches-et-régimes)).
+
+**Prédateurs.** En 1×1 ils s'éteignent presque toujours (1 graine sur 16 en garde), en 2×2 ils tiennent dans 4 graines sur 16, et un monde 3×3 ne fait pas mieux : le goulot est la fondation de leur population. Des prédateurs déjà évolués passent ce départ mais surexploitent les proies et s'effondrent (1 graine sur 46 les garde). Quand ils durent : cycles de Lotka-Volterra, proies qui se détournent d'eux et deviennent deux fois plus rapides ([Prédateurs](#prédateurs)).
+
+**Calcul.** Un tick en 2×2 (~1 350 créatures) est passé de 10,7 à 2,2 ms, avec des résultats identiques au bit près : état des créatures dans des tableaux permanents, grille spatiale, Numba ([Calcul](#calcul)).
+
+## Lancer une expérience
 
 ```bash
 python -m experiments.run --name <nom> --seeds 1 2 3 4 --ticks 120000 [--set FOOD_COUNT=30 MUTATION_STD=0.2]
@@ -39,30 +66,7 @@ Chaque run écrit `experiments/results/<date>_<nom>/` : `run.json` (commande, co
 
 Deux expériences dont les intervalles (± écart-type) se recouvrent ne sont pas départagées : ajouter des graines avant de conclure.
 
-## Résultats
-
-### État actuel (22/11/2026)
-
-Réglages de `config.py` : `FOOD_COUNT = 60` (nourriture des petites populations), `FOOD_COUNT_MIN = 15`, `FOOD_PRESSURE_POP = 300` créatures nées pour le monde entier, `POP_MAX = 400` par écran (`POP_CAP`). Détails et protocoles dans les sections datées ci-dessous.
-
-| Cadre | Extinctions | Population à l'équilibre | Vitesse moyenne | Coût d'un tick |
-|---|---|---|---|---|
-| 1×1, une espèce (`complet`) | 0/8 | 204 ± 27 | 1,49 ± 1,03 (une graine à ~3,9, les autres ~1) | ~1,4 ms |
-| 2×2, 60°, `complet` + `complet_faim` | 0/16 | 440 ± 27 | 0,77 ± 0,08 | ~7,4 ms |
-
-- Coût d'un tick : chiffres d'avant l'optimisation du 23/11 ; depuis, environ 4 fois moins en 2×2 (section « Optimisation du calcul »).
-- Le goulot de départ est passé dans 24 graines sur 24 (8 en 1×1, 16 en 2×2), contre 8 sur 16 avec `FOOD_COUNT = 40`.
-- Le plafond ne bloque plus de naissances ; c'est la nourriture qui règle la population.
-- Duels de populations évoluées (1×1) : une fois les fondateurs choisis, l'issue ne dépend presque pas du hasard du monde (même vainqueur dans 37 rejeux sur 40). En duels croisés (chaque lignée contre 4 adversaires), la qualité de la lignée adverse prédit 81 à 91 % des issues. Faim et bruit : aucun effet d'espèce. Mémoire : vrai handicap (13 lignées mémoire sur 16 perdent en majorité contre des `complet` variés, p = 0,02), bien que les réseaux s'en servent (la couper coûte 3 % de population et fait perdre les duels plus vite). Ce qui gagne : la population qu'une lignée tient seule (79 % des duels) ; les lignées rapides perdent presque tout. **Confirmé en 2×2 à 60°** : `complet` gagne 44 duels tranchés sur 45 contre la mémoire, les 16 lignées mémoire perdent en majorité.
-- **Prédateurs** (23/11, `PREDATION`) : en 1×1 ils s'éteignent presque toujours (1 graine sur 16 en garde), en 2×2 ils tiennent dans 4 graines sur 16 à 120 000 ticks, et un monde 3×3 ne fait pas mieux (1 et 2 sur 16) : le goulot est la fondation de leur population. Des prédateurs déjà évolués passent ce départ, mais surexploitent les proies et s'effondrent : 1 graine sur 46 les garde, et 19 sur 46 perdent aussi leurs proies (24/11). Quand ils durent : cycles de Lotka-Volterra (les prédateurs suivent les proies de 2 000 à 4 000 ticks), proies qui se détournent d'eux (5 populations sur 5) et deviennent deux fois plus rapides, prédateurs qui accélèrent à la vue d'une proie. Les proies utilisent plus d'entrées, mais leurs réseaux ne sont pas nettement plus non linéaires.
-- **Deux espèces avec fondateurs spécialistes** : coexistence dans 45 % des graines (21 sur 47, contre 17 % avec des régimes au hasard, p = 0,009 ; mutation du régime 0,05), chaque espèce sur sa nourriture ; avec une mutation à 0,15, une seule espèce occupe plus souvent les deux nourritures en se scindant.
-- **Une espèce se scinde en deux** : avec deux nourritures et une mutation du régime à 0,15, une seule espèce garde deux groupes de spécialistes dans 12 graines sur 12, et en refait un par mutation quand il disparaît ; à 0,05, une seule nourriture finit mangée.
-- **Cerveaux plus gros** (12 ou 16 neurones cachés au lieu de 6) : pas plus non linéaires, même population, pas d'avantage en duel (9 et 11 victoires sur 16). La taille du réseau ne bride pas la complexité.
-- **Coexistence par niches** : avec deux sortes de nourriture et un gène de régime où les spécialistes sont avantagés, deux espèces coexistent de façon stable dans 3 graines sur 13 (0 sur 16 avec une seule nourriture), chaque fois sur des nourritures différentes. Sans avantage aux spécialistes, aucune niche ne se forme.
-- **Un million de ticks** : la non-linéarité des réseaux continue de monter (0,13 à 50 000 ticks → 0,36, plateau vers 700 000), pas le nombre d'entrées utilisées (~6 sur 9) ; la vitesse baisse encore (1,44 → 0,56). Les runs de 120 000 ticks voient des populations encore en train de changer.
-- **Carte des réglages** (section « Carte des réglages et préréglages ») : la nourriture décide de la survie, la vision et la mutation de la complexité des réseaux ; aucun réglage ne fait coexister deux espèces durablement, l'abondance retarde seulement l'élimination. Combinés, les réglages durs s'additionnent jusqu'à l'extinction : quatre préréglages validés (Facile, Équitable, Dur, Compliqué) sont dans `presets/`.
-- Duel en 2×2 (16 graines) : `complet` l'emporte 10 fois, `complet_faim` 6 fois. Écart compatible avec le hasard (p = 0,45) : le capteur de faim ne donne ni avantage ni handicap mesurable. Il n'est pas cassé, mais il vaut presque toujours ~0 : son échelle (600 ticks) est 50 fois plus longue que les moments typiques sans nourriture en vue. Avec une échelle de 60 ticks, l'entrée varie et le réseau s'en sert un peu (couper le capteur coûte ~2,5 % de population), mais le duel reste à 9 contre 6 (et une graine où les deux coexistent) : l'avantage est trop petit face au hasard du départ. Une espèce élimine toujours l'autre, entre 6 000 et 70 000 ticks.
-- **Vitesse** (revérifiée le 22/11, section « La vitesse avec les règles actuelles ») : la conclusion du 08/11 ne tient plus. C'est la quantité de nourriture qui règle la vitesse (×2 de 15 à 60 nourritures par écran, à densité égale), la densité ne la baisse que de 6 à 18 %. Les lignées diffèrent beaucoup entre elles (0,5 à 4), et la sélection favorise les plus rapides (rho +0,27 ± 0,19, positif dans les 8 populations) au lieu des intermédiaires.
+## Population, goulot et plafond
 
 ### Évolution continue, ancienne règle de nourriture (08/11/2026, historique)
 
@@ -163,6 +167,8 @@ Après le passage de `POP_MAX` et `FOOD_PRESSURE_POP` en valeurs par écran (`PO
 - **Limites** : coût mesuré sur une seule machine (8 cœurs, un processus par graine) ; 3×3 non testé (densité attendue ~2 000 créatures).
 - **Retenu** : la pression de nourriture redevient un nombre pour le monde entier (`FOOD_PRESSURE_POP = 300`), le plafond reste par écran : un 2×2 se fixe vers 440 créatures, à ~6 ms par tick.
 
+## Vitesse
+
 ### La vitesse avec les règles actuelles (22/11/2026)
 
 Même protocole que le 08/11 (jardin commun, puis gradient de sélection), sur les 8 populations finales de `calib_long_nourr60` (1×1, une espèce, `FOOD_COUNT=60`, 120 000 ticks). Jardin et gradient les reprennent dans le monde de leur run (`run.json`). Sorties brutes : `experiments/results/20261122_014718_calib_long_nourr60/vitesse_jardin_gradient.txt`.
@@ -209,6 +215,41 @@ Même protocole que le 08/11 (jardin commun, puis gradient de sélection), sur l
 **Conclusion** : avec les règles actuelles, la vitesse est un comportement appris qui suit **la quantité de nourriture** (×2 de 15 à 60 nourritures par écran), bien plus que la densité ; elle varie aussi beaucoup entre lignées, et la sélection pousse vers les plus rapides. Le 08/11 décrivait un autre monde (nourriture fixe, sans `FOOD_COUNT` élevé pour les petites populations).
 
 **Limites** : une seule configuration (1×1, une espèce) ; 3 tirages par condition du jardin ; une seule suite par population pour le gradient ; nourriture du jardin fixée à son maximum.
+
+### La vitesse dans le temps : coureurs et économes (23/11/2026)
+
+Les 62 populations évoluées seules de la section précédente (4 espèces, 1×1), relevé tous les 600 ticks. Sorties et script : `experiments/results/20261122_150050_seul_complet/vitesse_dans_le_temps.txt`.
+
+Hypothèse testée : une « tragédie des communs », où chaque créature gagnerait à courir et où la population s'accélérerait peu à peu en tenant de moins en moins de monde. **Elle ne tient pas.**
+
+| | Lignées | Vitesse 10-20k / 40-60k / 100-120k ticks | Population 10-20k / 40-60k / 100-120k |
+|---|---|---|---|
+| Rapides à la fin (> 2,5) | 11 | 2,94 / 3,70 / 3,54 | 85 / 120 / 149 |
+| Les autres | 51 | 2,87 / 2,49 / 1,34 | 92 / 145 / 203 |
+
+- **Presque toutes les populations partent vite** (~2,9 au début, 55 sur 62 dépassent 2,5 dans les 25 000 premiers ticks), **puis la plupart ralentissent** pendant que leur population monte : corrélation vitesse-population dans le temps négative dans 54 sur 62 (−0,65 en moyenne).
+- **Les lignées rapides sont celles qui restent bloquées** dans le régime du départ, presque à la vitesse maximale (4) : elles ne s'accélèrent pas au fil du temps, elles ne ralentissent jamais.
+- **À la fin, la vitesse fixe presque la population** : corrélation −0,97 entre populations. Le coût du mouvement (0,03 par unité de vitesse, contre 0,04 à l'arrêt) fixe ce qu'une même nourriture peut faire vivre : un coureur à 4 dépense 2,3 fois plus qu'un marcheur à 1.
+- **Tension avec le gradient de sélection** (rho +0,27 vers la vitesse, section « La vitesse avec les règles actuelles ») : si les plus rapides laissaient vraiment plus de petits pour des raisons héritables, les populations s'accéléreraient. Or 51 sur 62 ralentissent. La vitesse d'une créature est sans doute surtout un effet de son état (une créature qui voit de la nourriture et a de l'énergie accélère et se reproduit), pas de ses gènes.
+
+### Coût du mouvement : un levier pour la vitesse (23/11/2026)
+
+`complet` seul, 1×1, 16 graines × 120 000 ticks, `ENERGY_MOVE_COST` de 0,015 à 0,06 (0,03 = réglage actuel, run `seul_complet`). Résultats : `experiments/results/20261123_0*_cout_mouvement_*` ; sorties et script : `experiments/results/20261123_015215_cout_mouvement_06/cout_mouvement.txt`.
+
+| Coût par unité de vitesse | Extinctions | Vitesse (médiane) | Population | Coureurs (> 2,5) | Population d'un coureur |
+|---|---|---|---|---|---|
+| 0,015 | 0/16 | 2,38 | 208 ± 10 | 7/16 | 190 à 210 |
+| **0,03** (actuel) | 1/16 | 1,18 | 205 ± 20 | 1/15 | 142 |
+| 0,045 | 3/16 | 0,87 | 197 ± 26 | 1/13 | 113 |
+| 0,06 | 6/16 | 0,73 | 188 ± 33 | 1/10 | 94 |
+
+- **Le coût règle la vitesse, pas la population** : la vitesse médiane est divisée par 3 de 0,015 à 0,06, la population des lignées lentes bouge peu (215 → 199).
+- **À bas coût, courir n'est plus un piège** : à 0,015, 7 lignées sur 16 courent, et elles tiennent presque autant de monde que les autres (190 à 210). Les vitesses varient sans que ça coûte de la population.
+- **À haut coût, le piège du coureur s'aggrave** : il en reste une par réglage, bloquée près de 4, qui tient de moins en moins de monde (142 → 94).
+- **Un coût élevé tue au départ** : toutes les extinctions ont lieu avant 13 000 ticks, dans le goulot (3/16 à 0,045, 6/16 à 0,06). Les fondateurs au hasard bougent beaucoup et s'épuisent avant d'apprendre.
+- **Pour le jeu** : 0,03 est un compromis. Moins (0,015-0,02) donne des mondes plus variés en vitesse et sans extinction ; plus donne des mondes lents mais des débuts risqués.
+
+## Duels d'espèces et lignées
 
 ### Duel `complet` contre `complet_faim` sur 16 graines (22/11/2026)
 
@@ -334,39 +375,6 @@ Suite de la section précédente, mêmes populations évoluées seules, mêmes r
 - **Donc la mémoire n'est pas un poids mort** : les réseaux qui l'ont s'en servent et en dépendent. Le handicap de l'espèce vient de ce que l'évolution en fait : avec 2 entrées et 2 sorties de plus qui se rebouclent, elle trouve des réseaux moins bons dans l'ensemble que ceux de `complet`, même s'ils tirent parti de leur mémoire. Le gain de la mémoire (quelques %) ne compense pas.
 - **Limites** : la coupure ne montre que la dépendance d'un réseau à sa mémoire, pas ce qu'aurait donné une espèce sans mémoire partie du même point ; 1×1.
 
-### La vitesse dans le temps : coureurs et économes (23/11/2026)
-
-Les 62 populations évoluées seules de la section précédente (4 espèces, 1×1), relevé tous les 600 ticks. Sorties et script : `experiments/results/20261122_150050_seul_complet/vitesse_dans_le_temps.txt`.
-
-Hypothèse testée : une « tragédie des communs », où chaque créature gagnerait à courir et où la population s'accélérerait peu à peu en tenant de moins en moins de monde. **Elle ne tient pas.**
-
-| | Lignées | Vitesse 10-20k / 40-60k / 100-120k ticks | Population 10-20k / 40-60k / 100-120k |
-|---|---|---|---|
-| Rapides à la fin (> 2,5) | 11 | 2,94 / 3,70 / 3,54 | 85 / 120 / 149 |
-| Les autres | 51 | 2,87 / 2,49 / 1,34 | 92 / 145 / 203 |
-
-- **Presque toutes les populations partent vite** (~2,9 au début, 55 sur 62 dépassent 2,5 dans les 25 000 premiers ticks), **puis la plupart ralentissent** pendant que leur population monte : corrélation vitesse-population dans le temps négative dans 54 sur 62 (−0,65 en moyenne).
-- **Les lignées rapides sont celles qui restent bloquées** dans le régime du départ, presque à la vitesse maximale (4) : elles ne s'accélèrent pas au fil du temps, elles ne ralentissent jamais.
-- **À la fin, la vitesse fixe presque la population** : corrélation −0,97 entre populations. Le coût du mouvement (0,03 par unité de vitesse, contre 0,04 à l'arrêt) fixe ce qu'une même nourriture peut faire vivre : un coureur à 4 dépense 2,3 fois plus qu'un marcheur à 1.
-- **Tension avec le gradient de sélection** (rho +0,27 vers la vitesse, section « La vitesse avec les règles actuelles ») : si les plus rapides laissaient vraiment plus de petits pour des raisons héritables, les populations s'accéléreraient. Or 51 sur 62 ralentissent. La vitesse d'une créature est sans doute surtout un effet de son état (une créature qui voit de la nourriture et a de l'énergie accélère et se reproduit), pas de ses gènes.
-
-### Coût du mouvement : un levier pour la vitesse (23/11/2026)
-
-`complet` seul, 1×1, 16 graines × 120 000 ticks, `ENERGY_MOVE_COST` de 0,015 à 0,06 (0,03 = réglage actuel, run `seul_complet`). Résultats : `experiments/results/20261123_0*_cout_mouvement_*` ; sorties et script : `experiments/results/20261123_015215_cout_mouvement_06/cout_mouvement.txt`.
-
-| Coût par unité de vitesse | Extinctions | Vitesse (médiane) | Population | Coureurs (> 2,5) | Population d'un coureur |
-|---|---|---|---|---|---|
-| 0,015 | 0/16 | 2,38 | 208 ± 10 | 7/16 | 190 à 210 |
-| **0,03** (actuel) | 1/16 | 1,18 | 205 ± 20 | 1/15 | 142 |
-| 0,045 | 3/16 | 0,87 | 197 ± 26 | 1/13 | 113 |
-| 0,06 | 6/16 | 0,73 | 188 ± 33 | 1/10 | 94 |
-
-- **Le coût règle la vitesse, pas la population** : la vitesse médiane est divisée par 3 de 0,015 à 0,06, la population des lignées lentes bouge peu (215 → 199).
-- **À bas coût, courir n'est plus un piège** : à 0,015, 7 lignées sur 16 courent, et elles tiennent presque autant de monde que les autres (190 à 210). Les vitesses varient sans que ça coûte de la population.
-- **À haut coût, le piège du coureur s'aggrave** : il en reste une par réglage, bloquée près de 4, qui tient de moins en moins de monde (142 → 94).
-- **Un coût élevé tue au départ** : toutes les extinctions ont lieu avant 13 000 ticks, dans le goulot (3/16 à 0,045, 6/16 à 0,06). Les fondateurs au hasard bougent beaucoup et s'épuisent avant d'apprendre.
-- **Pour le jeu** : 0,03 est un compromis. Moins (0,015-0,02) donne des mondes plus variés en vitesse et sans extinction ; plus donne des mondes lents mais des débuts risqués.
-
 ### Mémoire contre `complet` en 2×2 à 60° (23/11/2026)
 
 Même protocole qu'en 1×1, dans un autre cadre : monde 2×2, champ de vision 60°. `complet` et `complet_memoire` évoluent seules (16 graines × 120 000 ticks), puis duels croisés 100 + 100 aux décalages 0, 1 et 2 (48 duels, chaque lignée contre 3 adversaires). Lancé comme un lot (`experiments.lot`). Résultats : `experiments/results/20261123_*_2x2_*` ; sorties et script : `experiments/results/20261123_114711_2x2_croise_complet_memoire_s2/analyse_2x2.txt`.
@@ -382,6 +390,8 @@ Même protocole qu'en 1×1, dans un autre cadre : monde 2×2, champ de vision 60
 - **Ce qui prédit le vainqueur** : la population tenue seule, 82 % des duels (79 % en 1×1). Le plus lent gagne 71 % des duels.
 - **Pas de coureurs en 2×2 à 60°** : les 32 populations restent entre 0,49 et 1,05 de vitesse. Le piège du coureur vu en 1×1 à 120° n'apparaît pas dans ce cadre.
 - **Durée** : 20 à 28 min par run de 16 graines. Le run `seul_complet_memoire` a duré 8 h 30 à cause d'une pause volontaire (`experiments.pause`) : les résultats n'en dépendent pas.
+
+## Complexité des réseaux et réglages
 
 ### Carte des réglages et préréglages (23/11/2026)
 
@@ -425,6 +435,133 @@ Résultats : `experiments/results/20261123_1*_carte_*`, tables dans `experiments
 | Compliqué | 25 obstacles, mutation 0,3 | 0/8 | ~100 | 7 entrées sur 9, non-linéarité 0,22 (30 000 ticks) |
 
 Ils sont dans `presets/` (versionnés) et apparaissent en tête des préréglages du panneau Paramètres (◀ ▶, puis Appliquer). Ils ne changent ni la taille du monde ni les espèces ; les nombres de nourritures, poisons et obstacles sont par écran, valables en 2×2. Limites : base en 1×1, vision 60° (choix arbitraire) ; Dur et Compliqué validés sur 30 000 ticks seulement.
+
+### Cerveaux plus gros : 6, 12 ou 16 neurones cachés (23/11/2026)
+
+La complexité est-elle bridée par la taille du réseau ? `complet` (6 neurones cachés, 74 poids) contre `complet_12` (146 poids) et `complet_16` (194 poids), mêmes capteurs, défauts de `config.py`. Seules : 8 graines × 200 000 ticks, complexité des populations finales. Duels à fondateurs aléatoires : 16 graines × 120 000 ticks. Lot `experiments/lots/cerveaux.txt` ; résultats `experiments/results/20261123_16*_cerveau_*` et `*_duel_6_*`, tables dans `experiments/results/cerveaux/`. (Les photos intermédiaires demandées n'ont pas été prises : `--photos` se perdait dans les lots, corrigé depuis.)
+
+| Neurones cachés | Population | Vitesse | Entrées utilisées (sur 9) | Non-linéarité | Duel contre 6 neurones |
+|---|---|---|---|---|---|
+| 6 | 213 | 1,18 | 6,1 ± 0,6 | 0,26 ± 0,09 | — |
+| 12 | 219 | 0,87 | 6,5 ± 0,3 | 0,23 ± 0,03 | gagne 9 sur 16 (p = 0,80) |
+| 16 | 217 | 0,90 | 6,8 ± 0,3 | 0,21 ± 0,03 | gagne 11 sur 16 (p = 0,21) |
+
+- **La taille du réseau ne bride pas la complexité** : avec 2 à 3 fois plus de poids, les réseaux ne sont pas plus non linéaires (plutôt un peu moins, écart dans le bruit), et la population tenue est la même. Ils utilisent un peu plus d'entrées (6,8 contre 6,1 sur 9) et varient moins d'une graine à l'autre.
+- **Pas d'avantage en duel** : 9 et 11 victoires sur 16, compatibles avec le hasard. Plus de poids à faire évoluer ne coûte rien non plus (la mutation touche chaque poids : un grand réseau mute plus en tout).
+- Le contrôle : `cerveau_6` reproduit exactement les chiffres du run d'un million de ticks à 200 000 ticks (6,12 entrées, 0,256), mêmes graines, mêmes réglages.
+- Ce qui limite la complexité est donc plutôt le monde (ce qu'il y a à percevoir et à décider) que la capacité du réseau : la non-linéarité monte avec le temps (section suivante), pas avec la taille.
+
+### Un million de ticks : la complexité continue-t-elle de monter ? (23/11/2026)
+
+Défauts de `config.py` (1×1, vision 120°, `complet` seule), 8 graines × 1 000 000 ticks (44 min), une photo de la population tous les 50 000 ticks (`experiments.run --photos 50000`). Chaque photo est mesurée comme dans la carte des réglages (30 créatures rejouées 1 500 ticks). Résultats : `experiments/results/20261123_144515_long_1M/` ; table et script : `complexite_dans_le_temps.txt`, `long_analyse.py`.
+
+| Tick | Entrées utilisées (sur 9) | Non-linéarité | Population | Vitesse | Générations |
+|---|---|---|---|---|---|
+| 50 000 | 6,1 ± 0,5 | 0,13 ± 0,02 | 148 | 2,50 | 27 |
+| 100 000 | 6,2 ± 0,7 | 0,21 ± 0,08 | 200 | 1,44 | 52 |
+| 200 000 | 6,1 ± 0,6 | 0,26 ± 0,09 | 213 | 1,18 | 99 |
+| 400 000 | 6,0 ± 0,5 | 0,30 ± 0,08 | 217 | 1,00 | 188 |
+| 600 000 | 5,8 ± 1,1 | 0,33 ± 0,09 | 234 | 0,65 | 278 |
+| 800 000 | 5,9 ± 0,7 | 0,36 ± 0,08 | 230 | 0,67 | 365 |
+| 1 000 000 | 5,8 ± 0,8 | 0,36 ± 0,06 | 233 | 0,56 | 452 |
+
+- **La non-linéarité continue de monter**, presque trois fois plus à la fin qu'à 50 000 ticks (0,13 → 0,36), plus vite au début, puis un plateau à partir de ~700 000 ticks. Elle monte dans 7 graines sur 8 (moyenne 50 000-200 000 contre 800 000-1 000 000) ; la graine 2, déjà haute tôt (0,34), redescend un peu (0,29).
+- **Le nombre d'entrées utilisées, lui, ne monte pas** : ~6 sur 9 du début à la fin. Les réseaux ne se servent pas de plus de capteurs ; ils se servent de façon plus fine (seuils, combinaisons) de ceux qu'ils utilisent déjà.
+- **La population monte lentement** (200 → 233 de 100 000 à 1 000 000 ticks) **et la vitesse baisse** (1,44 → 0,56) : la tendance « les populations commencent vite et ralentissent » continue bien au-delà des 120 000 ticks des autres expériences.
+- Conséquence : les runs de 120 000 ticks mesurent des populations encore en train de changer (non-linéarité à mi-chemin, vitesse deux fois plus haute qu'à la fin).
+
+## Niches et régimes
+
+### Coexistence par niches : deux sortes de nourriture (23/11/2026)
+
+La carte des réglages n'a trouvé aucun réglage qui fasse coexister deux espèces : une élimine toujours l'autre. Nouveau mécanisme : deux sortes de nourriture et un gène de régime hérité (`FOOD_TYPES = 2`, voir `docs/fonctionnement.md`). Deux espèces presque identiques, `regime` et `regime_faim` (la seconde a en plus le capteur de faim), défauts de `config.py`, 16 graines × 120 000 ticks. Lot `experiments/lots/niches.txt` ; résultats `experiments/results/20261123_15*_niches_*`, table par graine et script dans `experiments/results/niches/`.
+
+| Condition | Extinctions | Coexistence à la fin | Régimes |
+|---|---|---|---|
+| Témoin : une sorte de nourriture (énergie 30) | 0/16 | 0/16 | — |
+| Deux sortes, énergie 60, exposant 2 (spécialistes avantagés) | 3/16 | **3/13** | spécialistes (> 98 % sous 0,25 ou au-dessus de 0,75) |
+| Deux sortes, énergie 60, exposant 1 (pas d'avantage) | 1/16 | 1/15 | généralistes (~0,5) |
+
+- **Avec des niches, des espèces coexistent, et chaque fois sur des nourritures différentes** : dans les 3 graines, une espèce a un régime moyen de 0,95 à 0,97, l'autre de 0,04 à 0,06. Les espèces se sont partagé les deux nourritures.
+- **Cette coexistence est stable**, pas une élimination lente : l'espèce rare remonte (graine 6 : 10 créatures à 15 000 ticks, 122 à la fin ; graines 3 et 12 : de ~50 à plus de 100). Une espèce rare laisse sa nourriture intacte, donc abondante : elle repart. C'est le retour à l'équilibre qui manquait avec une seule nourriture.
+- **Sans avantage aux spécialistes (exposant 1)**, tout le monde reste généraliste (régime ~0,5) et une espèce élimine l'autre comme avec une seule nourriture (1 coexistence sur 15). Ce sont bien les niches qui font coexister, pas le fait d'avoir deux sortes de nourriture.
+- **Le plus souvent, une seule espèce reste et une seule nourriture est mangée** : dans 9 des 10 graines à une espèce, la quasi-totalité de la population est spécialiste de la même nourriture, l'autre est laissée. Passer d'un régime à l'autre oblige à traverser les généralistes, qui ne tirent qu'un quart de chaque nourriture : une vallée que la mutation (0,05 par naissance) ne franchit pas. La coexistence se joue tôt : il faut que les deux spécialisations s'installent avant qu'une espèce élimine l'autre. Une graine (1) garde les deux spécialistes dans une même espèce (53 % / 46 %) : deux lignées dans la même espèce.
+- **Coût** : la nourriture de l'autre sorte ne rapporte rien à un spécialiste, d'où l'énergie doublée (60) ; malgré elle, 3 graines sur 16 s'éteignent au départ (régimes tirés au hasard : en moyenne un tiers de l'énergie).
+- Suites possibles : une mutation de régime plus forte, ou un exposant entre 1 et 2, pour que la vallée se franchisse et que la seconde nourriture soit conquise ; plus de graines pour mesurer la fréquence de la coexistence.
+
+### Deux espèces, fondateurs spécialistes : coexistence ou une espèce partout (23/11/2026)
+
+Reprise de la coexistence par niches avec les fondateurs spécialistes (section suivante : plus d'extinction au départ) : `regime` + `regime_faim`, deux nourritures, énergie 60, 16 graines × 120 000 ticks, mutation du régime 0,05 ou 0,15. Lot `experiments/lots/coexistence_m015.txt` ; résultats `experiments/results/20261123_17*_coexist_*`, table par graine `experiments/results/niches/coexistence_fondateurs_specialistes.txt`.
+
+| Mutation du régime | Coexistence à la fin | Les graines à une espèce |
+|---|---|---|
+| 0,05 | **9/16**, chaque fois une espèce par nourriture | le gagnant ne mange qu'une nourriture (6 sur 7) |
+| 0,15 | 6/16, chaque fois une espèce par nourriture | le gagnant mange les deux : il s'est scindé (10 sur 10, ~50/50) |
+
+- **Avec des fondateurs spécialistes, la coexistence devient fréquente à 0,05** : 9 graines sur 16, contre 3 sur 13 avec des régimes au hasard. **Confirmé sur 48 graines** (32 de plus, `experiments/lots/coexistence_48.txt`, `experiments/results/niches/coexistence_48_graines.txt`) : coexistence dans 21 graines survivantes sur 47 (45 %) contre 6 sur 36 (17 %), p = 0,009 ; extinctions au départ 1 sur 48 contre 12 sur 48. Toujours une espèce par nourriture. Chaque espèce part avec des spécialistes des deux nourritures ; celle qui perd le terrain sur une nourriture garde l'autre.
+- **Une mutation du régime plus forte ne fait pas coexister plus d'espèces, plutôt moins** (6/16, écart dans le bruit : p = 0,48). Ce qui change nettement, c'est l'issue quand une espèce gagne : à 0,15 elle occupe les deux nourritures à elle seule (10 graines sur 10, deux groupes de spécialistes en interne), à 0,05 elle se contente d'une (6 sur 7). Une espèce assez souple pour se scinder remplit les deux niches et ne laisse pas de place à l'autre.
+- Population totale à la fin : ~230 quand deux espèces coexistent ou qu'une espèce scindée occupe les deux nourritures, ~180 quand une seule nourriture est mangée. Le monde nourrit plus de monde quand les deux niches sont occupées, peu importe par qui.
+
+### Une espèce qui se scinde en deux spécialistes (23/11/2026)
+
+Une seule espèce (`regime`), deux sortes de nourriture, énergie 60, 16 graines × 120 000 ticks. Une graine est dite **scindée** quand au moins 10 % de la population est spécialiste de chaque nourriture (régime sous 0,25 et au-dessus de 0,75). Lot `experiments/lots/scission.txt` ; résultats `experiments/results/20261123_17*_scission_*`, table et script dans `experiments/results/scission/`.
+
+| Variante | Extinctions | Scindées à la fin | Généralistes à la fin | Groupe perdu puis refait |
+|---|---|---|---|---|
+| Mutation du régime 0,05, exposant 2 | 4/16 | 2/12 | ~0 % | 1 |
+| **Mutation du régime 0,15**, exposant 2 | 4/16 | **12/12** | ~9 % | 12 |
+| Mutation 0,05, exposant 1,5 (vallée moins profonde) | 1/16 | 9/15 | 0 à 43 % | 9 |
+
+- **Avec une mutation de régime à 0,15, l'espèce garde deux groupes de spécialistes dans toutes les graines survivantes**, presque tout le temps (100 % des relevés de la seconde moitié dans 10 graines sur 12), à peu près moitié-moitié (de 21/67 % à 58/37 %).
+- **Le second groupe naît de l'autre** : dans 12 cas, un groupe a disparu (moins de 2 %) puis a été recréé par des mutants qui ont traversé la vallée des généralistes (graine 1 : plus de spécialistes du jaune à 6 600 ticks, de nouveau 10 % à 39 600 ; graine 11 : de 6 600 à 90 000). C'est une scission à partir d'une seule population, sans barrière géographique : la nourriture laissée par les autres rapporte assez pour que les premiers mutants à l'atteindre prolifèrent.
+- **À 0,05, la vallée ne se traverse presque jamais** : dès ~5 000 ticks, un seul groupe reste (10 graines sur 12) et l'autre nourriture n'est plus mangée. Les 2 graines scindées le sont depuis le départ (les fondateurs ont des régimes au hasard).
+- **Exposant 1,5** : la vallée est moins profonde, la scission plus fréquente (9/15) mais moins nette, avec beaucoup de généralistes dans certaines graines (jusqu'à 43 %) et des scissions qui vont et viennent (30 à 100 % du temps).
+- **Les deux groupes pensent-ils différemment ?** Les 12 populations scindées (mutation 0,15) rejouées 3 000 ticks, spécialistes du vert contre spécialistes du jaune (script et sortie : `experiments/results/scission/groupes.py`, `groupes_resultat.txt`) :
+  - **Leurs réseaux ont divergé** : distance entre génomes 8,95 entre les groupes, contre 3,8 et 3,9 dans chaque groupe (plus grande entre groupes dans 12 populations sur 12).
+  - **Ils reconnaissent leur nourriture** : 75 % de leurs repas sur la leur (78 % vert, 72 % jaune ; de 49 % à 92 % selon la population ; 50 % = au hasard). L'entrée «valeur nourriture» est parmi les plus utilisées (sensibilité 0,46 et 0,34, après la distance de la nourriture).
+  - **Mais ils se dirigent presque autant vers l'autre nourriture** : corrélation entre l'angle de la nourriture et le virage +0,49 vers la leur, +0,41 vers l'autre. Un repas sur quatre ne leur rapporte rien et prive l'autre groupe.
+  - **Pour le reste, mêmes comportements** : vitesse (1,38 contre 1,28, sans sens constant d'une population à l'autre) et usage des autres capteurs semblables. Attendu : les deux nourritures ne diffèrent que par leur sorte, les deux niches sont symétriques. Une différenciation du comportement demanderait des niches différentes (nourriture rare mais riche contre abondante mais pauvre, par exemple).
+- Les « groupes » restent une seule espèce au sens du jeu (même profil, même réseau ; reproduction sans partenaire, donc pas de barrière à franchir) : ce sont deux lignées spécialisées, qui le restent parce que les intermédiaires sont désavantagés.
+- **Goulot de départ** : avec des régimes tirés au hasard, un fondateur ne tire en moyenne qu'un tiers de l'énergie d'une nourriture, d'où 1 départ sur 4 éteint. Des fondateurs spécialistes, un sur deux vert et un sur deux jaune (`DIET_FOUNDERS = "specialistes"`, défaut depuis), suppriment les extinctions : 0 sur 32 graines contre 6 sur 32 (une et deux espèces, mutation 0,15, 30 000 ticks), creux de population médian 43 et 38 créatures contre 13 et 18 (`experiments/lots/goulot_regimes.txt`, `experiments/results/scission/goulot_fondateurs.txt`). Les runs ci-dessus ont été faits avec des régimes au hasard.
+- Dans le jeu : réglage «Mutation du régime» (Paramètres, section Nourriture) ; le préréglage «Niches» la met à 0,15.
+
+### Niches asymétriques : nourriture rare et riche contre abondante et pauvre (24/11/2026)
+
+Une espèce (`regime`) qui se scinde (mutation du régime 0,15), deux sortes de nourriture à **énergie totale égale** : la verte rare et riche, la jaune abondante et pauvre (`FOOD_KIND_SHARES`, `FOOD_KIND_ENERGY`). Témoin 1:1 ; 1:2 (verte 1,5 × 60, jaune 0,75 × 60) ; 1:3 (verte 2 × 60, jaune 0,67 × 60). 16 graines × 120 000 ticks par réglage, lot `experiments/lots/niches_asymetriques.txt`. Pour chaque population scindée, 3 000 ticks rejoués (`experiments/results/niches_asymetriques/analyse.py`, sortie complète dans `resultat.txt`).
+
+| réglage | scindées | part du groupe rare / abondant | repas par 1000 ticks | vitesse | sans nourriture en vue | sensibilité à «valeur nourr.» | à «distance» |
+|---|---|---|---|---|---|---|---|
+| 1:1 | 14/16 | 0,44 / 0,48 | 1,6 / 1,7 | 1,38 / 1,21 | 0,42 / 0,43 | 0,55 / 0,49 | 0,43 / 0,40 |
+| 1:2 | 12/16 | 0,28 / 0,63 | 1,3 / 1,9 | 1,10 / 1,68 | 0,42 / 0,40 | 0,69 / 0,37 | 0,26 / 0,52 |
+| 1:3 | 9/16 | 0,21 / 0,70 | 1,1 / 1,8 | 0,85 / 1,12 | 0,47 / 0,45 | 0,80 / 0,31 | 0,23 / 0,52 |
+
+- **Le groupe de la nourriture rare est plus petit**, alors que sa niche porte autant d'énergie : 21 % de la population contre 70 % en 1:3. Une nourriture rare coûte du chemin, et un repas riche ne se prend que quand il tient dans la réserve (120 d'énergie en 1:3 : seulement sous 80 sur 200). La scission tient aussi moins souvent (9/16 contre 14/16).
+- **Il vit autrement.** Il mange moins souvent (moins de repas dans 21 des 23 populations scindées de 1:2 et 1:3, p = 0,0001), il est plus lent (20/23, p = 0,0005), et passe plus de temps sans nourriture en vue (18/23, p = 0,01). Le témoin 1:1 ne montre aucun de ces écarts (vitesse 9/14, repas 7/14).
+- **Son réseau regarde autre chose** : il réagit surtout à la valeur de la nourriture en vue (0,80 contre 0,31) et peu à sa distance (0,23 contre 0,52), le groupe abondant l'inverse. Le spécialiste du rare trie ; celui de l'abondant fonce sur ce qui est proche. Ce n'est pas l'explorateur rapide qu'on attendait : il économise son énergie entre deux repas rares.
+- L'attirance vers sa propre nourriture ne change pas (corrélation angle → virage autour de +0,45 dans les deux groupes) : l'écart est dans le tri et l'allure, pas dans la façon de viser.
+
+### Nombre de niches : 2, 3 ou 4 sortes de nourriture (24/11/2026)
+
+Une espèce (`regime`), 2, 3 ou 4 sortes de nourriture à parts et énergies égales (la sorte k nourrit le régime k/(N−1)), fondateurs spécialistes répartis sur les sortes, mutation du régime 0,05 ou 0,15. 16 graines × 120 000 ticks par réglage. Un groupe = au moins 10 % de la population spécialiste d'une sorte. Lots `experiments/lots/niches_nombre.txt` et `niches_nombre_egal.txt` ; script et sorties dans `experiments/results/niches_nombre/`.
+
+**À nourriture totale égale** (60 nourritures par écran au départ, partagées entre les sortes), 3 ou 4 sortes tuent au départ : 8 et 10 graines éteintes sur 16 avec 3 sortes, 14 et 15 avec 4, toutes avant 10 000 ticks. Chaque spécialiste ne voit qu'un tiers ou un quart de la nourriture pendant le goulot. Le second lot donne donc à chaque niche autant de nourriture qu'avec deux sortes (`FOOD_COUNT` 30 et `FOOD_COUNT_MIN` 7,5 par sorte) :
+
+| sortes | mutation | éteintes | groupes à la fin (graines vivantes) | moyenne | régimes mixtes |
+|---|---|---|---|---|---|
+| 2 | 0,05 | 0/16 | 1 : 3, 2 : 13 | 1,81 | 0,00 |
+| 2 | 0,15 | 0/16 | 1 : 2, 2 : 14 | 1,88 | 0,08 |
+| 3 | 0,05 | 3/16 | 1 : 5, 2 : 5, 3 : 3 | 1,85 | 0,04 |
+| 3 | 0,15 | 4/16 | **3 : 12** | **3,00** | 0,20 |
+| 4 | 0,05 | 6/16 | 1 : 1, 2 : 4, 3 : 4, 4 : 1 | 2,50 | 0,11 |
+| 4 | 0,15 | 8/16 | 2 : 1, 3 : 3, 4 : 4 | 3,38 | 0,25 |
+
+- **Avec une mutation du régime assez forte (0,15), le nombre de groupes suit le nombre de niches** : 2 groupes avec 2 sortes, 3 dans les 12 graines vivantes sur 12 avec 3 sortes, 3 ou 4 avec 4 sortes (3,6 en moyenne sur la seconde moitié). Une niche vidée est réoccupée par mutation depuis les voisines.
+- **Avec une mutation faible (0,05), c'est l'histoire qui décide** : les groupes perdus au départ ne reviennent que lentement (avec 4 sortes, 1,8 groupe en moyenne sur la seconde moitié mais 2,5 à la fin, le nombre monte encore à 120 000 ticks), et beaucoup de graines finissent avec moins de groupes que de niches.
+- **Les sortes du milieu sont les moins peuplées** (3 sortes, 0,15 : 17 % de spécialistes de la sorte du milieu contre 30 % pour chaque bout ; 4 sortes : 10 à 15 % contre 20 à 30 %). Une sorte du milieu est aussi mangée en partie par les régimes mixtes des deux côtés, une sorte du bout d'un seul côté.
+- Plus il y a de sortes, plus il y a de régimes mixtes (0,20 à 0,25 à 0,15), car l'écart entre deux sortes voisines (1/3 avec 4 sortes) n'est que le double de la mutation.
+- **Limite** : même à nourriture égale par niche, 3 et 4 sortes s'éteignent plus souvent au départ (3 à 8 graines sur 16) : un fondateur spécialiste ne mange toujours qu'une nourriture sur 3 ou 4 qu'il rencontre.
+
+## Prédateurs
 
 ### Prédateurs : survie, cycles, fuite et complexité (23/11/2026)
 
@@ -508,107 +645,18 @@ Nouveau mécanisme (`PREDATION`, `docs/fonctionnement.md`) : des prédateurs (`p
 - Un biais à garder en tête : dans A et B, les proies reprises sont nombreuses à l'arrivée des prédateurs (~730 à 830, contre ~190 au tick 20 000 d'un run parti de zéro). Une abondance de proies au départ favorise le boom.
 - **Conclusion** : le goulot n'est pas seulement la fondation. Des prédateurs efficaces surexploitent leurs proies. Ce qui manque à ce monde pour une coexistence durable, c'est de quoi freiner les prédateurs quand ils sont nombreux, ou abriter les proies : refuges, digestion plus longue, prédateurs plus coûteux, ou des proies déjà rodées et peu nombreuses à l'arrivée.
 
-### Niches asymétriques : nourriture rare et riche contre abondante et pauvre (24/11/2026)
+## Calcul
 
-Une espèce (`regime`) qui se scinde (mutation du régime 0,15), deux sortes de nourriture à **énergie totale égale** : la verte rare et riche, la jaune abondante et pauvre (`FOOD_KIND_SHARES`, `FOOD_KIND_ENERGY`). Témoin 1:1 ; 1:2 (verte 1,5 × 60, jaune 0,75 × 60) ; 1:3 (verte 2 × 60, jaune 0,67 × 60). 16 graines × 120 000 ticks par réglage, lot `experiments/lots/niches_asymetriques.txt`. Pour chaque population scindée, 3 000 ticks rejoués (`experiments/results/niches_asymetriques/analyse.py`, sortie complète dans `resultat.txt`).
+### Coût du calcul (22/11/2026)
 
-| réglage | scindées | part du groupe rare / abondant | repas par 1000 ticks | vitesse | sans nourriture en vue | sensibilité à «valeur nourr.» | à «distance» |
-|---|---|---|---|---|---|---|---|
-| 1:1 | 14/16 | 0,44 / 0,48 | 1,6 / 1,7 | 1,38 / 1,21 | 0,42 / 0,43 | 0,55 / 0,49 | 0,43 / 0,40 |
-| 1:2 | 12/16 | 0,28 / 0,63 | 1,3 / 1,9 | 1,10 / 1,68 | 0,42 / 0,40 | 0,69 / 0,37 | 0,26 / 0,52 |
-| 1:3 | 9/16 | 0,21 / 0,70 | 1,1 / 1,8 | 0,85 / 1,12 | 0,47 / 0,45 | 0,80 / 0,31 | 0,23 / 0,52 |
+Les coûts par tick des sections précédentes datent d'avant l'optimisation de la vision (commit `ea4fc90` : l'angle n'est plus calculé que pour les objets à portée, résultat identique au bit près). Banc de 300 ticks, un processus :
 
-- **Le groupe de la nourriture rare est plus petit**, alors que sa niche porte autant d'énergie : 21 % de la population contre 70 % en 1:3. Une nourriture rare coûte du chemin, et un repas riche ne se prend que quand il tient dans la réserve (120 d'énergie en 1:3 : seulement sous 80 sur 200). La scission tient aussi moins souvent (9/16 contre 14/16).
-- **Il vit autrement.** Il mange moins souvent (moins de repas dans 21 des 23 populations scindées de 1:2 et 1:3, p = 0,0001), il est plus lent (20/23, p = 0,0005), et passe plus de temps sans nourriture en vue (18/23, p = 0,01). Le témoin 1:1 ne montre aucun de ces écarts (vitesse 9/14, repas 7/14).
-- **Son réseau regarde autre chose** : il réagit surtout à la valeur de la nourriture en vue (0,80 contre 0,31) et peu à sa distance (0,23 contre 0,52), le groupe abondant l'inverse. Le spécialiste du rare trie ; celui de l'abondant fonce sur ce qui est proche. Ce n'est pas l'explorateur rapide qu'on attendait : il économise son énergie entre deux repas rares.
-- L'attirance vers sa propre nourriture ne change pas (corrélation angle → virage autour de +0,45 dans les deux groupes) : l'écart est dans le tri et l'allure, pas dans la façon de viser.
-
-### Deux espèces, fondateurs spécialistes : coexistence ou une espèce partout (23/11/2026)
-
-Reprise de la coexistence par niches avec les fondateurs spécialistes (section suivante : plus d'extinction au départ) : `regime` + `regime_faim`, deux nourritures, énergie 60, 16 graines × 120 000 ticks, mutation du régime 0,05 ou 0,15. Lot `experiments/lots/coexistence_m015.txt` ; résultats `experiments/results/20261123_17*_coexist_*`, table par graine `experiments/results/niches/coexistence_fondateurs_specialistes.txt`.
-
-| Mutation du régime | Coexistence à la fin | Les graines à une espèce |
+| Scène | Avant | Après |
 |---|---|---|
-| 0,05 | **9/16**, chaque fois une espèce par nourriture | le gagnant ne mange qu'une nourriture (6 sur 7) |
-| 0,15 | 6/16, chaque fois une espèce par nourriture | le gagnant mange les deux : il s'est scindé (10 sur 10, ~50/50) |
+| 2×2, ~900 créatures | 17,0 ms | 11,0 ms (−35 %) |
+| 1×1, 200 à 400 créatures | 1,63 ms | 1,38 ms (−15 %) |
 
-- **Avec des fondateurs spécialistes, la coexistence devient fréquente à 0,05** : 9 graines sur 16, contre 3 sur 13 avec des régimes au hasard. **Confirmé sur 48 graines** (32 de plus, `experiments/lots/coexistence_48.txt`, `experiments/results/niches/coexistence_48_graines.txt`) : coexistence dans 21 graines survivantes sur 47 (45 %) contre 6 sur 36 (17 %), p = 0,009 ; extinctions au départ 1 sur 48 contre 12 sur 48. Toujours une espèce par nourriture. Chaque espèce part avec des spécialistes des deux nourritures ; celle qui perd le terrain sur une nourriture garde l'autre.
-- **Une mutation du régime plus forte ne fait pas coexister plus d'espèces, plutôt moins** (6/16, écart dans le bruit : p = 0,48). Ce qui change nettement, c'est l'issue quand une espèce gagne : à 0,15 elle occupe les deux nourritures à elle seule (10 graines sur 10, deux groupes de spécialistes en interne), à 0,05 elle se contente d'une (6 sur 7). Une espèce assez souple pour se scinder remplit les deux niches et ne laisse pas de place à l'autre.
-- Population totale à la fin : ~230 quand deux espèces coexistent ou qu'une espèce scindée occupe les deux nourritures, ~180 quand une seule nourriture est mangée. Le monde nourrit plus de monde quand les deux niches sont occupées, peu importe par qui.
-
-### Une espèce qui se scinde en deux spécialistes (23/11/2026)
-
-Une seule espèce (`regime`), deux sortes de nourriture, énergie 60, 16 graines × 120 000 ticks. Une graine est dite **scindée** quand au moins 10 % de la population est spécialiste de chaque nourriture (régime sous 0,25 et au-dessus de 0,75). Lot `experiments/lots/scission.txt` ; résultats `experiments/results/20261123_17*_scission_*`, table et script dans `experiments/results/scission/`.
-
-| Variante | Extinctions | Scindées à la fin | Généralistes à la fin | Groupe perdu puis refait |
-|---|---|---|---|---|
-| Mutation du régime 0,05, exposant 2 | 4/16 | 2/12 | ~0 % | 1 |
-| **Mutation du régime 0,15**, exposant 2 | 4/16 | **12/12** | ~9 % | 12 |
-| Mutation 0,05, exposant 1,5 (vallée moins profonde) | 1/16 | 9/15 | 0 à 43 % | 9 |
-
-- **Avec une mutation de régime à 0,15, l'espèce garde deux groupes de spécialistes dans toutes les graines survivantes**, presque tout le temps (100 % des relevés de la seconde moitié dans 10 graines sur 12), à peu près moitié-moitié (de 21/67 % à 58/37 %).
-- **Le second groupe naît de l'autre** : dans 12 cas, un groupe a disparu (moins de 2 %) puis a été recréé par des mutants qui ont traversé la vallée des généralistes (graine 1 : plus de spécialistes du jaune à 6 600 ticks, de nouveau 10 % à 39 600 ; graine 11 : de 6 600 à 90 000). C'est une scission à partir d'une seule population, sans barrière géographique : la nourriture laissée par les autres rapporte assez pour que les premiers mutants à l'atteindre prolifèrent.
-- **À 0,05, la vallée ne se traverse presque jamais** : dès ~5 000 ticks, un seul groupe reste (10 graines sur 12) et l'autre nourriture n'est plus mangée. Les 2 graines scindées le sont depuis le départ (les fondateurs ont des régimes au hasard).
-- **Exposant 1,5** : la vallée est moins profonde, la scission plus fréquente (9/15) mais moins nette, avec beaucoup de généralistes dans certaines graines (jusqu'à 43 %) et des scissions qui vont et viennent (30 à 100 % du temps).
-- **Les deux groupes pensent-ils différemment ?** Les 12 populations scindées (mutation 0,15) rejouées 3 000 ticks, spécialistes du vert contre spécialistes du jaune (script et sortie : `experiments/results/scission/groupes.py`, `groupes_resultat.txt`) :
-  - **Leurs réseaux ont divergé** : distance entre génomes 8,95 entre les groupes, contre 3,8 et 3,9 dans chaque groupe (plus grande entre groupes dans 12 populations sur 12).
-  - **Ils reconnaissent leur nourriture** : 75 % de leurs repas sur la leur (78 % vert, 72 % jaune ; de 49 % à 92 % selon la population ; 50 % = au hasard). L'entrée «valeur nourriture» est parmi les plus utilisées (sensibilité 0,46 et 0,34, après la distance de la nourriture).
-  - **Mais ils se dirigent presque autant vers l'autre nourriture** : corrélation entre l'angle de la nourriture et le virage +0,49 vers la leur, +0,41 vers l'autre. Un repas sur quatre ne leur rapporte rien et prive l'autre groupe.
-  - **Pour le reste, mêmes comportements** : vitesse (1,38 contre 1,28, sans sens constant d'une population à l'autre) et usage des autres capteurs semblables. Attendu : les deux nourritures ne diffèrent que par leur sorte, les deux niches sont symétriques. Une différenciation du comportement demanderait des niches différentes (nourriture rare mais riche contre abondante mais pauvre, par exemple).
-- Les « groupes » restent une seule espèce au sens du jeu (même profil, même réseau ; reproduction sans partenaire, donc pas de barrière à franchir) : ce sont deux lignées spécialisées, qui le restent parce que les intermédiaires sont désavantagés.
-- **Goulot de départ** : avec des régimes tirés au hasard, un fondateur ne tire en moyenne qu'un tiers de l'énergie d'une nourriture, d'où 1 départ sur 4 éteint. Des fondateurs spécialistes, un sur deux vert et un sur deux jaune (`DIET_FOUNDERS = "specialistes"`, défaut depuis), suppriment les extinctions : 0 sur 32 graines contre 6 sur 32 (une et deux espèces, mutation 0,15, 30 000 ticks), creux de population médian 43 et 38 créatures contre 13 et 18 (`experiments/lots/goulot_regimes.txt`, `experiments/results/scission/goulot_fondateurs.txt`). Les runs ci-dessus ont été faits avec des régimes au hasard.
-- Dans le jeu : réglage «Mutation du régime» (Paramètres, section Nourriture) ; le préréglage «Niches» la met à 0,15.
-
-### Cerveaux plus gros : 6, 12 ou 16 neurones cachés (23/11/2026)
-
-La complexité est-elle bridée par la taille du réseau ? `complet` (6 neurones cachés, 74 poids) contre `complet_12` (146 poids) et `complet_16` (194 poids), mêmes capteurs, défauts de `config.py`. Seules : 8 graines × 200 000 ticks, complexité des populations finales. Duels à fondateurs aléatoires : 16 graines × 120 000 ticks. Lot `experiments/lots/cerveaux.txt` ; résultats `experiments/results/20261123_16*_cerveau_*` et `*_duel_6_*`, tables dans `experiments/results/cerveaux/`. (Les photos intermédiaires demandées n'ont pas été prises : `--photos` se perdait dans les lots, corrigé depuis.)
-
-| Neurones cachés | Population | Vitesse | Entrées utilisées (sur 9) | Non-linéarité | Duel contre 6 neurones |
-|---|---|---|---|---|---|
-| 6 | 213 | 1,18 | 6,1 ± 0,6 | 0,26 ± 0,09 | — |
-| 12 | 219 | 0,87 | 6,5 ± 0,3 | 0,23 ± 0,03 | gagne 9 sur 16 (p = 0,80) |
-| 16 | 217 | 0,90 | 6,8 ± 0,3 | 0,21 ± 0,03 | gagne 11 sur 16 (p = 0,21) |
-
-- **La taille du réseau ne bride pas la complexité** : avec 2 à 3 fois plus de poids, les réseaux ne sont pas plus non linéaires (plutôt un peu moins, écart dans le bruit), et la population tenue est la même. Ils utilisent un peu plus d'entrées (6,8 contre 6,1 sur 9) et varient moins d'une graine à l'autre.
-- **Pas d'avantage en duel** : 9 et 11 victoires sur 16, compatibles avec le hasard. Plus de poids à faire évoluer ne coûte rien non plus (la mutation touche chaque poids : un grand réseau mute plus en tout).
-- Le contrôle : `cerveau_6` reproduit exactement les chiffres du run d'un million de ticks à 200 000 ticks (6,12 entrées, 0,256), mêmes graines, mêmes réglages.
-- Ce qui limite la complexité est donc plutôt le monde (ce qu'il y a à percevoir et à décider) que la capacité du réseau : la non-linéarité monte avec le temps (section suivante), pas avec la taille.
-
-### Coexistence par niches : deux sortes de nourriture (23/11/2026)
-
-La carte des réglages n'a trouvé aucun réglage qui fasse coexister deux espèces : une élimine toujours l'autre. Nouveau mécanisme : deux sortes de nourriture et un gène de régime hérité (`FOOD_TYPES = 2`, voir `docs/fonctionnement.md`). Deux espèces presque identiques, `regime` et `regime_faim` (la seconde a en plus le capteur de faim), défauts de `config.py`, 16 graines × 120 000 ticks. Lot `experiments/lots/niches.txt` ; résultats `experiments/results/20261123_15*_niches_*`, table par graine et script dans `experiments/results/niches/`.
-
-| Condition | Extinctions | Coexistence à la fin | Régimes |
-|---|---|---|---|
-| Témoin : une sorte de nourriture (énergie 30) | 0/16 | 0/16 | — |
-| Deux sortes, énergie 60, exposant 2 (spécialistes avantagés) | 3/16 | **3/13** | spécialistes (> 98 % sous 0,25 ou au-dessus de 0,75) |
-| Deux sortes, énergie 60, exposant 1 (pas d'avantage) | 1/16 | 1/15 | généralistes (~0,5) |
-
-- **Avec des niches, des espèces coexistent, et chaque fois sur des nourritures différentes** : dans les 3 graines, une espèce a un régime moyen de 0,95 à 0,97, l'autre de 0,04 à 0,06. Les espèces se sont partagé les deux nourritures.
-- **Cette coexistence est stable**, pas une élimination lente : l'espèce rare remonte (graine 6 : 10 créatures à 15 000 ticks, 122 à la fin ; graines 3 et 12 : de ~50 à plus de 100). Une espèce rare laisse sa nourriture intacte, donc abondante : elle repart. C'est le retour à l'équilibre qui manquait avec une seule nourriture.
-- **Sans avantage aux spécialistes (exposant 1)**, tout le monde reste généraliste (régime ~0,5) et une espèce élimine l'autre comme avec une seule nourriture (1 coexistence sur 15). Ce sont bien les niches qui font coexister, pas le fait d'avoir deux sortes de nourriture.
-- **Le plus souvent, une seule espèce reste et une seule nourriture est mangée** : dans 9 des 10 graines à une espèce, la quasi-totalité de la population est spécialiste de la même nourriture, l'autre est laissée. Passer d'un régime à l'autre oblige à traverser les généralistes, qui ne tirent qu'un quart de chaque nourriture : une vallée que la mutation (0,05 par naissance) ne franchit pas. La coexistence se joue tôt : il faut que les deux spécialisations s'installent avant qu'une espèce élimine l'autre. Une graine (1) garde les deux spécialistes dans une même espèce (53 % / 46 %) : deux lignées dans la même espèce.
-- **Coût** : la nourriture de l'autre sorte ne rapporte rien à un spécialiste, d'où l'énergie doublée (60) ; malgré elle, 3 graines sur 16 s'éteignent au départ (régimes tirés au hasard : en moyenne un tiers de l'énergie).
-- Suites possibles : une mutation de régime plus forte, ou un exposant entre 1 et 2, pour que la vallée se franchisse et que la seconde nourriture soit conquise ; plus de graines pour mesurer la fréquence de la coexistence.
-
-### Un million de ticks : la complexité continue-t-elle de monter ? (23/11/2026)
-
-Défauts de `config.py` (1×1, vision 120°, `complet` seule), 8 graines × 1 000 000 ticks (44 min), une photo de la population tous les 50 000 ticks (`experiments.run --photos 50000`). Chaque photo est mesurée comme dans la carte des réglages (30 créatures rejouées 1 500 ticks). Résultats : `experiments/results/20261123_144515_long_1M/` ; table et script : `complexite_dans_le_temps.txt`, `long_analyse.py`.
-
-| Tick | Entrées utilisées (sur 9) | Non-linéarité | Population | Vitesse | Générations |
-|---|---|---|---|---|---|
-| 50 000 | 6,1 ± 0,5 | 0,13 ± 0,02 | 148 | 2,50 | 27 |
-| 100 000 | 6,2 ± 0,7 | 0,21 ± 0,08 | 200 | 1,44 | 52 |
-| 200 000 | 6,1 ± 0,6 | 0,26 ± 0,09 | 213 | 1,18 | 99 |
-| 400 000 | 6,0 ± 0,5 | 0,30 ± 0,08 | 217 | 1,00 | 188 |
-| 600 000 | 5,8 ± 1,1 | 0,33 ± 0,09 | 234 | 0,65 | 278 |
-| 800 000 | 5,9 ± 0,7 | 0,36 ± 0,08 | 230 | 0,67 | 365 |
-| 1 000 000 | 5,8 ± 0,8 | 0,36 ± 0,06 | 233 | 0,56 | 452 |
-
-- **La non-linéarité continue de monter**, presque trois fois plus à la fin qu'à 50 000 ticks (0,13 → 0,36), plus vite au début, puis un plateau à partir de ~700 000 ticks. Elle monte dans 7 graines sur 8 (moyenne 50 000-200 000 contre 800 000-1 000 000) ; la graine 2, déjà haute tôt (0,34), redescend un peu (0,29).
-- **Le nombre d'entrées utilisées, lui, ne monte pas** : ~6 sur 9 du début à la fin. Les réseaux ne se servent pas de plus de capteurs ; ils se servent de façon plus fine (seuils, combinaisons) de ceux qu'ils utilisent déjà.
-- **La population monte lentement** (200 → 233 de 100 000 à 1 000 000 ticks) **et la vitesse baisse** (1,44 → 0,56) : la tendance « les populations commencent vite et ralentissent » continue bien au-delà des 120 000 ticks des autres expériences.
-- Conséquence : les runs de 120 000 ticks mesurent des populations encore en train de changer (non-linéarité à mi-chemin, vitesse deux fois plus haute qu'à la fin).
+En 2×2 (~440 créatures), un tick coûte 7,4 ms une fois optimisé (les ~6 ms des tableaux précédents sont déduits de la durée des runs, pas mesurés de la même façon). Le temps va à la vision (42 %), aux contacts nourriture-créature (22 %) et aux réseaux et déplacements (22 %). Garder les coordonnées des objets dans un tableau n'a rien apporté (essayé, abandonné) : les objets réapparaissent presque à chaque tick.
 
 ### Optimisation du calcul (23/11/2026)
 
@@ -629,18 +677,6 @@ Trois changements, chacun vérifié **identique au bit près** : mêmes trajecto
 - **Dans le jeu** (fenêtre réelle, carte graphique, 2×2, ~1 100 créatures, vitesse ×100) : les tableaux permanents avaient doublé le coût du dessin (6,5 → 14,7 ms par image : chaque attribut lu passe par le tableau). Le dessin lit maintenant les colonnes une fois par image (`World.columns`) : 7,5 ms. Bilan : 291 ticks par seconde contre 86 avant l'optimisation (×3,4), à ~29 images par seconde (à haute vitesse, le calcul prend ce que le dessin laisse d'une image à 30 images par seconde, `MIN_FPS`).
 - Ce qui reste (2,2 ms) : contour des obstacles et poussées (~0,4 ms), contacts côté Python (~0,3 ms), réseaux et déplacements (~0,4 ms), naissances et morts.
 
-### Coût du calcul (22/11/2026)
-
-Les coûts par tick des sections précédentes datent d'avant l'optimisation de la vision (commit `ea4fc90` : l'angle n'est plus calculé que pour les objets à portée, résultat identique au bit près). Banc de 300 ticks, un processus :
-
-| Scène | Avant | Après |
-|---|---|---|
-| 2×2, ~900 créatures | 17,0 ms | 11,0 ms (−35 %) |
-| 1×1, 200 à 400 créatures | 1,63 ms | 1,38 ms (−15 %) |
-
-En 2×2 (~440 créatures), un tick coûte 7,4 ms une fois optimisé (les ~6 ms des tableaux précédents sont déduits de la durée des runs, pas mesurés de la même façon). Le temps va à la vision (42 %), aux contacts nourriture-créature (22 %) et aux réseaux et déplacements (22 %). Garder les coordonnées des objets dans un tableau n'a rien apporté (essayé, abandonné) : les objets réapparaissent presque à chaque tick.
-
 ### Mode générations (supprimé le 08/11, historique)
 
 Le monde durci (×2, 5 nourritures, 20 poisons à 80, 25 obstacles) avec une sélection sur l'âge d'abord menait au piège d'immobilité sur 4 graines sur 4. Dans le monde réparé (10 nourritures), l'évolution progressait sur 4 graines sur 4. Résultats dans `experiments/results/20261108_20*` (format de l'époque, lisible par `experiments.summary`).
-

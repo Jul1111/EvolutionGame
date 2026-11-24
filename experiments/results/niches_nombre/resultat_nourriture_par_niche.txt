@@ -1,0 +1,72 @@
+3 sortes, mutation 0.05 : 3 éteintes ; à la fin (13 vivantes) 1 groupes : 5, 2 groupes : 5, 3 groupes : 3 ; moyenne 1.85 groupes à la fin, 1.80 sur la 2e moitié ; mixtes 0.04
+  seed_1   pop  212  groupes 3  0.32 0.40 0.24  mixtes 0.05  (2e moitié : 2.6 groupes en moyenne)
+  seed_2   pop   87  groupes 1  0.00 0.99 0.00  mixtes 0.01  (2e moitié : 1.0 groupes en moyenne)
+  seed_3   pop  238  groupes 2  0.50 0.00 0.47  mixtes 0.03  (2e moitié : 2.0 groupes en moyenne)
+  seed_4   pop  187  groupes 1  0.99 0.00 0.00  mixtes 0.01  (2e moitié : 1.0 groupes en moyenne)
+  seed_5   pop  196  groupes 2  0.61 0.34 0.00  mixtes 0.05  (2e moitié : 2.0 groupes en moyenne)
+  seed_6   pop  239  groupes 3  0.22 0.36 0.37  mixtes 0.05  (2e moitié : 2.9 groupes en moyenne)
+  seed_7   pop  254  groupes 2  0.52 0.45 0.00  mixtes 0.03  (2e moitié : 2.0 groupes en moyenne)
+  seed_8   éteinte
+  seed_9   pop  194  groupes 1  0.00 0.00 0.98  mixtes 0.02  (2e moitié : 1.0 groupes en moyenne)
+  seed_10  pop  215  groupes 2  0.62 0.35 0.00  mixtes 0.03  (2e moitié : 2.0 groupes en moyenne)
+  seed_11  pop  167  groupes 1  0.04 0.89 0.00  mixtes 0.07  (2e moitié : 1.0 groupes en moyenne)
+  seed_12  éteinte
+  seed_13  pop  247  groupes 3  0.21 0.41 0.35  mixtes 0.04  (2e moitié : 3.0 groupes en moyenne)
+  seed_14  pop  207  groupes 2  0.00 0.32 0.66  mixtes 0.01  (2e moitié : 2.0 groupes en moyenne)
+  seed_15  pop  172  groupes 1  0.90 0.00 0.00  mixtes 0.10  (2e moitié : 1.0 groupes en moyenne)
+  seed_16  éteinte
+
+3 sortes, mutation 0.15 : 4 éteintes ; à la fin (12 vivantes) 3 groupes : 12 ; moyenne 3.00 groupes à la fin, 2.98 sur la 2e moitié ; mixtes 0.20
+  seed_1   pop  232  groupes 3  0.25 0.19 0.43  mixtes 0.13  (2e moitié : 3.0 groupes en moyenne)
+  seed_2   éteinte
+  seed_3   pop  174  groupes 3  0.30 0.18 0.37  mixtes 0.16  (2e moitié : 3.0 groupes en moyenne)
+  seed_4   éteinte
+  seed_5   pop  279  groupes 3  0.31 0.19 0.27  mixtes 0.23  (2e moitié : 3.0 groupes en moyenne)
+  seed_6   pop  239  groupes 3  0.32 0.18 0.30  mixtes 0.20  (2e moitié : 3.0 groupes en moyenne)
+  seed_7   pop  228  groupes 3  0.25 0.17 0.40  mixtes 0.18  (2e moitié : 3.0 groupes en moyenne)
+  seed_8   éteinte
+  seed_9   pop  228  groupes 3  0.25 0.14 0.35  mixtes 0.25  (2e moitié : 3.0 groupes en moyenne)
+  seed_10  pop  216  groupes 3  0.38 0.16 0.18  mixtes 0.27  (2e moitié : 3.0 groupes en moyenne)
+  seed_11  éteinte
+  seed_12  pop  187  groupes 3  0.48 0.11 0.26  mixtes 0.15  (2e moitié : 3.0 groupes en moyenne)
+  seed_13  pop  230  groupes 3  0.32 0.20 0.25  mixtes 0.23  (2e moitié : 2.9 groupes en moyenne)
+  seed_14  pop  223  groupes 3  0.31 0.21 0.28  mixtes 0.20  (2e moitié : 3.0 groupes en moyenne)
+  seed_15  pop  182  groupes 3  0.35 0.20 0.32  mixtes 0.13  (2e moitié : 3.0 groupes en moyenne)
+  seed_16  pop  228  groupes 3  0.36 0.15 0.25  mixtes 0.23  (2e moitié : 3.0 groupes en moyenne)
+
+4 sortes, mutation 0.05 : 6 éteintes ; à la fin (10 vivantes) 1 groupes : 1, 2 groupes : 4, 3 groupes : 4, 4 groupes : 1 ; moyenne 2.50 groupes à la fin, 1.80 sur la 2e moitié ; mixtes 0.11
+  seed_1   pop  233  groupes 3  0.00 0.12 0.28 0.51  mixtes 0.10  (2e moitié : 1.2 groupes en moyenne)
+  seed_2   pop  192  groupes 2  0.00 0.00 0.30 0.58  mixtes 0.11  (2e moitié : 1.4 groupes en moyenne)
+  seed_3   éteinte
+  seed_4   pop  170  groupes 1  0.00 0.00 0.00 0.90  mixtes 0.10  (2e moitié : 1.0 groupes en moyenne)
+  seed_5   éteinte
+  seed_6   éteinte
+  seed_7   pop  202  groupes 3  0.27 0.39 0.18 0.00  mixtes 0.16  (2e moitié : 2.1 groupes en moyenne)
+  seed_8   pop  245  groupes 3  0.00 0.24 0.31 0.36  mixtes 0.10  (2e moitié : 1.6 groupes en moyenne)
+  seed_9   éteinte
+  seed_10  pop  218  groupes 2  0.51 0.31 0.01 0.00  mixtes 0.17  (2e moitié : 1.2 groupes en moyenne)
+  seed_11  pop  231  groupes 2  0.00 0.00 0.31 0.58  mixtes 0.10  (2e moitié : 1.7 groupes en moyenne)
+  seed_12  éteinte
+  seed_13  pop  222  groupes 3  0.28 0.00 0.34 0.29  mixtes 0.09  (2e moitié : 3.0 groupes en moyenne)
+  seed_14  pop  270  groupes 4  0.18 0.23 0.25 0.21  mixtes 0.13  (2e moitié : 3.3 groupes en moyenne)
+  seed_15  éteinte
+  seed_16  pop  251  groupes 2  0.53 0.40 0.00 0.00  mixtes 0.07  (2e moitié : 1.4 groupes en moyenne)
+
+4 sortes, mutation 0.15 : 8 éteintes ; à la fin (8 vivantes) 2 groupes : 1, 3 groupes : 3, 4 groupes : 4 ; moyenne 3.38 groupes à la fin, 3.57 sur la 2e moitié ; mixtes 0.25
+  seed_1   éteinte
+  seed_2   pop  276  groupes 4  0.29 0.15 0.12 0.20  mixtes 0.25  (2e moitié : 3.9 groupes en moyenne)
+  seed_3   pop  227  groupes 2  0.35 0.08 0.06 0.29  mixtes 0.21  (2e moitié : 3.2 groupes en moyenne)
+  seed_4   pop  174  groupes 4  0.29 0.10 0.12 0.28  mixtes 0.21  (2e moitié : 3.8 groupes en moyenne)
+  seed_5   éteinte
+  seed_6   pop  285  groupes 4  0.26 0.19 0.14 0.17  mixtes 0.23  (2e moitié : 3.7 groupes en moyenne)
+  seed_7   éteinte
+  seed_8   pop  265  groupes 4  0.24 0.14 0.12 0.25  mixtes 0.25  (2e moitié : 3.6 groupes en moyenne)
+  seed_9   éteinte
+  seed_10  pop  182  groupes 3  0.15 0.07 0.14 0.30  mixtes 0.33  (2e moitié : 3.1 groupes en moyenne)
+  seed_11  éteinte
+  seed_12  pop  280  groupes 3  0.23 0.08 0.15 0.29  mixtes 0.25  (2e moitié : 3.7 groupes en moyenne)
+  seed_13  éteinte
+  seed_14  éteinte
+  seed_15  pop  266  groupes 3  0.29 0.15 0.07 0.23  mixtes 0.26  (2e moitié : 3.7 groupes en moyenne)
+  seed_16  éteinte
+

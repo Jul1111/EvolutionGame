@@ -79,15 +79,15 @@ Toutes les constantes sont dans `config.py`. Règles détaillées, gène de tail
 
 ## Ce qu'on a appris
 
-Résultats sur 8 à 16 graines par condition, détails et limites dans [docs/experiences.md](docs/experiences.md) :
+Résultats sur 8 à 16 graines par condition ; résumé par thème puis détails et limites dans [docs/experiences.md](docs/experiences.md) :
 
 - **Le départ est un goulot** : sur 200 fondateurs au hasard, il en reste quelques dizaines. Avec 40 nourritures par écran, une graine sur deux s'éteignait ; avec 60 (`FOOD_COUNT`), aucune sur 24.
 - **La nourriture règle la population** : environ 200 créatures par écran à l'équilibre. Le plafond de calcul (`POP_MAX`, 400 par écran) ne sert plus.
 - **La vitesse est un comportement appris qui suit la nourriture** : à génomes égaux, une créature va deux fois plus vite avec 60 nourritures par écran qu'avec 15. Le nombre de voisins compte peu. Les lignées diffèrent beaucoup entre elles, et la sélection favorise les plus rapides.
 - **Les duels d'espèces finissent presque toujours par l'élimination d'une des deux**, et aucune aide à explorer (faim, bruit, mémoire) ne bat l'espèce de base. Le vainqueur est écrit dès les fondateurs (même issue dans 37 rejeux sur 40) et dépend surtout de la lignée adverse ; la mémoire est même un handicap (44 duels sur 45 perdus en 2×2). Gagne la lignée qui fait vivre le plus de créatures avec la même nourriture (lente, économe) : les lignées rapides perdent presque tous leurs duels.
-
 - **Coexistence par niches** : avec deux sortes de nourriture et un gène de régime (`FOOD_TYPES = 2`), deux espèces peuvent coexister durablement, chacune spécialisée sur une nourriture (45 % des graines avec des fondateurs spécialistes, sur 48 ; aucune avec une seule nourriture).
-- **Une espèce peut se scinder** : avec une mutation du régime assez forte (0,15), une seule espèce se partage en deux groupes de spécialistes, et en refait un quand il disparaît.
+- **Une espèce peut se scinder** : avec une mutation du régime assez forte (0,15), une seule espèce se partage en autant de groupes de spécialistes qu'il y a de sortes de nourriture (2, 3, et 3 ou 4 avec 4 sortes), et en refait un quand il disparaît.
+- **Une niche rare façonne le comportement** : si une nourriture est rare et riche et l'autre abondante et pauvre (même énergie au total), les spécialistes de la rare sont moins nombreux, plus lents, mangent moins souvent et choisissent leur nourriture par sa valeur plutôt que par sa distance.
 - **Les prédateurs tiennent mal, mais façonnent les proies** : des créatures qui mangent les autres (`PREDATION`) s'éteignent presque toujours en 1×1 et dans 3 graines sur 4 en 2×2 ; un monde 3×3 n'aide pas, tout se joue juste après leur arrivée. Des prédateurs déjà évolués passent ce cap, mais mangent presque toutes les proies puis meurent de faim : leur efficacité déstabilise le système. Là où elles durent : cycles proies-prédateurs, proies qui fuient et vont deux fois plus vite, prédateurs qui accélèrent sur une proie en vue.
 - **La complexité vient du temps, pas de la taille du cerveau** : sur un million de ticks, la non-linéarité des réseaux triple puis plafonne ; des réseaux 2 à 3 fois plus gros ne sont pas plus complexes.
 - **Les réglages ne s'additionnent pas** : chacun pris seul reste vivable, mais combiner peu de nourriture, repousse lente et poison éteint tout. Quatre préréglages validés (Facile, Équitable, Dur, Compliqué, dossier `presets/`) sont proposés en tête du panneau Paramètres.
