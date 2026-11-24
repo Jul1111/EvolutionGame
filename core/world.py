@@ -3,7 +3,7 @@ import math
 import numpy as np
 
 import config
-from core.food import Food
+from core.food import Food, kind_pattern, kind_position
 from core.obstacle import Obstacle
 from core.physics import torus_delta, normalize_angle
 from core.creature import Creature, CreatureStore
@@ -27,7 +27,8 @@ class World:
         self.obstacles = self._make_obstacles()
         # Far enough from an obstacle for a creature to touch it
         reach = self.cfg.CREATURE_RADIUS + self.cfg.FOOD_RADIUS
-        self.foods = [Food(*self._free_position(reach), self.cfg.FOOD_ENERGY, k % self.cfg.FOOD_TYPES)
+        self._kinds = kind_pattern(self.cfg)   # Kind of the food of index i: self._kinds[i % len(self._kinds)]
+        self.foods = [Food(*self._free_position(reach), self.cfg.FOOD_ENERGY, self._kind_of(k))
                       for k in range(self._count(self.cfg.FOOD_COUNT))]
         # Poison: same kind of object as food, but its `energy` is the damage. Seen through its own two inputs
         self.poisons = [Food(*self._free_position(reach), self.cfg.POISON_ENERGY)
@@ -322,15 +323,27 @@ class World:
                 effect(item, alive[i], amount if gains is None else float(amount[k]))
                 E[i] = alive[i].energy
 
+    def _kind_of(self, index):
+        """Kind of the food of this index in self.foods (FOOD_KIND_SHARES, core/food.py)."""
+        return self._kinds[index % len(self._kinds)]
+
     def gains(self, diets):
-        """Share of a food's energy that each creature gets, by kind of food: array (creatures, 2) for an array of
-        diets; None when there is one kind of food (FOOD_TYPES = 1: the whole energy, the runs before 23/11)."""
-        if self.cfg.FOOD_TYPES < 2:
+        """Part of a food's energy that each creature gets, by kind of food: array (creatures, FOOD_TYPES) for an
+        array of diets; None when there is one kind of food (FOOD_TYPES = 1: the whole energy, the runs before 23/11).
+        Kind k feeds best the diet k / (FOOD_TYPES - 1): (1 - |diet - k / (FOOD_TYPES - 1)| × (FOOD_TYPES - 1)) **
+        DIET_EXPONENT, 0 beyond the neighbouring kinds, times FOOD_KIND_ENERGY[k] (richer or poorer kinds)."""
+        n = self.cfg.FOOD_TYPES
+        if n < 2:
             return None
-        return np.stack([(1.0 - np.abs(diets - k)) ** self.cfg.DIET_EXPONENT for k in (0, 1)], axis=1)
+        spread = n - 1
+        out = np.stack([np.maximum(0.0, 1.0 - np.abs(diets - kind_position(k, n)) * spread) ** self.cfg.DIET_EXPONENT
+                        for k in range(n)], axis=1)
+        if self.cfg.FOOD_KIND_ENERGY:
+            out *= np.asarray(self.cfg.FOOD_KIND_ENERGY, float)
+        return out
 
     def gain(self, creature, food):
-        """Share of `food`'s energy that `creature` gets (1 with one kind of food)."""
+        """Part of `food`'s energy that `creature` gets (1 with one kind of food)."""
         if self.cfg.FOOD_TYPES < 2:
             return 1.0
         return float(self.gains(np.array([creature.diet]))[0, food.kind])
@@ -454,8 +467,8 @@ class World:
         return self.nearest(creature, self.creature_points(kind))[0]
 
     def _value_of(self, diets, food_index):
-        """Sensor «valeur» (core/sensors.py): share of the energy of the nearest food in view that each creature
-        would get (0 when it sees none, 1 with one kind of food)."""
+        """Sensor «valeur» (core/sensors.py): part of the energy of the nearest food in view that each creature
+        would get (World.gains: 0 when it sees none, 1 with one kind of food)."""
         seen = food_index >= 0
         gains = self.gains(diets)
         if gains is None:
@@ -612,7 +625,7 @@ class World:
             target = self._count(count)
             del items[target:]
             while len(items) < target:
-                item = Food(*self._free_position(reach), energy, len(items) % self.cfg.FOOD_TYPES if items is self.foods
+                item = Food(*self._free_position(reach), energy, self._kind_of(len(items)) if items is self.foods
                             else 0)
                 if not self._place_item(item):
                     item.cooldown = 1   # No room away from the creatures now: it will try again next tick

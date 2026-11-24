@@ -38,7 +38,7 @@ PARAM_INFO = {
     "predation_efficiency": ("Énergie tirée d'une proie", "Part de l'énergie de la proie que gagne le prédateur qui la mange ; le reste est perdu. Plus elle est haute, plus les prédateurs se multiplient vite."),
     "predator_digest": ("Digestion", "Après un repas, le prédateur ne peut plus attaquer pendant ce temps : limite ce qu'il peut manger, et freine l'explosion des prédateurs."),
     "predator_cost": ("Coût de base d'un prédateur", "Ce qu'un prédateur dépense à l'arrêt, par rapport à une autre créature de sa taille."),
-    "food_types": ("Sortes de nourriture", "Deux : une nourriture sur deux est jaune, et chaque créature hérite d'un régime (0 = mange le vert, 1 = le jaune). Un spécialiste tire tout de sa nourriture et rien de l'autre : deux espèces peuvent se partager le monde. Doubler l'énergie d'une nourriture (60). Couleur «régime» : touche C. Au prochain départ de zéro."),
+    "food_types": ("Sortes de nourriture", "Deux : une nourriture sur deux est jaune, et chaque créature hérite d'un régime (0 = mange le vert, 1 = le jaune). Un spécialiste tire tout de sa nourriture et rien de l'autre : deux espèces peuvent se partager le monde. Trois ou quatre : nourritures bleue et rose en plus, réparties entre 0 et 1 (chacune ne nourrit que les régimes proches du sien). Doubler l'énergie d'une nourriture (60). Couleur «régime» : touche C. Au prochain départ de zéro."),
     "respawn": ("Délai de réapparition", "Temps avant qu'une nourriture mangée soit de nouveau disponible."),
     "poison_count": ("Nombre de poisons", "Sources de poison dans le monde. 0 = aucun."),
     "poison_energy": ("Dégâts d'un poison", "Énergie perdue au contact d'un poison."),

@@ -18,6 +18,7 @@ import numpy as np
 
 import config
 from brain.profiles import IS_PREDATOR, PROFILES, new_brain
+from core.food import kind_position
 from core.world import World
 from evolution.mutation import mutate
 
@@ -29,7 +30,8 @@ SAMPLE_HEADER = ["tick", "population", "births", "deaths_hunger", "deaths_age", 
                  "blind_frac", "blind_speed", "blind_turn", "food_sources"]
 # Then one column per species of the run: pop__<profile> (living creatures of that species)
 # With two kinds of food (FOOD_TYPES = 2): mean diet, share of specialists of kind 0 (diet < 0.25) and of kind 1
-# (> 0.75), then the mean diet of each species: diet__<profile>
+# (> 0.75), then the mean diet of each species: diet__<profile>. With 3 or 4 kinds, also the share of specialists of
+# each kind: diet_kind<k> (diet within a quarter of the gap between kinds from k / (FOOD_TYPES - 1))
 DIET_HEADER = ["diet_mean", "diet_low", "diet_high"]
 # With predators (PREDATION, or a predator species among the founders): prey eaten, living prey and predators, kills
 # per 1000 ticks of predator life; for the prey, share of their life with a predator in view, their speed with and
@@ -64,9 +66,11 @@ class ContinuousSimulation:
                                    self.cfg.PREDATOR_PROFILE not in profiles else [])
         self.predation = any(PROFILES[p].get("predator") for p in self.species)   # Predation measures
         self.header = SAMPLE_HEADER + [f"pop__{p}" for p in self.species]
-        self.diets = self.cfg.FOOD_TYPES > 1   # Diet gene in play (two kinds of food)
+        self.diets = self.cfg.FOOD_TYPES > 1   # Diet gene in play (several kinds of food)
         if self.diets:
             self.header += DIET_HEADER + [f"diet__{p}" for p in self.species]
+            if self.cfg.FOOD_TYPES > 2:
+                self.header += [f"diet_kind{k}" for k in range(self.cfg.FOOD_TYPES)]
         if self.predation:
             self.header += PREDATION_HEADER
         for index, name in enumerate(profiles):
@@ -225,10 +229,11 @@ class ContinuousSimulation:
         if self.cfg.DIET_FOUNDERS == "hasard":
             return self.rng.random()
         self._founders_made = getattr(self, "_founders_made", 0) + 1
-        return float(self._founders_made % 2)
+        kinds = self.cfg.FOOD_TYPES
+        return float(kind_position(self._founders_made % kinds, kinds))
 
     def _child_diet(self, diet):
-        """Diet gene of a newborn (two kinds of food): the parent's + N(0, DIET_MUTATION_STD), kept in [0, 1]."""
+        """Diet gene of a newborn (several kinds of food): the parent's + N(0, DIET_MUTATION_STD), kept in [0, 1]."""
         if not self.diets:
             return {}
         return {"diet": min(1.0, max(0.0, diet + self.rng.gauss(0.0, self.cfg.DIET_MUTATION_STD)))}
@@ -328,7 +333,17 @@ class ContinuousSimulation:
         return {"diet_mean": statistics.mean(diets) if diets else None,
                 "diet_low": sum(d < 0.25 for d in diets) / len(diets) if diets else None,
                 "diet_high": sum(d > 0.75 for d in diets) / len(diets) if diets else None,
-                **{k: statistics.mean(v) if v else None for k, v in by_species.items()}}
+                **{k: statistics.mean(v) if v else None for k, v in by_species.items()},
+                **self._kind_shares(diets)}
+
+    def _kind_shares(self, diets):
+        """3 or 4 kinds of food: share of specialists of each kind (diet_kind<k>, DIET_HEADER)."""
+        n = self.cfg.FOOD_TYPES
+        if n < 3:
+            return {}
+        near = 0.25 / (n - 1)
+        return {f"diet_kind{k}": sum(abs(d - kind_position(k, n)) < near for d in diets) / len(diets) if diets else None
+                for k in range(n)}
 
     def _sample(self):
         s = self.sample()

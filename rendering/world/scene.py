@@ -132,8 +132,9 @@ class Scene:
             self.dead_sprite = self._build_dead()
             self.predator_sprite = self._build_predator()
             self.food_sprites = [self._build_food(f) for f in range(FOOD_FRAMES)]
-            # Second kind of food (FOOD_TYPES = 2, diets): same shape, another colour
-            self.food_b_sprites = [self._build_food(f, theme.FOOD_B_COLOR) for f in range(FOOD_FRAMES)]
+            # One list per kind of food (FOOD_TYPES > 1, diets): same shape, another colour
+            self.food_kind_sprites = [self.food_sprites] + [[self._build_food(f, color) for f in range(FOOD_FRAMES)]
+                                                            for color in theme.FOOD_KIND_COLORS[1:]]
             self.poison_sprites = [self._build_poison(f) for f in range(FOOD_FRAMES)]
             self._sized = {}   # Body sprites resized for the size gene: (id of sprite, size step) → sprite
             self._lineage_sprites = {}
@@ -432,7 +433,7 @@ class Scene:
             if food.cooldown > 0:
                 continue  # Eaten, not back yet
             frame = int(now / 90 + i * 3) % FOOD_FRAMES
-            sprites = self.food_b_sprites if food.kind else self.food_sprites
+            sprites = self.food_kind_sprites[food.kind]
             self._queue(batch, sprites[frame], self._images(world, food.x, food.y, 14))
 
         for i, poison in enumerate(world.poisons):

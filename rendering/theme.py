@@ -5,6 +5,9 @@ are not recorded in the run.json of an experiment."""
 DEAD_COLOR = (90, 90, 90)
 FOOD_COLOR = (90, 200, 110)
 FOOD_B_COLOR = (240, 210, 80)     # Second kind of food (FOOD_TYPES = 2): yellow, far from the green
+# Colour of each kind of food (FOOD_TYPES up to 4): green, yellow, blue, pink
+FOOD_KIND_COLORS = (FOOD_COLOR, FOOD_B_COLOR, (90, 170, 245), (235, 120, 200))
+FOOD_KIND_NAMES = ("verte", "jaune", "bleue", "rose")
 PREDATOR_COLOR = (235, 60, 60)    # Crown of spikes of the predators (rendering/world/scene.py)
 POISON_COLOR = (176, 96, 214)
 OBSTACLE_COLOR = (92, 102, 112)

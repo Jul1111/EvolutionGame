@@ -102,16 +102,22 @@ SIZE_MIN = 0.5
 SIZE_MAX = 2.0
 SIZE_BASE_EXPONENT = 0.75
 
-# Configuration for diets (niches, docs/experiences.md). FOOD_TYPES = 2: every other food is of kind 1 (drawn in another
-# colour), and each creature has a diet gene in [0, 1]. A food of kind k gives FOOD_ENERGY × (1 - |diet - k|) **
-# DIET_EXPONENT: a specialist (diet 0 or 1) gets all of its food and nothing from the other, a generalist (0.5) gets
-# 0.5 ** DIET_EXPONENT of both. Exponent > 1: specialists win, and the food the fewest eat becomes the most available
-# (two niches). Founders draw their diet at random; a newborn gets its parent's + N(0, DIET_MUTATION_STD), kept in
-# [0, 1]. FOOD_TYPES = 1: one kind, diets play no part (the runs before 23/11)
+# Configuration for diets (niches, docs/experiences.md). FOOD_TYPES = 2 to 4 kinds of food, in turn along the list of
+# foods (drawn in different colours), and each creature has a diet gene in [0, 1]. Kind k feeds best the diet
+# k / (FOOD_TYPES - 1) (two kinds: 0 and 1): it gives FOOD_ENERGY × (1 - |diet - k / (FOOD_TYPES - 1)| ×
+# (FOOD_TYPES - 1)) ** DIET_EXPONENT, nothing beyond the neighbouring kinds. Two kinds: a specialist (diet 0 or 1) gets
+# all of its food and nothing from the other, a generalist (0.5) gets 0.5 ** DIET_EXPONENT of both. Exponent > 1:
+# specialists win, and the food the fewest eat becomes the most available (niches). A newborn gets its parent's diet
+# + N(0, DIET_MUTATION_STD), kept in [0, 1]. FOOD_TYPES = 1: one kind, diets play no part (the runs before 23/11)
 FOOD_TYPES = 1
 DIET_EXPONENT = 2.0
-DIET_FOUNDERS = "specialistes"   # Random founders: "specialistes" = every other one eats only green (0) or only
-                                 # yellow (1); "hasard" = a diet drawn at random (the runs before 23/11 evening)
+DIET_FOUNDERS = "specialistes"   # Random founders: "specialistes" = each one eats only one kind, the kinds in turn
+                                 # (two kinds: green 0, yellow 1); "hasard" = a diet drawn at random (the runs before
+                                 # 23/11 evening)
+# Asymmetric niches: share of each kind among the foods (whole numbers, e.g. (1, 3): one food in four of kind 0) and
+# energy factor of each kind (e.g. (2.0, 0.667): kind 0 twice as rich). Empty: equal shares, FOOD_ENERGY for all
+FOOD_KIND_SHARES = ()
+FOOD_KIND_ENERGY = ()
 DIET_MUTATION_STD = 0.05   # 0.15: one species keeps two specialist groups (12/12 seeds, docs/experiences.md)
 
 # Configuration for predators (docs/fonctionnement.md). A predator is a creature of a profile marked "predator"
