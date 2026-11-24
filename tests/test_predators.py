@@ -84,21 +84,24 @@ def _hunting_cfg(**kw):
                               "ACTIVE_PROFILES": ["proie", "complet"], **kw})
 
 
-def test_compiled_kernels_match_numpy_with_predators(monkeypatch):
+@pytest.mark.parametrize("refuges", [0, 6])
+def test_compiled_kernels_match_numpy_with_predators(monkeypatch, refuges):
     if not kernels.ENABLED:
         pytest.skip("numba absent")
     runs = []
     for enabled in (True, False):
         monkeypatch.setattr(kernels, "ENABLED", enabled)
-        sim = ContinuousSimulation(random.Random(5), cfg=_hunting_cfg(WORLD_SCALE=2, VISION_FOV_DEGREES=90))
+        sim = ContinuousSimulation(random.Random(5), cfg=_hunting_cfg(WORLD_SCALE=2, VISION_FOV_DEGREES=90,
+                                                                      REFUGE_COUNT=refuges, REFUGE_RADIUS=150))
         sim.run(600)
         runs.append([(c.uid, c.x, c.y, c.energy, c.food_eaten, c.kills, c.digest) for c in sim.world.creatures]
                     + [sim.world.predated, sim.world.hunt])
     assert runs[0] == runs[1] and runs[0][-2] > 0   # Kills happened
 
 
-def test_fast_update_matches_reference_with_predators():
-    cfg = _hunting_cfg(POISON_COUNT=8, VISION_FOV_DEGREES=360)
+@pytest.mark.parametrize("refuges", [0, 6])
+def test_fast_update_matches_reference_with_predators(refuges):
+    cfg = _hunting_cfg(POISON_COUNT=8, VISION_FOV_DEGREES=360, REFUGE_COUNT=refuges, REFUGE_RADIUS=150)
     worlds = []
     for _ in range(2):
         w = World(random.Random(11), cfg)
@@ -223,3 +226,31 @@ def test_run_seed_cycle_takes_one_file_per_seed(tmp_path):
         with open(os.path.join(out, f"seed_{seed}", "timeline.csv"), newline="", encoding="utf-8") as f:
             header = next(csv.reader(f))
         assert [h for h in header if h.startswith("pop__")] == [f"pop__{alone}"]
+
+
+@pytest.mark.parametrize("compiled", [True, False])
+def test_no_capture_in_a_refuge(monkeypatch, compiled):
+    if compiled and not kernels.ENABLED:
+        pytest.skip("numba absent")
+    monkeypatch.setattr(kernels, "ENABLED", compiled)
+    w = _empty()
+    w.refuges = [(w.width - 10.0, 100.0)]   # Across the torus edge from the prey at x = 20: 30 away
+    safe_hunter = _put(w, "predateur", 30.0, 100.0, energy=50.0)
+    safe = _put(w, "proie", 20.0, 100.0)                         # Centre 30 from the refuge's: inside (radius 60)
+    hunter = _put(w, "predateur", 30.0, 300.0, energy=50.0)
+    caught = _put(w, "proie", 20.0, 300.0)                       # Same contact, out of the refuge
+    _phase4(w)
+    assert safe.alive and safe_hunter.kills == 0 and not caught.alive and hunter.kills == 1
+    assert list(w.sheltered(np.array([20.0, 20.0, 1220.0]), np.array([100.0, 300.0, 100.0]))) == [True, False, True]
+
+
+def test_refuges_drawn_with_the_world():
+    assert World(random.Random(1), config.Settings()).refuges == []
+    w = World(random.Random(1), config.Settings(REFUGE_COUNT=8, WORLD_SCALE=2))
+    assert len(w.refuges) == 32 and all(0 <= x < w.width and 0 <= y < w.height for x, y in w.refuges)
+
+
+def test_game_shows_refuges(make_app):
+    app = make_app(PREDATION=True, PREDATOR_START=3, REFUGE_COUNT=8, ACTIVE_PROFILES=["proie"])
+    app.run(max_frames=5)
+    assert len(app.world.refuges) == 8 and app.scene._refuge_cache[1].get_width() > 0

@@ -30,13 +30,15 @@ PARAMS = {
     "predation_efficiency": ("PREDATION_EFFICIENCY", [0.25, 0.5, 0.75, 1.0], lambda v: f"{v:.0%}"),
     "predator_digest": ("PREDATOR_DIGEST", [0, 100, 200, 300, 600, 1200], lambda v: f"{v} ticks"),
     "predator_cost": ("PREDATOR_COST_FACTOR", [0.5, 1.0, 1.5, 2.0], lambda v: f"×{v:g}"),
+    "refuge_count": ("REFUGE_COUNT", [0, 4, 8, 16], lambda v: "aucun" if not v else f"{v} par écran"),
 }
 # Settings that only take effect on a new world (obstacles are drawn when the world is created).
 # Every other setting applies at once.
 # size_mode: bodies are set at birth; food_types: the kind of each food and the diets are set at creation;
-# predation and its arrival: the predators come at a tick of the run, its species are set at creation
+# predation and its arrival: the predators come at a tick of the run, its species are set at creation; refuges: drawn
+# with the world
 RESTART_PARAMS = {"obstacle_count", "world_scale", "size_mode", "founders", "food_types", "predation",
-                  "predator_start", "predator_founders"}
+                  "predator_start", "predator_founders", "refuge_count"}
 
 
 def next_step(steps, current):

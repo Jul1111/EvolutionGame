@@ -136,6 +136,9 @@ PREDATION_EFFICIENCY = 0.75 # Share of the prey's energy the predator gets (the 
 PREDATOR_DIGEST = 200       # Ticks after a kill during which the predator cannot attack (caps what it can eat).
                             # Calibrated on 2×2 (5 founders: 4 seeds out of 8 still have predators at 80 000 ticks)
 PREDATOR_COST_FACTOR = 1.0  # Base cost of a predator = this × the base cost of a creature of its size
+REFUGE_COUNT = 0            # Refuges per screen: discs where a prey cannot be caught (predators may go in, prey do
+                            # not see them). Drawn at random when the world is created. 0 (default): none
+REFUGE_RADIUS = 60          # Radius of a refuge (world units; 8 per screen of radius 60 cover ~10 % of the area)
 PREDATOR_POPULATION = ""     # Saved population (.npz) the arriving predators are drawn from (without replacement)
                             # instead of random networks: their genomes and sizes. A list of paths: seed s takes the
                             # path (s - 1) mod len (one lineage per seed). "" (default): random predators

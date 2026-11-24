@@ -11,6 +11,7 @@ FOOD_KIND_NAMES = ("verte", "jaune", "bleue", "rose")
 PREDATOR_COLOR = (235, 60, 60)    # Crown of spikes of the predators (rendering/world/scene.py)
 POISON_COLOR = (176, 96, 214)
 OBSTACLE_COLOR = (92, 102, 112)
+REFUGE_COLOR = (90, 200, 140)      # Refuges of the prey (predation): faint disc and its edge
 
 # Background and creatures (organic style)
 BG_CENTER_COLOR = (30, 40, 46)       # Centre of the "petri dish" background

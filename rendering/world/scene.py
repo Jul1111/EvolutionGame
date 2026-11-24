@@ -531,11 +531,28 @@ class Scene:
             self._draw_debug(screen, world, debug_mode, selected)
 
     def _draw_obstacles(self, screen, world):
-        """Animated anemones, drawn again on the other side of the torus when they cross an edge."""
+        """Animated anemones, drawn again on the other side of the torus when they cross an edge. Refuges first, under
+        everything: a faint green disc with its edge."""
         k = self.scale
+        if world.refuges:
+            r = max(1, round(world.cfg.REFUGE_RADIUS * k))
+            disc = self._refuge_disc(r)
+            for x, y in world.refuges:
+                for px, py in self._images(world, x, y, world.cfg.REFUGE_RADIUS):
+                    screen.blit(disc, (px - r, py - r))
         for o in world.obstacles:
             for px, py in self._images(world, o.x, o.y, o.radius * 1.5):
                 draw_obstacle(screen, o, px, py, k)
+
+    def _refuge_disc(self, r):
+        """Picture of a refuge of radius r pixels, kept for the last radius (it changes with the zoom)."""
+        cached = getattr(self, "_refuge_cache", None)
+        if cached is None or cached[0] != r:
+            surf = pygame.Surface((2 * r, 2 * r), pygame.SRCALPHA)
+            pygame.draw.circle(surf, (*theme.REFUGE_COLOR, 28), (r, r), r)
+            pygame.draw.circle(surf, (*theme.REFUGE_COLOR, 110), (r, r), r, max(1, r // 30))
+            cached = self._refuge_cache = (r, surf)
+        return cached[1]
 
     def _draw_trail(self, screen, trail, world):
         """Trajectory of the selected creature, fading with age. A segment that crosses a torus edge is drawn short."""

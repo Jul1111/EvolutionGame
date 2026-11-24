@@ -38,6 +38,7 @@ PARAM_INFO = {
     "predation_efficiency": ("Énergie tirée d'une proie", "Part de l'énergie de la proie que gagne le prédateur qui la mange ; le reste est perdu. Plus elle est haute, plus les prédateurs se multiplient vite."),
     "predator_digest": ("Digestion", "Après un repas, le prédateur ne peut plus attaquer pendant ce temps : limite ce qu'il peut manger, et freine l'explosion des prédateurs."),
     "predator_cost": ("Coût de base d'un prédateur", "Ce qu'un prédateur dépense à l'arrêt, par rapport à une autre créature de sa taille."),
+    "refuge_count": ("Refuges des proies", "Disques verts où une proie ne peut pas être attrapée. Les prédateurs peuvent y entrer, et les proies ne les voient pas : elles n'en profitent que quand elles s'y trouvent. Au prochain départ de zéro."),
     "food_types": ("Sortes de nourriture", "Deux : une nourriture sur deux est jaune, et chaque créature hérite d'un régime (0 = mange le vert, 1 = le jaune). Un spécialiste tire tout de sa nourriture et rien de l'autre : deux espèces peuvent se partager le monde. Trois ou quatre : nourritures bleue et rose en plus, réparties entre 0 et 1 (chacune ne nourrit que les régimes proches du sien). Doubler l'énergie d'une nourriture (60). Couleur «régime» : touche C. Au prochain départ de zéro."),
     "respawn": ("Délai de réapparition", "Temps avant qu'une nourriture mangée soit de nouveau disponible."),
     "poison_count": ("Nombre de poisons", "Sources de poison dans le monde. 0 = aucun."),
@@ -97,7 +98,7 @@ PARAM_COLUMNS = (
                      "diet_mutation"))),
     (("Dangers", ("poison_count", "poison_energy", "obstacle_count")), ("Monde", ("founders", "world_scale")),
      ("Prédateurs", ("predation", "predator_start", "predator_founders", "predation_efficiency", "predator_digest",
-                     "predator_cost"))),
+                     "predator_cost", "refuge_count"))),
 )
 
 HELP_MOUSE = [

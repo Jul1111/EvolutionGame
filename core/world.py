@@ -25,6 +25,9 @@ class World:
         self.area_factor = self.width * self.height / (self.cfg.SCREEN_WIDTH * self.cfg.SCREEN_HEIGHT)
         # Obstacles first: food, poison and creatures are never placed inside one
         self.obstacles = self._make_obstacles()
+        # Refuges (predation): centres drawn anywhere; none (and no draw) by default
+        self.refuges = [(self.rng.uniform(0, self.width), self.rng.uniform(0, self.height))
+                        for _ in range(self._count(self.cfg.REFUGE_COUNT))]
         # Far enough from an obstacle for a creature to touch it
         reach = self.cfg.CREATURE_RADIUS + self.cfg.FOOD_RADIUS
         self._kinds = kind_pattern(self.cfg)   # Kind of the food of index i: self._kinds[i % len(self._kinds)]
@@ -223,6 +226,9 @@ class World:
         pred, k = idx[hunters], np.nonzero(hunters)[0]
         s.digest[pred] = np.maximum(s.digest[pred] - 1, 0)
         prey = np.nonzero(~hunters)[0]
+        if self.refuges:   # A prey whose centre is in a refuge cannot be caught
+            q = idx[prey]
+            prey = prey[~self.sheltered(s.x[q], s.y[q])]
         if not len(prey):
             return
         q = idx[prey]
@@ -237,6 +243,16 @@ class World:
         for j in np.nonzero(win >= 0)[0].tolist():
             alive[k[win[j]]].eat_prey(alive[prey[j]], float(gain[j]))
             self.predated += 1
+
+    def sheltered(self, x, y):
+        """Which points (arrays) are in a refuge: torus distance to a refuge centre below REFUGE_RADIUS."""
+        inside = np.zeros(len(x), bool)
+        r2 = self.cfg.REFUGE_RADIUS ** 2
+        for rx, ry in self.refuges:
+            dx = (x - rx + self.width / 2) % self.width - self.width / 2
+            dy = (y - ry + self.height / 2) % self.height - self.height / 2
+            inside |= dx * dx + dy * dy < r2
+        return inside
 
     def _prey_winners(self, px, py, pr, gain, X, Y, E, R, emax, ready):
         """numpy version of kernels.prey_winners: same formulas, same order (prey in list order, a tie goes to the
@@ -598,6 +614,8 @@ class World:
             h.digest = max(h.digest - 1, 0)
         for prey in self.creatures if hunters else []:
             if not prey.alive or prey._spec.get("predator"):
+                continue
+            if self.refuges and self.sheltered(np.array([prey.x]), np.array([prey.y]))[0]:
                 continue
             gain = self.cfg.PREDATION_EFFICIENCY * max(prey.energy, 0.0)
             best, best_gap = None, math.inf

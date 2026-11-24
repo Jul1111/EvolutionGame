@@ -78,6 +78,7 @@ MENUS = [
         ("predation_efficiency", "Énergie tirée d'une proie : {predation_efficiency}", "action", None, ""),
         ("predator_digest", "Digestion : {predator_digest}", "action", None, ""),
         ("predator_cost", "Coût de base d'un prédateur : {predator_cost}", "action", None, ""),
+        ("refuge_count", "Refuges des proies : {refuge_count}", "action", None, ""),
     ]),
     # One check box per network profile (brain/profiles.py), in the colour of the species: the species of the random
     # founders, applied at the next restart from zero.
