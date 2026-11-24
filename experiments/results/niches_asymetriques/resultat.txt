@@ -1,0 +1,54 @@
+=== 20261124_135653_asym_1_1 : 0 éteintes, scindées à la fin 14/16; 2e moitié : spécialistes rare 0.45, abondant 0.48, population 192
+  14 populations scindées analysées (3000 ticks rejoués)
+              part repas/1000 sa nourr.  énergie  vitesse sans vue vit. sans attir. sienne  autre
+  rare        0.44        1.6       81%     0.37     1.38     0.42      0.84         +0.45  +0.41
+  abondant    0.48        1.7       78%     0.35     1.21     0.43      0.71         +0.44  +0.40
+  rare plus rapide dans 9/14, plus souvent sans nourriture en vue dans 5/14, moins de repas dans 7/14
+  Sensibilité de la sortie à chaque entrée :    rare abond.
+    Distance                                0.430  0.401
+    Angle                                   0.358  0.308
+    Énergie                                 0.184  0.149
+    Vitesse                                 0.269  0.227
+    Peut manger                             0.293  0.268
+    Dist. poison                            0.041  0.044
+    Angle poison                            0.008  0.013
+    Dist. obstacle                          0.096  0.075
+    Angle obstacle                          0.045  0.055
+    Valeur nourr.                           0.545  0.488
+
+=== 20261124_140746_asym_1_2 : 0 éteintes, scindées à la fin 12/16; 2e moitié : spécialistes rare 0.39, abondant 0.53, population 182
+  13 populations scindées analysées (3000 ticks rejoués)
+              part repas/1000 sa nourr.  énergie  vitesse sans vue vit. sans attir. sienne  autre
+  rare        0.28        1.3       80%     0.36     1.10     0.42      0.69         +0.46  +0.37
+  abondant    0.63        1.9       84%     0.38     1.68     0.40      1.17         +0.53  +0.45
+  rare plus rapide dans 1/13, plus souvent sans nourriture en vue dans 10/13, moins de repas dans 12/13
+  Sensibilité de la sortie à chaque entrée :    rare abond.
+    Distance                                0.262  0.517
+    Angle                                   0.247  0.384
+    Énergie                                 0.126  0.173
+    Vitesse                                 0.186  0.267
+    Peut manger                             0.147  0.225
+    Dist. poison                            0.034  0.049
+    Angle poison                            0.005  0.005
+    Dist. obstacle                          0.060  0.092
+    Angle obstacle                          0.036  0.054
+    Valeur nourr.                           0.686  0.370
+
+=== 20261124_142302_asym_1_3 : 0 éteintes, scindées à la fin 9/16; 2e moitié : spécialistes rare 0.20, abondant 0.70, population 178
+  10 populations scindées analysées (3000 ticks rejoués)
+              part repas/1000 sa nourr.  énergie  vitesse sans vue vit. sans attir. sienne  autre
+  rare        0.21        1.1       76%     0.30     0.85     0.47      0.42         +0.45  +0.34
+  abondant    0.70        1.8       85%     0.30     1.12     0.45      0.59         +0.43  +0.41
+  rare plus rapide dans 2/10, plus souvent sans nourriture en vue dans 8/10, moins de repas dans 9/10
+  Sensibilité de la sortie à chaque entrée :    rare abond.
+    Distance                                0.232  0.523
+    Angle                                   0.231  0.366
+    Énergie                                 0.098  0.142
+    Vitesse                                 0.169  0.270
+    Peut manger                             0.087  0.282
+    Dist. poison                            0.038  0.041
+    Angle poison                            0.007  0.010
+    Dist. obstacle                          0.071  0.082
+    Angle obstacle                          0.041  0.056
+    Valeur nourr.                           0.802  0.309
+

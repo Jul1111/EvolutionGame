@@ -486,6 +486,21 @@ Nouveau mécanisme (`PREDATION`, `docs/fonctionnement.md`) : des prédateurs (`p
 - **La non-linéarité monte un peu, sans que ce soit établi** (+0,02 à +0,04, dans le bruit sur 16 graines). La prédation ajoute une chose à percevoir et à fuir ; elle ne rend pas, à 120 000 ticks, les réseaux nettement plus complexes. La plupart des graines ont perdu leurs prédateurs tôt : un monde où ils durent (plus grand, ou des prédateurs plus stables) serait le vrai test.
 - Suites possibles : un monde 3×3, des refuges pour les proies, des runs plus longs dans les graines qui gardent leurs prédateurs ; espèce omnivore et gène de carnivorie (option C de la conception) gardés pour plus tard.
 
+### Niches asymétriques : nourriture rare et riche contre abondante et pauvre (24/11/2026)
+
+Une espèce (`regime`) qui se scinde (mutation du régime 0,15), deux sortes de nourriture à **énergie totale égale** : la verte rare et riche, la jaune abondante et pauvre (`FOOD_KIND_SHARES`, `FOOD_KIND_ENERGY`). Témoin 1:1 ; 1:2 (verte 1,5 × 60, jaune 0,75 × 60) ; 1:3 (verte 2 × 60, jaune 0,67 × 60). 16 graines × 120 000 ticks par réglage, lot `experiments/lots/niches_asymetriques.txt`. Pour chaque population scindée, 3 000 ticks rejoués (`experiments/results/niches_asymetriques/analyse.py`, sortie complète dans `resultat.txt`).
+
+| réglage | scindées | part du groupe rare / abondant | repas par 1000 ticks | vitesse | sans nourriture en vue | sensibilité à «valeur nourr.» | à «distance» |
+|---|---|---|---|---|---|---|---|
+| 1:1 | 14/16 | 0,44 / 0,48 | 1,6 / 1,7 | 1,38 / 1,21 | 0,42 / 0,43 | 0,55 / 0,49 | 0,43 / 0,40 |
+| 1:2 | 12/16 | 0,28 / 0,63 | 1,3 / 1,9 | 1,10 / 1,68 | 0,42 / 0,40 | 0,69 / 0,37 | 0,26 / 0,52 |
+| 1:3 | 9/16 | 0,21 / 0,70 | 1,1 / 1,8 | 0,85 / 1,12 | 0,47 / 0,45 | 0,80 / 0,31 | 0,23 / 0,52 |
+
+- **Le groupe de la nourriture rare est plus petit**, alors que sa niche porte autant d'énergie : 21 % de la population contre 70 % en 1:3. Une nourriture rare coûte du chemin, et un repas riche ne se prend que quand il tient dans la réserve (120 d'énergie en 1:3 : seulement sous 80 sur 200). La scission tient aussi moins souvent (9/16 contre 14/16).
+- **Il vit autrement.** Il mange moins souvent (moins de repas dans 21 des 23 populations scindées de 1:2 et 1:3, p = 0,0001), il est plus lent (20/23, p = 0,0005), et passe plus de temps sans nourriture en vue (18/23, p = 0,01). Le témoin 1:1 ne montre aucun de ces écarts (vitesse 9/14, repas 7/14).
+- **Son réseau regarde autre chose** : il réagit surtout à la valeur de la nourriture en vue (0,80 contre 0,31) et peu à sa distance (0,23 contre 0,52), le groupe abondant l'inverse. Le spécialiste du rare trie ; celui de l'abondant fonce sur ce qui est proche. Ce n'est pas l'explorateur rapide qu'on attendait : il économise son énergie entre deux repas rares.
+- L'attirance vers sa propre nourriture ne change pas (corrélation angle → virage autour de +0,45 dans les deux groupes) : l'écart est dans le tri et l'allure, pas dans la façon de viser.
+
 ### Deux espèces, fondateurs spécialistes : coexistence ou une espèce partout (23/11/2026)
 
 Reprise de la coexistence par niches avec les fondateurs spécialistes (section suivante : plus d'extinction au départ) : `regime` + `regime_faim`, deux nourritures, énergie 60, 16 graines × 120 000 ticks, mutation du régime 0,05 ou 0,15. Lot `experiments/lots/coexistence_m015.txt` ; résultats `experiments/results/20261123_17*_coexist_*`, table par graine `experiments/results/niches/coexistence_fondateurs_specialistes.txt`.
