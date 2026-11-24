@@ -242,7 +242,17 @@ class ContinuousSimulation:
         """PREDATOR_FOUNDERS (per screen) random predators of PREDATOR_PROFILE at random free places (config.PREDATION;
         called at tick PREDATOR_START)."""
         name = self.cfg.PREDATOR_PROFILE
-        for _ in range(self.world._count(self.cfg.PREDATOR_FOUNDERS)):
+        count = self.world._count(self.cfg.PREDATOR_FOUNDERS)
+        source = predator_source(self.cfg)
+        if source:   # Evolved predators: genomes and sizes drawn from a saved population
+            pool = load_population(source).get(name, [])
+            for genome, size, *diet in self.rng.sample(pool, min(count, len(pool))):
+                brain = new_brain(name)
+                brain.set_genome(genome)
+                extra = {"diet": diet[0] if diet else self._founder_diet()} if self.diets else {}
+                self._add(brain, name, size=size if self.cfg.SIZE_MODE != "fixe" else 1.0, **extra)
+            return
+        for _ in range(count):
             brain = new_brain(name)
             brain.randomize(self.rng, self.cfg.NN_INIT_STD)
             self._add(brain, name, **({"diet": self._founder_diet()} if self.diets else {}))
@@ -380,6 +390,15 @@ def save_population(sim, path):
     tmp = path[:-4] + "_tmp.npz" if path.endswith(".npz") else path + "_tmp.npz"
     np.savez(tmp, **data)
     os.replace(tmp, path if path.endswith(".npz") else path + ".npz")
+
+
+def predator_source(cfg):
+    """The population file the predators of this seed come from (cfg.PREDATOR_POPULATION), or "" (random ones).
+    A list: seed s takes the path (s - 1) mod len, one lineage per seed."""
+    source = cfg.PREDATOR_POPULATION
+    if isinstance(source, (list, tuple)):
+        return source[(cfg.SEED - 1) % len(source)] if source else ""
+    return source or ""
 
 
 def load_population(path, with_tick=False):

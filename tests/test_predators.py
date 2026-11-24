@@ -1,5 +1,6 @@
 """Predators (config.PREDATION, profiles marked "predator" in brain/profiles.py)."""
 import math
+import os
 import random
 
 import numpy as np
@@ -154,3 +155,71 @@ def test_game_shows_predators(make_app):
     assert any(c.profile == "predateur" for c in app.world.creatures)
     assert "predateur" in app.hud.profiles and app.hud.rows and app.hud.rows[-1].get("predators") is not None
     assert app.scene.predator_sprite.get_width() > 0
+
+
+def _evolved_predators(tmp_path, n=12):
+    """A saved population of prey and predators with random networks (stands for an evolved one)."""
+    from evolution.continuous import save_population
+    cfg = _hunting_cfg(PREDATOR_START=0, PREDATOR_FOUNDERS=n, INITIAL_POPULATION=10, ACTIVE_PROFILES=["proie"])
+    sim = ContinuousSimulation(random.Random(4), cfg=cfg)
+    sim.run(1)
+    path = str(tmp_path / "evolues.npz")
+    save_population(sim, path)
+    return path
+
+
+def test_predators_drawn_from_a_saved_population(tmp_path):
+    from evolution.continuous import load_population
+    path = _evolved_predators(tmp_path)
+    pool = [g for g, *_ in load_population(path)["predateur"]]
+    cfg = _hunting_cfg(PREDATOR_START=5, PREDATOR_FOUNDERS=5, ACTIVE_PROFILES=["proie"], PREDATOR_POPULATION=path)
+    sim = ContinuousSimulation(random.Random(2), cfg=cfg)
+    sim.run(6)
+    arrived = [c for c in sim.world.creatures if c.profile == "predateur"]
+    assert len(arrived) == 5
+    for c in arrived:   # Genomes of the file, each drawn once
+        assert sum(np.array_equal(c.brain.get_genome(), g) for g in pool) == 1
+    assert len({c.brain.get_genome().tobytes() for c in arrived}) == 5
+    few = ContinuousSimulation(random.Random(2), cfg=cfg.__class__(**{**vars(cfg), "PREDATOR_FOUNDERS": 40}))
+    few.run(6)
+    assert sum(c.profile == "predateur" for c in few.world.creatures) == len(pool)   # No more than the file holds
+
+
+def test_predator_source_one_lineage_per_seed():
+    from evolution.continuous import predator_source
+    files = ["a.npz", "b.npz", "c.npz"]
+    assert [predator_source(config.Settings(PREDATOR_POPULATION=files, SEED=s)) for s in (1, 2, 3, 4)] == \
+        ["a.npz", "b.npz", "c.npz", "a.npz"]
+    assert predator_source(config.Settings(PREDATOR_POPULATION="x.npz", SEED=9)) == "x.npz"
+    assert predator_source(config.Settings()) == ""
+
+
+def test_run_seed_leaves_out_the_predators_of_the_starting_file(tmp_path):
+    from experiments import run as run_module
+    path = _evolved_predators(tmp_path)
+    settings = {"PREDATION": True, "PREDATOR_START": 10, "PREDATOR_FOUNDERS": 3, "SAMPLE_TICKS": 5,
+                "PREDATOR_POPULATION": [path]}
+    message = run_module.run_seed(1, str(tmp_path / "out"), settings, 10, ["proie"], path)
+    assert "prédateurs" in message
+    import csv
+    with open(tmp_path / "out" / "seed_1" / "timeline.csv", newline="", encoding="utf-8") as f:
+        rows = list(csv.DictReader(f))
+    assert float(rows[0]["predators"]) == 0 and float(rows[0]["prey"]) > 0   # Prey only until PREDATOR_START
+
+
+def test_run_seed_cycle_takes_one_file_per_seed(tmp_path):
+    from evolution.continuous import save_population
+    from experiments import run as run_module
+    paths = []
+    for profile in ("complet", "complet_faim"):
+        sim = ContinuousSimulation(random.Random(1), cfg=config.Settings(ACTIVE_PROFILES=[profile],
+                                                                          INITIAL_POPULATION=10))
+        paths.append(str(tmp_path / f"{profile}.npz"))
+        save_population(sim, paths[-1])
+    import csv
+    for seed, alone in ((1, "complet"), (2, "complet_faim"), (3, "complet")):
+        out = str(tmp_path / f"out{seed}")
+        run_module.run_seed(seed, out, {"SAMPLE_TICKS": 5}, 5, ["complet"], paths, cycle=True)
+        with open(os.path.join(out, f"seed_{seed}", "timeline.csv"), newline="", encoding="utf-8") as f:
+            header = next(csv.reader(f))
+        assert [h for h in header if h.startswith("pop__")] == [f"pop__{alone}"]

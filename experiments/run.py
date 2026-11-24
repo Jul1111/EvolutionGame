@@ -12,6 +12,10 @@
     ... --replica 1      same founders, another chance in the world (is the winner of a duel luck or the lineages?)
     ... --shift 1 --from-population <run A>/seed_{seed}/... <run B>/seed_{pair}/...
         ({pair}: the seed `shift` places further in --seeds, cyclically: each population meets other opponents)
+    ... --cycle --from-population <file 1> <file 2> ...
+        (seed s starts from file (s - 1) mod n alone, instead of an equal share of each file)
+    ... --from-population <prey>/seed_{seed}/... --set PREDATION=True PREDATOR_POPULATION="['<file>', ...]"
+        (evolved prey; the predators of the file are left out, the arriving ones are drawn from PREDATOR_POPULATION)
 
 Several runs in one command (one after the other, an overall progress bar and one bar per run):
     python -m experiments.run --name cout --varie ENERGY_MOVE_COST=0.015,0.03,0.06     (3 runs: cout_0.015, ...)
@@ -113,15 +117,21 @@ def paired_seeds(seeds, shift):
     return {s: seeds[(i + shift) % len(seeds)] for i, s in enumerate(seeds)}
 
 
-def run_seed(seed, out_dir, overrides, ticks, profiles, population_file, replica=0, pair=None, photos=0):
+def run_seed(seed, out_dir, overrides, ticks, profiles, population_file, replica=0, pair=None, photos=0,
+             cycle=False):
     """One seed (run in its own process by main, to use every core). In population paths {seed} is the seed and
     {pair} its paired seed (crossed duels, default: the seed itself). photos > 0: the population is also saved every
-    `photos` ticks (seed_<n>/population_<tick>.npz), to follow it over the run."""
-    from evolution.continuous import ContinuousSimulation, save_population, load_population
+    `photos` ticks (seed_<n>/population_<tick>.npz), to follow it over the run. cycle=True: several population
+    files are not mixed, seed s starts from file (s - 1) mod n.
+    With PREDATION, the predators of a starting population are left out: they arrive at PREDATOR_START (random, or
+    drawn from PREDATOR_POPULATION)."""
+    from evolution.continuous import ContinuousSimulation, save_population, load_population, predator_source
     cfg = build_settings(overrides, SEED=seed, ACTIVE_PROFILES=list(profiles))
     seed_dir = os.path.join(out_dir, f"seed_{seed}")
     files = [] if not population_file else [population_file] if isinstance(population_file, str) else population_file
     files = [p.format(seed=seed, pair=seed if pair is None else pair) for p in files]
+    if cycle and files:
+        files = [files[(seed - 1) % len(files)]]
     missing = [p for p in files if not os.path.exists(p)]
     if missing:   # Typically: that seed died out in the run the population comes from
         return f"graine {seed} : ignorée, population de départ absente ({os.path.relpath(missing[0], ROOT)})"
@@ -131,6 +141,8 @@ def run_seed(seed, out_dir, overrides, ticks, profiles, population_file, replica
         founders = load_population(files[0])
     else:                   # Several: an equal share of each
         founders = mixed_founders(files, cfg.INITIAL_POPULATION, random.Random(seed))
+    if founders and cfg.PREDATION:
+        founders = {name: fs for name, fs in founders.items() if name != cfg.PREDATOR_PROFILE}
     sim = ContinuousSimulation(world_rng(seed, replica), os.path.join(seed_dir, "timeline.csv"), founders=founders,
                               cfg=cfg)
     start = time.time()
@@ -143,7 +155,10 @@ def run_seed(seed, out_dir, overrides, ticks, profiles, population_file, replica
     if not sim.extinct:
         save_population(sim, os.path.join(seed_dir, "population_finale.npz"))
     end = f"EXTINCTION au tick {sim.world.tick}" if sim.extinct else f"population {len(sim.world.creatures)}"
-    return f"graine {seed} : {played} ticks en {time.time() - start:.0f} s, {end}"
+    origin = "".join(f", {what} {os.path.relpath(p, ROOT)}" for what, p in
+                     (("départ", files[0] if len(files) == 1 and cycle else ""),
+                      ("prédateurs", predator_source(cfg) if cfg.PREDATION else "")) if p)
+    return f"graine {seed} : {played} ticks en {time.time() - start:.0f} s, {end}{origin}"
 
 
 def show_progress(out_dir, futures, every=2.0):
@@ -191,6 +206,9 @@ def build_parser():
                         help="Population sauvegardée de départ (.npz). {seed} est remplacé par le numéro de graine. "
                              "Plusieurs fichiers : INITIAL_POPULATION fondateurs, à parts égales de chacun (duel "
                              "de populations évoluées)")
+    parser.add_argument("--cycle", action="store_true",
+                        help="Plusieurs --from-population : la graine s part du fichier (s - 1) mod n seul, au lieu "
+                             "d'une part égale de chacun")
     parser.add_argument("--replica", type=int, nargs="+", default=[0],
                         help="Autre hasard du monde, mêmes fondateurs (0 : la graine telle quelle). Plusieurs "
                              "valeurs : un run par valeur")
@@ -241,6 +259,8 @@ def expand(args):
             argv += ["--profiles", *args.profiles]
         if args.from_population:
             argv += ["--from-population", *args.from_population]
+        if args.cycle:
+            argv += ["--cycle"]
         if sets:
             argv += ["--set", *sets]
         build_settings(parse_overrides(sets))   # Typos stop here, before the first run
@@ -270,6 +290,7 @@ def main(argv=None):
     meta = {"name": args.name, "ticks": args.ticks, "from_population": args.from_population,
             "command": " ".join(sys.argv), "git": git_state(), "seeds": args.seeds, "profiles": list(profiles),
             "overrides": overrides, "replica": args.replica, "shift": args.shift, "photos": args.photos,
+            "cycle": args.cycle,
             "config": {n: getattr(cfg, n) for n in [*cfg.__dict__, *config.DERIVED] if n.isupper() and n != "SAVE_DIR"
                        and isinstance(getattr(cfg, n), (int, float, str, bool, list, tuple))}}
     with open(os.path.join(out_dir, "run.json"), "w", encoding="utf-8") as f:
@@ -282,7 +303,7 @@ def main(argv=None):
     with ProcessPoolExecutor(max_workers=max(1, args.jobs), initializer=worker_init,
                              initargs=(args.jobs,)) as pool:
         futures = [pool.submit(run_seed, s, out_dir, overrides, args.ticks, profiles, args.from_population,
-                               args.replica, pairs[s], args.photos) for s in args.seeds]
+                               args.replica, pairs[s], args.photos, args.cycle) for s in args.seeds]
         show_progress(out_dir, futures)
 
     from experiments.summary import summarize_timeline, print_timeline_table, print_species_table

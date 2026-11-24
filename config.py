@@ -136,6 +136,9 @@ PREDATION_EFFICIENCY = 0.75 # Share of the prey's energy the predator gets (the 
 PREDATOR_DIGEST = 200       # Ticks after a kill during which the predator cannot attack (caps what it can eat).
                             # Calibrated on 2×2 (5 founders: 4 seeds out of 8 still have predators at 80 000 ticks)
 PREDATOR_COST_FACTOR = 1.0  # Base cost of a predator = this × the base cost of a creature of its size
+PREDATOR_POPULATION = ""     # Saved population (.npz) the arriving predators are drawn from (without replacement)
+                            # instead of random networks: their genomes and sizes. A list of paths: seed s takes the
+                            # path (s - 1) mod len (one lineage per seed). "" (default): random predators
 
 # Configuration for mutation
 MUTATION_STD = 0.1          # Std of the gaussian noise added to each weight of a child (0.2 was chosen on one seed
