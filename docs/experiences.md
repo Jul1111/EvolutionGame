@@ -23,7 +23,7 @@ Coût d'un tick : chiffres d'avant l'optimisation du 23/11 ; depuis, environ 4 f
 
 **Niches et régimes.** Avec une seule nourriture, une espèce élimine toujours l'autre. Avec deux sortes de nourriture et un gène de régime, deux espèces coexistent dans 45 % des graines quand leurs fondateurs sont spécialistes (21 sur 47, contre 17 % avec des régimes au hasard, p = 0,009), chacune sur sa nourriture. Une seule espèce se scinde en deux groupes de spécialistes quand le régime mute assez (0,15 : 12 graines sur 12). Si une nourriture est rare et riche et l'autre abondante et pauvre, à énergie égale, le groupe de la rare est plus petit, plus lent, mange moins souvent et choisit sa nourriture par sa valeur plutôt que par sa distance. Avec 3 ou 4 sortes et une mutation du régime de 0,15, le nombre de groupes suit le nombre de niches (3 groupes dans 12 graines sur 12 avec 3 sortes) ; avec une mutation faible, c'est l'histoire du départ qui décide ([Niches et régimes](#niches-et-régimes)).
 
-**Prédateurs.** En 1×1 ils s'éteignent presque toujours (1 graine sur 16 en garde), en 2×2 ils tiennent dans 4 graines sur 16, et un monde 3×3 ne fait pas mieux : le goulot est la fondation de leur population. Des prédateurs déjà évolués passent ce départ mais surexploitent les proies et s'effondrent (1 graine sur 46 les garde). Quand ils durent : cycles de Lotka-Volterra, proies qui se détournent d'eux et deviennent deux fois plus rapides ([Prédateurs](#prédateurs)).
+**Prédateurs.** En 1×1 ils s'éteignent presque toujours (1 graine sur 16 en garde), en 2×2 ils tiennent dans 4 graines sur 16, et un monde 3×3 ne fait pas mieux : le goulot est la fondation de leur population. Des prédateurs déjà évolués passent ce départ mais surexploitent les proies et s'effondrent (1 graine sur 46 les garde) ; des refuges que les proies ne voient pas (5 à 19 % de la surface) n'y changent presque rien. Quand ils durent : cycles de Lotka-Volterra, proies qui se détournent d'eux et deviennent deux fois plus rapides ([Prédateurs](#prédateurs)).
 
 **Calcul.** Un tick en 2×2 (~1 350 créatures) est passé de 10,7 à 2,2 ms, avec des résultats identiques au bit près : état des créatures dans des tableaux permanents, grille spatiale, Numba ([Calcul](#calcul)).
 
@@ -644,6 +644,21 @@ Nouveau mécanisme (`PREDATION`, `docs/fonctionnement.md`) : des prédateurs (`p
 - **Même les couples qui coexistaient s'effondrent une fois rejoués (C)** : ils repartent mélangés au hasard sur la carte, avec de l'énergie neuve. Dans leur run d'origine, les proies avaient sans doute des zones sans prédateur. Ici, les prédateurs passent de 50 à plus de 300 en 3 600 ticks, puis disparaissent. L'équilibre de ces runs tenait à leur histoire (dispersion, âges, densités), pas seulement aux génomes.
 - Un biais à garder en tête : dans A et B, les proies reprises sont nombreuses à l'arrivée des prédateurs (~730 à 830, contre ~190 au tick 20 000 d'un run parti de zéro). Une abondance de proies au départ favorise le boom.
 - **Conclusion** : le goulot n'est pas seulement la fondation. Des prédateurs efficaces surexploitent leurs proies. Ce qui manque à ce monde pour une coexistence durable, c'est de quoi freiner les prédateurs quand ils sont nombreux, ou abriter les proies : refuges, digestion plus longue, prédateurs plus coûteux, ou des proies déjà rodées et peu nombreuses à l'arrivée.
+
+### Refuges des proies face à des prédateurs évolués (24/11/2026)
+
+**Question** : des abris où une proie ne peut pas être attrapée empêchent-ils les prédateurs évolués de surexploiter les proies ? Lot `predateurs_refuges.txt` : le montage A de la section précédente (proies naïves du témoin 2×2, 5 prédateurs évolués par écran au tick 5 000, une lignée par graine, 15 graines, 120 000 ticks), avec `REFUGE_COUNT` = 4, 8 ou 16 refuges par écran de rayon 60 (environ 5, 10 et 19 % de la surface, placés au hasard). Les prédateurs peuvent y entrer ; les proies ne les voient pas (aucun capteur : les proies évoluées gardent leur réseau). Sortie `refuges.txt`.
+
+| Refuges par écran (surface) | Prédateurs à la fin | Survie des prédateurs (médiane) | Plus de 40 000 ticks | Proies éteintes | Pic de prédateurs (médiane) |
+|---|---|---|---|---|---|
+| 0 (montage A) | 0/15 | 10 000 ticks | 1/15 | 8/15 | 165 |
+| 4 (~5 %) | 1/15 | 17 800 | 5/15 | 8/15 | 216 |
+| 8 (~10 %) | 0/15 | 11 200 | 3/15 | 8/15 | 160 |
+| 16 (~19 %) | 0/15 | 17 400 | 3/15 | 6/15 | 176 |
+
+- **Les refuges ne changent presque rien** : toujours boom puis effondrement, les prédateurs tiennent un peu plus longtemps (médiane 11 000 à 18 000 ticks contre 10 000, dans le bruit : p = 0,17 en réunissant les trois niveaux), et les proies s'éteignent aussi souvent (6 à 8 graines sur 15). Pas de tendance avec la surface des refuges.
+- **Pourquoi** : des proies qui ne voient pas les refuges n'y sont qu'au hasard de leurs déplacements, une part fixe d'entre elles à un moment donné. Elles en sortent pour manger, et les prédateurs, au plus haut à 160 à 220, les attendent partout ailleurs. Un abri qu'on ne peut pas chercher ne protège pas une population : il ne fait que retarder.
+- Suites possibles : une espèce de proie qui voit les refuges (capteur dédié, à faire évoluer depuis zéro), de la nourriture dans les refuges, ou un frein du côté des prédateurs (digestion plus longue, coût plus élevé).
 
 ## Calcul
 
